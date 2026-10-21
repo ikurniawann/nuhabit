@@ -354,7 +354,7 @@ func (s *Service) release(ctx context.Context, id string, now time.Time) error {
 				return err
 			}
 			if settings.ReferrerArkIdr > 0 && arkCoinEnabled(ctx, tx) {
-				if err := creditArk(ctx, tx, held.ReferrerID, settings.ReferrerArkIdr, id); err != nil {
+				if err := creditArk(ctx, tx, held.ReferrerID, settings.ReferrerArkIdr, id, now); err != nil {
 					return err
 				}
 				out.ReferrerArkIdr = settings.ReferrerArkIdr

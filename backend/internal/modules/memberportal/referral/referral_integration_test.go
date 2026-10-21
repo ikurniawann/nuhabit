@@ -176,6 +176,15 @@ func TestIntegrationHoldThenRelease(t *testing.T) {
 	if f.bonusCredits(referrer) != 2 || f.bonusCredits(friend) != 1 || f.ark(referrer) != 50000 {
 		t.Fatalf("rewards: referrer %d credits %v ARK, friend %d", f.bonusCredits(referrer), f.ark(referrer), f.bonusCredits(friend))
 	}
+	// The ARK Coin bonus is a promotion expense: one journal event keyed by
+	// the wallet row. The bonus credit lots carry no money and post nothing.
+	var bonusJournals int
+	f.scalarInto(&bonusJournals, `SELECT count(*) FROM platform.outbox_events ev JOIN pos.pos_wallet_transactions w ON w.id::text = ev.payload->>'bonus_id'
+		WHERE ev.topic = 'wallet.bonus.granted' AND ev.payload->>'event_code' = 'WALLET_REFERRAL_BONUS' AND (ev.payload->>'amount')::float8 = 50000
+		  AND w.customer_id = $1 AND w.type = 'bonus'`, referrer)
+	if bonusJournals != 1 {
+		t.Fatalf("%d referral bonus journals", bonusJournals)
+	}
 	var expires time.Time
 	f.scalarInto(&expires, `SELECT l.expires_at FROM gym.credit_lots l JOIN gym.credit_ledger e ON e.lot_id = l.id
 		WHERE e.customer_id = $1 AND e.source_type = 'referral'`, referrer)

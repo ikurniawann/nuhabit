@@ -48,6 +48,7 @@ func (s *Service) expireLapsedLots(ctx context.Context, q database.Querier, cust
 	if len(drafts) == 0 {
 		return state, 0, nil
 	}
+	remainders := domain.LotRemainders(state.lots, state.entries)
 	moves := make([]lotMove, 0, len(drafts))
 	for _, d := range drafts {
 		id, err := s.repo.InsertEntry(ctx, q, NewEntry{
@@ -57,7 +58,8 @@ func (s *Service) expireLapsedLots(ctx context.Context, q database.Querier, cust
 		if err != nil {
 			return state, 0, err
 		}
-		moves = append(moves, lotMove{EntryID: id, LotID: d.LotID, Type: domain.Expiration, Amount: d.Amount})
+		moves = append(moves, lotMove{EntryID: id, LotID: d.LotID, Type: domain.Expiration, Amount: d.Amount,
+			UsedBefore: domain.UsedIn(remainders, d.LotID)})
 	}
 	if err := s.publishLotJournals(ctx, q, moves, "", now); err != nil {
 		return state, 0, err
@@ -99,6 +101,7 @@ type CreditMove struct {
 	SourceID       string
 	IdempotencyKey string
 	Note           string
+	CreatedBy      string
 }
 
 // classTypeOf is the class type a move pays for, "" when unknown.
@@ -149,11 +152,12 @@ func (s *Service) Deduct(ctx context.Context, q database.Querier, in CreditMove)
 	if err != nil {
 		return false, 0, err
 	}
-	allocations, enough := domain.AllocateDeduction(domain.LotRemainders(state.lots, state.entries), coverage, classTypeID, in.Amount, now)
+	remainders := domain.LotRemainders(state.lots, state.entries)
+	allocations, enough := domain.AllocateDeduction(remainders, coverage, classTypeID, in.Amount, now)
 	if !enough {
 		return false, 0, nil
 	}
-	moves, err := s.writeMoves(ctx, q, in, domain.ClassDeduction, -1, allocations)
+	moves, err := s.writeMoves(ctx, q, in, domain.ClassDeduction, -1, allocations, remainders)
 	if err != nil {
 		return false, 0, err
 	}
@@ -161,18 +165,21 @@ func (s *Service) Deduct(ctx context.Context, q database.Querier, in CreditMove)
 }
 
 // writeMoves writes one entry of type t per allocation, sign giving the
-// direction, and returns them as lot moves.
-func (s *Service) writeMoves(ctx context.Context, q database.Querier, in CreditMove, t domain.EntryType, sign int, allocations []domain.Allocation) ([]lotMove, error) {
+// direction, and returns them as lot moves valued against remainders, the
+// lots as they were before the entries.
+func (s *Service) writeMoves(ctx context.Context, q database.Querier, in CreditMove, t domain.EntryType, sign int, allocations []domain.Allocation, remainders []domain.LotRemainder) ([]lotMove, error) {
 	moves := make([]lotMove, 0, len(allocations))
 	for i, a := range allocations {
 		id, err := s.repo.InsertEntry(ctx, q, NewEntry{
 			CustomerID: in.CustomerID, Type: t, Amount: sign * a.Credits, LotID: a.LotID,
 			SourceType: in.SourceType, SourceID: in.SourceID, Note: in.Note, IdempotencyKey: splitKey(in.IdempotencyKey, i),
+			CreatedBy: in.CreatedBy,
 		})
 		if err != nil {
 			return nil, err
 		}
-		moves = append(moves, lotMove{EntryID: id, LotID: a.LotID, Type: t, Amount: sign * a.Credits})
+		moves = append(moves, lotMove{EntryID: id, LotID: a.LotID, Type: t, Amount: sign * a.Credits,
+			UsedBefore: domain.UsedIn(remainders, a.LotID)})
 	}
 	return moves, nil
 }
@@ -195,7 +202,8 @@ func (s *Service) RefundClass(ctx context.Context, q database.Querier, in Credit
 	if err != nil {
 		return err
 	}
-	moves, err := s.writeMoves(ctx, q, in, domain.Refund, 1, domain.AllocateClassRefund(state.entries, in.SourceID, in.Amount))
+	moves, err := s.writeMoves(ctx, q, in, domain.Refund, 1, domain.AllocateClassRefund(state.entries, in.SourceID, in.Amount),
+		domain.LotRemainders(state.lots, state.entries))
 	if err != nil {
 		return err
 	}
@@ -261,41 +269,56 @@ type AdjustResult struct {
 }
 
 // Adjust is a manual staff correction. A positive amount becomes a new lot
-// that expires by the gym rules of branchID (global when nil).
+// that expires by the gym rules of branchID (global when nil). A negative
+// amount comes off the live lots earliest expiry first, like a deduction,
+// and posts GYM_CREDIT_ADJUSTMENT at each lot's unit price.
 func (s *Service) Adjust(ctx context.Context, q database.Querier, customerID string, amount int, reason, actorID string, branchID *string) (*AdjustResult, error) {
 	if err := s.repo.LockMemberCredits(ctx, q, customerID); err != nil {
 		return nil, err
 	}
-	balance, err := s.Balance(ctx, q, customerID)
+	now := s.clock()
+	state, _, err := s.expireLapsedLots(ctx, q, customerID, now)
 	if err != nil {
 		return nil, err
 	}
+	balance := domain.Balance(state.entries)
 	if problem := domain.ValidateAdjustment(amount, reason, balance); problem != "" {
 		return nil, fail(http.StatusBadRequest, problem)
 	}
 	note := strings.TrimSpace(reason)
-	var entryID string
 	if amount > 0 {
 		rules, err := s.Rules(ctx, q, branchID)
 		if err != nil {
 			return nil, err
 		}
-		entryID, _, err = s.GrantCredits(ctx, q, Grant{
+		entryID, _, err := s.GrantCredits(ctx, q, Grant{
 			CustomerID: customerID, Type: domain.Adjustment, Credits: amount,
-			ExpiresAt: domain.LotExpiry(s.clock(), rules.CreditExpiryDays), SourceType: "admin", Note: note, CreatedBy: actorID,
+			ExpiresAt: domain.LotExpiry(now, rules.CreditExpiryDays), SourceType: "admin", Note: note, CreatedBy: actorID,
 		})
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		entryID, err = s.repo.InsertEntry(ctx, q, NewEntry{
-			CustomerID: customerID, Type: domain.Adjustment, Amount: amount, SourceType: "admin", Note: note, CreatedBy: actorID,
-		})
-		if err != nil {
-			return nil, err
-		}
+		return &AdjustResult{EntryID: entryID, BalanceAfter: balance + amount}, nil
 	}
-	return &AdjustResult{EntryID: entryID, BalanceAfter: balance + amount}, nil
+	coverage, err := s.repo.PackageCoverage(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	remainders := domain.LotRemainders(state.lots, state.entries)
+	allocations, enough := domain.AllocateDeduction(remainders, coverage, "", -amount, now)
+	if !enough {
+		// Credits outside any live lot (a legacy pool): the entry stays unpinned.
+		allocations = []domain.Allocation{{Credits: -amount}}
+	}
+	moves, err := s.writeMoves(ctx, q, CreditMove{CustomerID: customerID, SourceType: "admin", Note: note, CreatedBy: actorID},
+		domain.Adjustment, -1, allocations, remainders)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.publishLotJournals(ctx, q, moves, actorID, now); err != nil {
+		return nil, err
+	}
+	return &AdjustResult{EntryID: moves[0].EntryID, BalanceAfter: balance + amount}, nil
 }
 
 // ReverseResult is the body of POST /api/gym/credits/reverse.
@@ -330,7 +353,8 @@ func (s *Service) Reverse(ctx context.Context, q database.Querier, entryID, reas
 	if err != nil {
 		return nil, err
 	}
-	lotRemaining := domain.RemainingIn(domain.LotRemainders(state.lots, state.entries), original.LotID)
+	remainders := domain.LotRemainders(state.lots, state.entries)
+	lotRemaining := domain.RemainingIn(remainders, original.LotID)
 	draft, problem := domain.BuildReversal(original.Entry, reason, reversed, domain.Balance(state.entries), lotRemaining)
 	if problem != "" {
 		return nil, fail(http.StatusConflict, domain.ReversalProblemMessages[problem])
@@ -343,7 +367,7 @@ func (s *Service) Reverse(ctx context.Context, q database.Querier, entryID, reas
 	if err != nil {
 		return nil, err
 	}
-	move := lotMove{EntryID: id, LotID: draft.LotID, Type: domain.Reversal, Amount: draft.Amount}
+	move := lotMove{EntryID: id, LotID: draft.LotID, Type: domain.Reversal, Amount: draft.Amount, UsedBefore: domain.UsedIn(remainders, draft.LotID)}
 	if err := s.publishLotJournals(ctx, q, []lotMove{move}, actorID, now); err != nil {
 		return nil, err
 	}

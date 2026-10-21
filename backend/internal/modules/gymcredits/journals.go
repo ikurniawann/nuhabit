@@ -17,11 +17,14 @@ import (
 // later; a mapping it cannot post is logged there and never blocks a sale.
 //
 // Money paid for a package sits in deferred revenue until the member uses
-// it: a credit at the unit price of its lot (purchase total over the lot's
-// credits) when deducted, breakage when it expires, a pass by day through
-// SweepPassRevenue. Bonus and adjustment lots carry no money and post
-// nothing. Journal dates are calendar dates in the zone of the purchase's
-// branch.
+// it. A lot is valued in sen (domain/valuation.go): each credit that leaves
+// it (used, taken by an admin adjustment, expired, transferred to another
+// company) or comes back is worth the difference of the lot's cumulative
+// share, so the journals of a lot net to zero when its last credit goes. A
+// purchase refund pays whole rupiah; the sen left over is posted when the
+// lot closes. Passes release revenue by day through SweepPassRevenue. Bonus
+// and adjustment lots carry no money and post nothing. Journal dates are
+// calendar dates in the zone of the purchase's branch.
 
 // memberZone is the zone of member-level dates without a branch: pass and
 // credit expiry notices, renewals and the monthly transfer cap.
@@ -77,28 +80,33 @@ func (s *Service) publishPurchaseJournal(ctx context.Context, q database.Querier
 	})
 }
 
-// lotMove is a ledger entry that moved credits of one lot.
+// lotMove is a ledger entry that moved credits of one lot. UsedBefore is
+// how many of the lot's credits had left it before this move.
 type lotMove struct {
-	EntryID string
-	LotID   string
-	Type    domain.EntryType
-	Amount  int
+	EntryID    string
+	LotID      string
+	Type       domain.EntryType
+	Amount     int
+	UsedBefore int
 }
 
 // lotMoveEvent is the journal of a lot move: credits used (deduction, a
-// reversed refund), given back (refund, a reversed deduction) or expired.
+// reversed refund), taken by an admin adjustment, given back (refund, a
+// reversed deduction) or expired.
 func lotMoveEvent(m lotMove) (event, label string) {
 	switch {
 	case m.Type == domain.Expiration:
 		return "GYM_CREDIT_BREAKAGE", "kedaluwarsa"
+	case m.Type == domain.Adjustment && m.Amount < 0:
+		return "GYM_CREDIT_ADJUSTMENT", "dikurangi admin"
 	case m.Amount < 0:
 		return "GYM_CREDIT_USAGE", "terpakai"
 	}
 	return "GYM_CREDIT_USAGE_REVERSAL", "dikembalikan"
 }
 
-// publishLotJournals values each move at its lot's unit price and posts it,
-// keyed by the ledger entry. Moves of unpaid lots post nothing.
+// publishLotJournals values each move against its lot and posts it, keyed
+// by the ledger entry. Moves of unpaid lots post nothing.
 func (s *Service) publishLotJournals(ctx context.Context, q database.Querier, moves []lotMove, userID string, at time.Time) error {
 	ids := make([]string, 0, len(moves))
 	for _, m := range moves {
@@ -123,11 +131,48 @@ func (s *Service) publishLotJournals(ctx context.Context, q database.Querier, mo
 		event, label := lotMoveEvent(m)
 		if err := s.publishJournal(ctx, q, contracts.Journal{
 			EventCode: event, DocumentType: "gym_credit_entry", DocumentID: m.EntryID, CompanyID: v.CompanyID,
-			UserID: userID, EntryDate: localtime.DayKey(at, v.Zone), Amount: domain.UnitValue(v.TotalIdr, v.Credits, credits),
+			UserID: userID, EntryDate: localtime.DayKey(at, v.Zone),
+			Amount:      domain.SenToIdr(domain.MoveValueSen(v.ValueSen, v.Credits, m.UsedBefore, m.Amount)),
 			Description: fmt.Sprintf("%d kredit gym %s", credits, label),
 		}); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// lotClose is the entry that took the last unused credits of a lot at a
+// purchase refund, with the credits it took.
+type lotClose struct {
+	EntryID string
+	LotID   string
+	Credits int
+}
+
+// publishRefundResidual closes the books of a refunded lot: the deferred
+// revenue its unused credits held minus the whole rupiah paid back is a few
+// sen, posted as breakage when positive and as a usage reversal when the
+// refund paid more, so the lot nets to zero.
+func (s *Service) publishRefundResidual(ctx context.Context, q database.Querier, c lotClose, refundIdr float64, userID string) error {
+	if c.LotID == "" {
+		return nil
+	}
+	values, err := s.repo.LotValues(ctx, q, []string{c.LotID})
+	if err != nil {
+		return err
+	}
+	v, ok := values[c.LotID]
+	if !ok {
+		return nil
+	}
+	residual := domain.UnusedValueSen(v.ValueSen, v.Credits, v.Credits-c.Credits) - domain.LotValueSen(refundIdr)
+	event := "GYM_CREDIT_BREAKAGE"
+	if residual < 0 {
+		event, residual = "GYM_CREDIT_USAGE_REVERSAL", -residual
+	}
+	return s.publishJournal(ctx, q, contracts.Journal{
+		EventCode: event, DocumentType: "gym_credit_entry", DocumentID: c.EntryID, CompanyID: v.CompanyID,
+		UserID: userID, EntryDate: localtime.DayKey(s.clock(), v.Zone), Amount: domain.SenToIdr(residual),
+		Description: "Pembulatan refund paket gym",
+	})
 }

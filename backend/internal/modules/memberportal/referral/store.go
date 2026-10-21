@@ -8,8 +8,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"nuhabit/backend/internal/contracts/storedvalue"
 	"nuhabit/backend/internal/modules/memberportal/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/localtime"
+	"nuhabit/backend/internal/platform/outbox"
 )
 
 // SQL of the referral tables (crm.referral_*) and the reads of the gym
@@ -282,8 +285,13 @@ func arkCoinEnabled(ctx context.Context, q database.Querier) bool {
 }
 
 // creditArk adds a referral bonus to the member's ARK Coin wallet: a bonus
-// row (the wallet's default expiry applies) and the new balance.
-func creditArk(ctx context.Context, q database.Querier, customerID string, amount float64, referralID string) error {
+// row (the wallet's default expiry applies) and the new balance. The bonus
+// is a promotion expense against the ARK Coin liability, posted by
+// accounting from the WALLET_REFERRAL_BONUS mapping (wallet.bonus.granted,
+// keyed by the wallet row). Without a branch, the bonus books to the only
+// company, else to the gym rules' defaultCompanyId; with neither it is
+// skipped there.
+func creditArk(ctx context.Context, q database.Querier, customerID string, amount float64, referralID string, now time.Time) error {
 	var balance float64
 	if err := q.QueryRow(ctx, `SELECT COALESCE(ark_coin_balance, 0)::float8 FROM pos.pos_customers WHERE id = $1 FOR UPDATE`, customerID).Scan(&balance); err != nil {
 		return err
@@ -298,14 +306,27 @@ func creditArk(ctx context.Context, q database.Querier, customerID string, amoun
 		return err
 	}
 	after := balance + amount
-	if _, err := q.Exec(ctx, `
+	var bonusID string
+	if err := q.QueryRow(ctx, `
 INSERT INTO pos.pos_wallet_transactions (customer_id, type, amount, ark_coins, balance_before, balance_after, status, notes, metadata)
-VALUES ($1, 'bonus', $2, $3, $4, $5, 'completed', 'Bonus referral', $6::jsonb)`,
-		customerID, amount, amount/rate, balance, after, string(meta)); err != nil {
+VALUES ($1, 'bonus', $2, $3, $4, $5, 'completed', 'Bonus referral', $6::jsonb) RETURNING id::text`,
+		customerID, amount, amount/rate, balance, after, string(meta)).Scan(&bonusID); err != nil {
 		return err
 	}
-	_, err = q.Exec(ctx, `UPDATE pos.pos_customers SET ark_coin_balance = $2, updated_at = now() WHERE id = $1`, customerID, after)
-	return err
+	if _, err := q.Exec(ctx, `UPDATE pos.pos_customers SET ark_coin_balance = $2, updated_at = now() WHERE id = $1`, customerID, after); err != nil {
+		return err
+	}
+	var company *string
+	if err := q.QueryRow(ctx, `SELECT COALESCE((SELECT min(c.id::text)::uuid FROM configuration.companies c HAVING count(*) = 1),
+		(SELECT c.id FROM gym.business_rules r JOIN configuration.companies c ON c.id::text = r.rules->>'defaultCompanyId'
+		  WHERE r.branch_id IS NULL AND c.is_active))::text`).Scan(&company); err != nil && !database.IsNoRows(err) {
+		return err
+	}
+	bonus := storedvalue.WalletBonus{
+		BonusID: bonusID, CustomerID: customerID, CompanyID: company, EventCode: "WALLET_REFERRAL_BONUS",
+		EntryDate: localtime.DayKey(now, localtime.Jakarta), Amount: amount, Description: "Bonus ARK Coin referral " + referralID,
+	}
+	return outbox.Publish(ctx, q, storedvalue.TopicWalletBonus, bonus.EventCode+":"+bonusID, bonus)
 }
 
 /* ── Reads ──────────────────────────────────────────────────────────── */

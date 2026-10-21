@@ -43,6 +43,10 @@ func (s *Service) subscribe(bus *outbox.Bus) {
 		r, err := s.PostMemberDeposit(ctx, tx, in)
 		return []domain.PostResult{r}, err
 	}))
+	bus.Subscribe(storedvalue.TopicWalletBonus, "accounting.journal-wallet-bonus", handle(s, func(ctx context.Context, tx pgx.Tx, in storedvalue.WalletBonus) ([]domain.PostResult, error) {
+		r, err := s.PostWalletBonus(ctx, tx, in)
+		return []domain.PostResult{r}, err
+	}))
 	bus.Subscribe(procurement.TopicGrnPosted, "accounting.journal-grn", handle(s, func(ctx context.Context, tx pgx.Tx, in procurement.GrnPosted) ([]domain.PostResult, error) {
 		return s.PostGrn(ctx, tx, in)
 	}))

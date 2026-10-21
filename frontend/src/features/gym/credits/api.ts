@@ -71,6 +71,8 @@ export interface GymRules {
   allowMemberCreditTransfer: boolean;
   /** Batas kredit yang dikirim satu member per bulan WIB, staf dan member digabung (0 = tanpa batas). */
   maxTransferCreditsPerMonth: number;
+  /** Perusahaan pembukuan untuk pembelian tanpa cabang; "" = belum diatur. Hanya aturan global. */
+  defaultCompanyId: string;
 }
 
 /** credits: a batch of class credits; pass: unlimited bookings for validity_days. */
@@ -366,6 +368,8 @@ export interface RulesAdmin {
   defaults: GymRules;
   global: GymRules;
   branches: { id: string; name: string; override: Partial<GymRules> }[];
+  /** Pilihan untuk defaultCompanyId. */
+  companies: { id: string; name: string }[];
 }
 
 export const gymCreditsApi = {

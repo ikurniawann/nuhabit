@@ -326,12 +326,15 @@ func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purch
 			return nil, err
 		}
 	} else {
-		credits, err := s.takeBackUnusedCredits(ctx, tx, purchase, reason, actorID)
+		closing, err := s.takeBackUnusedCredits(ctx, tx, purchase, reason, actorID)
 		if err != nil {
 			return nil, err
 		}
-		refund = domain.PurchaseRefundIdr(purchase.TotalIdr, purchase.Credits, credits)
-		meta["refund_credits"] = credits
+		refund = domain.PurchaseRefundIdr(purchase.TotalIdr, purchase.Credits, closing.Credits)
+		meta["refund_credits"] = closing.Credits
+		if err := s.publishRefundResidual(ctx, tx, closing, refund, actorID); err != nil {
+			return nil, err
+		}
 		// Credits another member holds by transfer stay there; the note
 		// says so.
 		transferred, err := s.transferredFromPurchase(ctx, tx, purchase)
@@ -449,33 +452,33 @@ func (s *Service) unusedCredits(ctx context.Context, p *Purchase) (int, error) {
 }
 
 // takeBackUnusedCredits reverses the unused part of a credit purchase's
-// top-up and returns how many credits it took back.
-func (s *Service) takeBackUnusedCredits(ctx context.Context, tx database.Querier, p *Purchase, reason, actorID string) (int, error) {
+// top-up and returns the closing entry with the credits it took back.
+func (s *Service) takeBackUnusedCredits(ctx context.Context, tx database.Querier, p *Purchase, reason, actorID string) (lotClose, error) {
 	topUpID, err := s.repo.EntryIDByKey(ctx, tx, topUpKey(p.ID))
 	if err != nil || topUpID == "" {
-		return p.Credits, err
+		return lotClose{Credits: p.Credits}, err
 	}
 	topUp, err := s.repo.Entry(ctx, tx, topUpID)
 	if err != nil {
-		return 0, err
+		return lotClose{}, err
 	}
 	if err := s.repo.LockMemberCredits(ctx, tx, p.CustomerID); err != nil {
-		return 0, err
+		return lotClose{}, err
 	}
 	state, _, err := s.expireLapsedLots(ctx, tx, p.CustomerID, s.clock())
 	if err != nil {
-		return 0, err
+		return lotClose{}, err
 	}
 	unused := domain.RemainingIn(domain.LotRemainders(state.lots, state.entries), topUp.LotID)
 	if unused <= 0 {
-		return 0, fail(http.StatusConflict, "Semua kredit dari pembelian ini sudah terpakai atau kedaluwarsa, tidak ada yang bisa direfund")
+		return lotClose{}, fail(http.StatusConflict, "Semua kredit dari pembelian ini sudah terpakai atau kedaluwarsa, tidak ada yang bisa direfund")
 	}
-	_, err = s.repo.InsertEntry(ctx, tx, NewEntry{
+	id, err := s.repo.InsertEntry(ctx, tx, NewEntry{
 		CustomerID: p.CustomerID, Type: domain.Reversal, Amount: -unused, LotID: topUp.LotID,
 		SourceType: topUp.SourceType, SourceID: topUp.SourceID, ReversesEntryID: topUp.ID,
 		Note: strings.TrimSpace(reason), CreatedBy: actorID,
 	})
-	return unused, err
+	return lotClose{EntryID: id, LotID: topUp.LotID, Credits: unused}, err
 }
 
 // FrontDeskSale is a package sold at the front desk.

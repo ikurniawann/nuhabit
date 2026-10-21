@@ -303,7 +303,8 @@ func insertDetail(ctx context.Context, q database.Querier, runID, employeeID str
 
 func updateRunTotals(ctx context.Context, q database.Querier, runID string, count int, t domain.RunTotals, now time.Time) error {
 	_, err := q.Exec(ctx, `UPDATE hris.payroll_runs SET total_employees = $2, total_gross = $3, total_deductions = $4,
-		total_net = $5, total_bjtk_employee = $6, total_bjtk_employer = $7, total_pph21 = $8, updated_at = $9
+		total_net = $5, total_bjtk_employee = $6, total_bjtk_employer = $7, total_pph21 = $8, updated_at = $9,
+		needs_recalculation = false
 		WHERE id = $1`, runID, count, numParam(t.TotalGross), numParam(t.TotalDeductions), numParam(t.TotalNet),
 		numParam(t.TotalBjtkEmployee), numParam(t.TotalBjtkEmployer), numParam(t.TotalPph21), now)
 	return err

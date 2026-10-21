@@ -102,6 +102,11 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
           <p className="text-sm text-gray-500">
             {monthName(payrollRun.period_month)} {payrollRun.period_year} • {payrollRun.total_employees} karyawan
           </p>
+          {payrollRun.needs_recalculation ? (
+            <p className="mt-1 text-sm text-amber-700">
+              Perlu dihitung ulang: ada penambahan gaji (misalnya insentif coach) yang masuk setelah slip dihitung.
+            </p>
+          ) : null}
         </div>
         <Button onClick={() => void handleExportPayroll()} variant="outline" disabled={exporting}>
           <ArrowDownTrayIcon className="w-4 h-4 mr-2" />

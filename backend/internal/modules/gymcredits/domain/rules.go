@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"strings"
 )
 
@@ -78,6 +79,10 @@ type Rules struct {
 	// MaxTransferCreditsPerMonth caps the credits one member sends in a Jakarta
 	// calendar month, staff and member transfers together. 0 = no cap.
 	MaxTransferCreditsPerMonth int `json:"maxTransferCreditsPerMonth"`
+	// DefaultCompanyID books a purchase without a branch (member app) whose
+	// package has no branch either, when there is more than one company.
+	// "" = none; such a purchase then posts no journal. Global rules only.
+	DefaultCompanyID string `json:"defaultCompanyId"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
@@ -117,6 +122,7 @@ type RulesPatch struct {
 	CorrectionWindowDays       *int    `json:"correctionWindowDays,omitempty"`
 	AllowMemberCreditTransfer  *bool   `json:"allowMemberCreditTransfer,omitempty"`
 	MaxTransferCreditsPerMonth *int    `json:"maxTransferCreditsPerMonth,omitempty"`
+	DefaultCompanyID           *string `json:"defaultCompanyId,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -165,7 +171,12 @@ const (
 	kindInt ruleKind = iota
 	kindPolicy
 	kindBool
+	// kindUUID is a uuid or "" (none); such keys belong to the global rules only.
+	kindUUID
 )
+
+// uuidPattern is the canonical 8-4-4-4-12 hex form, any case.
+var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 // ruleSpec is one key of the rules shape, with the bounds of the reference
 // schema's CHECK constraints and the Indonesian labels of rules.ts.
@@ -189,6 +200,10 @@ func policyRule(key string, f func(*RulesPatch) **string) ruleSpec {
 
 func boolRule(key, label string, f func(*RulesPatch) **bool) ruleSpec {
 	return ruleSpec{key: key, kind: kindBool, label: label, boolFld: f}
+}
+
+func uuidRule(key, label string, f func(*RulesPatch) **string) ruleSpec {
+	return ruleSpec{key: key, kind: kindUUID, label: label, strField: f}
 }
 
 // ruleSpecs is in GYM_RULE_KEYS order.
@@ -228,6 +243,7 @@ var ruleSpecs = []ruleSpec{
 	intRule("correctionWindowDays", 0, 90, "Batas koreksi", func(p *RulesPatch) **int { return &p.CorrectionWindowDays }),
 	boolRule("allowMemberCreditTransfer", "Transfer kredit oleh member", func(p *RulesPatch) **bool { return &p.AllowMemberCreditTransfer }),
 	intRule("maxTransferCreditsPerMonth", 0, 1000, "Batas transfer kredit per bulan", func(p *RulesPatch) **int { return &p.MaxTransferCreditsPerMonth }),
+	uuidRule("defaultCompanyId", "Perusahaan default", func(p *RulesPatch) **string { return &p.DefaultCompanyID }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -272,6 +288,12 @@ func (s ruleSpec) check(v any, p *RulesPatch) string {
 			return s.label + " harus ya/tidak"
 		}
 		*s.boolFld(p) = &b
+	case kindUUID:
+		str, ok := v.(string)
+		if !ok || (str != "" && !uuidPattern.MatchString(str)) {
+			return s.label + " harus id perusahaan atau kosong"
+		}
+		*s.strField(p) = &str
 	}
 	return ""
 }
@@ -303,6 +325,9 @@ func validateRules(obj []KV, partial bool) (RulesPatch, string) {
 		v, present := lookup(obj, s.key)
 		if !present && partial {
 			continue
+		}
+		if present && partial && s.kind == kindUUID {
+			return RulesPatch{}, s.key + ": " + s.label + " hanya berlaku di aturan global"
 		}
 		if msg := s.check(v, &p); msg != "" {
 			return RulesPatch{}, s.key + ": " + msg
@@ -413,6 +438,9 @@ func (p RulesPatch) Over(base Rules) Rules {
 	setInt(&base.CorrectionWindowDays, p.CorrectionWindowDays)
 	setBool(&base.AllowMemberCreditTransfer, p.AllowMemberCreditTransfer)
 	setInt(&base.MaxTransferCreditsPerMonth, p.MaxTransferCreditsPerMonth)
+	if p.DefaultCompanyID != nil {
+		base.DefaultCompanyID = *p.DefaultCompanyID
+	}
 	return base
 }
 

@@ -5,17 +5,7 @@ import (
 	"time"
 )
 
-// Revenue rules for the gym package journals: credits are valued at the
-// unit price of the lot they come from, pass revenue is released by day.
-
-// UnitValue is the rupiah value of credits of a lot bought for totalIdr
-// with lotCredits credits, to the sen.
-func UnitValue(totalIdr float64, lotCredits, credits int) float64 {
-	if lotCredits <= 0 || totalIdr <= 0 {
-		return 0
-	}
-	return round2(totalIdr * float64(credits) / float64(lotCredits))
-}
+// Pass revenue is released by day; credits are valued in valuation.go.
 
 // PassRevenueDue is the pass revenue recognised through calendar day
 // through: the price spread evenly over the days from startDay to endDay,
