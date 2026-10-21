@@ -130,7 +130,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
   WA inbox dengan satu klik.
 - [x] T-067-B2 **(Tahap 2)** Alur penyelesaian: diterima → ditangani → selesai → dikonfirmasi member; PIC, batas waktu
   respons & selesai per kategori, catatan internal, riwayat status.
-- [ ] T-067-B3 **(Tahap 2)** Eskalasi aktif: saat batas waktu terlewat, kirim WA ke Head Coach / Ops (pakai jalur
+- [x] T-067-B3 **(Tahap 2)** Eskalasi aktif: saat batas waktu terlewat, kirim WA ke Head Coach / Ops (pakai jalur
   notifikasi owner yang ada); juga perbaiki SLA watcher WA inbox agar mengirim alert, bukan hanya menandai.
 - [ ] T-067-B4 **(Tahap 3)** Form "Send feedback / Report an issue" di Member App (bahasa Inggris), opsional terkait
   sesi yang pernah diikuti → masuk sebagai tiket.
@@ -449,4 +449,32 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
       otomatis → Mulai tangani → catatan internal → Tandai selesai (dengan catatan) → Dikonfirmasi member; filter
       "Ditugaskan ke saya" menampilkannya; tanpa error dari fitur baru.
     - `tsc` tanpa error baru (508); eslint bersih.
+  - Belum di-deploy.
+- 2026-10-22 — **T-067-B3 selesai.**
+  - **Eskalasi tiket keluhan** (`escalateOverdueComplaints`, dipanggil watcher job tiap 10 menit):
+    - tiket terbuka yang lewat batas respons (belum ditangani) atau batas selesai dieskalasi **sekali per jenis**
+      (`respond_escalated_at` / `resolve_escalated_at`, klaim atomik); dua-duanya terlewat → satu pesan jenis "selesai";
+    - WA lewat jalur Notifikasi WA owner (jenis baru **"Tiket keluhan lewat batas waktu"** / `eskalasiKomplain`,
+      default aktif). Penerimanya nomor Head Coach/Ops yang diisi di Settings → Notifikasi WA;
+    - WA langsung ke PIC tiket (nomor karyawan);
+    - dicatat sebagai event `escalated` di riwayat, termasuk bila WA tidak terkirim;
+    - di luar 08.00–21.00 WIB hanya tiket cedera / prioritas tinggi-mendesak yang langsung dikirim, sisanya ditahan
+      sampai pagi.
+  - **SLA watcher WA inbox** (EPIC-012) kini juga mengabari: jenis baru **"Chat WA belum dibalas melewati SLA"**
+    (`slaInbox`), **satu pesan ringkasan per pengecekan** (maks 10 baris) ke penerima Notifikasi WA owner. Tetap tidak
+    pernah mengirim apa pun ke customer, supaya aktivitas nomor bisnis rendah.
+  - Refaktor: helper `sendStaffWa` (`src/lib/studio/staff-wa.ts`) dipakai bersama coach-cover & eskalasi. Timeout
+    kirim kini mempertahankan klaim (at-most-once), selaras dengan pengirim owner.
+  - Kolom eskalasi ditambahkan ke migrasi B1 (belum pernah di-deploy).
+  - UI: tanda "Dieskalasi" di daftar & detail; riwayat menampilkan eskalasi; panel pengaturan menautkan Settings →
+    Notifikasi WA.
+  - Bukti:
+    - 4 unit test eskalasi + test pesan SLA;
+    - 4 test integrasi eskalasi (WA di-mock: sekali ke owner + PIC, tidak diulang, sudah ditangani → tak dieskalasi,
+      dua-duanya terlewat → satu pesan, jam tenang);
+    - 1 test integrasi SLA watcher; semua lulus 3× di `nuhabit_test`;
+    - cek visual tiket dieskalasi & daftar jenis di Notifikasi WA, tanpa error;
+    - `tsc` tanpa error baru (508); eslint bersih.
+  - Catatan: `src/lib/dataroom/watermark.test.ts` gagal sejak rebranding NüHabit (`20eaaebb`, 2 Okt) — tidak terkait
+    epic ini.
   - Belum di-deploy.

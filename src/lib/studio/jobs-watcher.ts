@@ -2,13 +2,15 @@
  * EPIC-058 — pengawas job studio (pola watcher lain di instrumentation.ts).
  * Tiap 10 menit per venue: tutup hari bila sudah lewat jam tutup dan belum
  * jalan hari ini (server mati di jam itu → dikejar tick berikutnya), lalu
- * pengingat WhatsApp (bila dinyalakan, hanya 08.00–21.00 WIB).
+ * pengingat WhatsApp (bila dinyalakan, hanya 08.00–21.00 WIB), kabar perubahan
+ * jadwal yang tertahan, dan eskalasi tiket keluhan (EPIC-067).
  * STUDIO_JOBS_DISABLED=1 mematikan watcher di proses ini.
  */
 
 import { dailyCloseDue } from "./jobs";
 import { lastAutoRunDate, loadJobSettings, runDailyClose, runReminders, studioVenues } from "./jobs-server";
 import { flushChangeNotices } from "./session-change-server";
+import { escalateOverdueComplaints } from "./complaints-server";
 
 const CHECK_INTERVAL_MS = 10 * 60_000;
 let started = false;
@@ -29,6 +31,9 @@ export async function studioJobsTick(now: Date = new Date()): Promise<void> {
     // Kabar perubahan jadwal yang ditahan jam tenang (EPIC-067 T-067-A6) — tidak ikut saklar pengingat.
     const changes = await flushChangeNotices(now);
     if (changes.sent || changes.failed) console.log("[studio-jobs] kabar perubahan jadwal:", JSON.stringify(changes));
+    // Eskalasi tiket keluhan yang lewat batas waktu (EPIC-067 T-067-B3).
+    const esc = await escalateOverdueComplaints(now);
+    if (esc.escalated) console.log("[studio-jobs] eskalasi keluhan:", JSON.stringify(esc));
   } finally {
     running = false;
   }

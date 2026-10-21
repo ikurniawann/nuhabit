@@ -1,7 +1,6 @@
 import type { PoolClient } from "pg";
 import { ApiError } from "@/lib/api/auth";
-import { getPool, query, queryOne } from "@/lib/db";
-import { normalizeWaPhone } from "@/lib/pos/receipt-wa";
+import { query, queryOne } from "@/lib/db";
 import { releaseSessionBookings } from "@/lib/studio/booking-server";
 import {
   approverNewLeaveMessage,
@@ -19,7 +18,7 @@ import {
 } from "@/lib/studio/coach-cover";
 import { assertCanDecideCoachLeave, getCoachLeaveApprovers, listCoachSessionsInRange, loadCoachLeaveSettings } from "@/lib/studio/coach-leave-server";
 import { flushChangeNoticesSoon, queueSessionChangeNotices } from "@/lib/studio/session-change-server";
-import { sendWhatsAppText } from "@/lib/whatsapp";
+import { sendStaffWa } from "@/lib/studio/staff-wa";
 import { LEAVE_TYPE_LABELS, type LeaveType } from "@/types/hris";
 
 /**
@@ -433,21 +432,6 @@ export async function finalizeAppliedCovers(ctx: CoachLeaveContext, actorUserId:
 
 // ── WA staf ────────────────────────────────────────────────────────────────
 
-async function sendStaffWa(dedupKey: string, phone: string | null, message: string) {
-  const target = normalizeWaPhone(phone);
-  if (!target) return;
-  const claim = await getPool().query<{ id: string }>(
-    `INSERT INTO configuration.wa_notif_log (notif_type, dedup_key, message, recipients)
-     VALUES ('coach_cover', $1, $2, $3::jsonb) ON CONFLICT (notif_type, dedup_key) DO NOTHING RETURNING id`,
-    [dedupKey.slice(0, 160), message, JSON.stringify([target])]
-  );
-  if (claim.rows.length === 0) return;
-  const result = await sendWhatsAppText({ target, message });
-  if (!result.success) {
-    await getPool().query(`DELETE FROM configuration.wa_notif_log WHERE id = $1`, [claim.rows[0].id]).catch(() => {});
-  }
-}
-
 /** Fire-and-forget: WA ke coach (nomor profil coach, fallback nomor karyawan). */
 async function notifyCoach(coachId: string, dedupKey: string, build: (name: string) => string) {
   try {
@@ -456,7 +440,7 @@ async function notifyCoach(coachId: string, dedupKey: string, build: (name: stri
        FROM studio.coaches c LEFT JOIN hris.employees e ON e.id = c.employee_id WHERE c.id = $1`,
       [coachId]
     );
-    if (coach) await sendStaffWa(dedupKey, coach.phone, build(coach.name));
+    if (coach) await sendStaffWa("coach_cover", dedupKey, coach.phone, build(coach.name));
   } catch (err) {
     console.error("[coach-cover] WA coach gagal:", err);
   }
@@ -474,6 +458,7 @@ export async function onCoachLeaveSubmitted(leaveId: string): Promise<void> {
     for (const a of resolved.approvers) {
       const emp = await queryOne<{ phone: string | null }>(`SELECT phone FROM hris.employees WHERE user_id = $1 LIMIT 1`, [a.userId]);
       await sendStaffWa(
+        "coach_cover",
         `coach-leave:${leaveId}:${a.userId}`,
         emp?.phone ?? null,
         approverNewLeaveMessage({

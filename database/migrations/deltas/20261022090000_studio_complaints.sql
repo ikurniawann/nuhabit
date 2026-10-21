@@ -32,6 +32,9 @@ CREATE TABLE IF NOT EXISTS studio.complaints (
   first_response_at timestamptz,
   resolved_at timestamptz,
   confirmed_at timestamptz,
+  -- Eskalasi WA (T-067-B3): masing-masing sekali per tiket.
+  respond_escalated_at timestamptz,
+  resolve_escalated_at timestamptz,
   created_by uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()

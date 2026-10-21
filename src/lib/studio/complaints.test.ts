@@ -6,8 +6,11 @@ import {
   complaintSlaState,
   complaintCode,
   complaintDeadlines,
+  complaintEscalationMessage,
   complaintTitle,
   defaultComplaintPriority,
+  dueEscalations,
+  escalationSendableNow,
   isComplaintOpen,
   nextStatuses,
   normalizeSlaRules,
@@ -91,5 +94,50 @@ describe("alur status (B2)", () => {
     expect(r.coach).toEqual({ respond_hours: 48, resolve_hours: 48 });
     expect(r.other).toEqual({ respond_hours: 24, resolve_hours: 72 });
     expect(normalizeSlaRules(null).billing).toEqual({ respond_hours: 24, resolve_hours: 72 });
+  });
+});
+
+describe("eskalasi (B3)", () => {
+  const now = new Date("2026-10-22T10:00:00Z");
+  const base = {
+    status: "received" as const,
+    respond_by: "2026-10-22T09:00:00Z",
+    resolve_by: "2026-10-23T09:00:00Z",
+    first_response_at: null,
+    respond_escalated_at: null,
+    resolve_escalated_at: null,
+  };
+
+  it("respons lewat & belum ditangani → eskalasi respons sekali", () => {
+    expect(dueEscalations(base, now)).toEqual(["respond"]);
+    expect(dueEscalations({ ...base, respond_escalated_at: "x" }, now)).toEqual([]);
+    expect(dueEscalations({ ...base, first_response_at: "2026-10-22T09:30:00Z" }, now)).toEqual([]);
+  });
+
+  it("selesai lewat → eskalasi selesai; tiket tertutup tidak dieskalasi", () => {
+    const late = { ...base, status: "in_progress" as const, first_response_at: "x", resolve_by: "2026-10-22T09:30:00Z" };
+    expect(dueEscalations(late, now)).toEqual(["resolve"]);
+    expect(dueEscalations({ ...base, resolve_by: "2026-10-22T09:30:00Z" }, now)).toEqual(["respond", "resolve"]);
+    expect(dueEscalations({ ...late, status: "resolved" }, now)).toEqual([]);
+  });
+
+  it("jam tenang: hanya cedera / prioritas tinggi yang dikirim malam", () => {
+    const night = new Date("2026-10-22T16:00:00Z"); // 23.00 WIB
+    expect(escalationSendableNow(night, { category: "facility", priority: "normal" })).toBe(false);
+    expect(escalationSendableNow(night, { category: "injury", priority: "normal" })).toBe(true);
+    expect(escalationSendableNow(night, { category: "billing", priority: "urgent" })).toBe(true);
+    expect(escalationSendableNow(now, { category: "facility", priority: "low" })).toBe(true); // 17.00 WIB
+  });
+
+  it("pesan eskalasi memuat kode, jenis, PIC, dan tautan", () => {
+    const msg = complaintEscalationMessage({
+      kind: "respond", code: "KEL-2610-0007", title: "AC ruang 2 mati", category: "facility", priority: "high",
+      reporter: "Maya", coach: null, assignee: null, deadline: "2026-10-22T09:00:00Z", url: "https://x/dashboard/studio/complaints",
+    });
+    expect(msg).toContain("Keluhan belum ditangani");
+    expect(msg).toContain("KEL-2610-0007 · Fasilitas · Tinggi");
+    expect(msg).toContain("PIC: belum ada");
+    expect(msg).toContain("https://x/dashboard/studio/complaints");
+    expect(msg).not.toContain("Coach:");
   });
 });

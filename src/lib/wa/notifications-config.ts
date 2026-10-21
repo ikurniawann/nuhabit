@@ -15,7 +15,9 @@ export type WaNotifType =
   | "omzetAnjlok"
   | "approvalMenginap"
   | "kontrakHabis"
-  | "prMendesak";
+  | "prMendesak"
+  | "eskalasiKomplain"
+  | "slaInbox";
 
 export interface WaNotifTypeMeta {
   key: WaNotifType;
@@ -45,6 +47,21 @@ export const WA_NOTIF_TYPES: WaNotifTypeMeta[] = [
     key: "komplain",
     label: "Komplain pelanggan masuk",
     description: "Komplain baru dari WhatsApp Customer Service.",
+    tier: "kritis",
+    defaultOn: true,
+  },
+  {
+    key: "eskalasiKomplain",
+    label: "Tiket keluhan lewat batas waktu",
+    description:
+      "Tiket Keluhan Pelanggan yang belum ditangani atau belum selesai melewati batas waktunya — eskalasi ke Head Coach/Ops (EPIC-067).",
+    tier: "kritis",
+    defaultOn: true,
+  },
+  {
+    key: "slaInbox",
+    label: "Chat WA belum dibalas melewati SLA",
+    description: "Ringkasan percakapan Inbox WA yang menunggu balasan lebih lama dari batas SLA CS — satu pesan per pengecekan.",
     tier: "kritis",
     defaultOn: true,
   },

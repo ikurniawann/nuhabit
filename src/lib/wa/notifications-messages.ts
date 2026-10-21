@@ -137,6 +137,23 @@ export function buildKomplainMessage(input: {
     .join("\n");
 }
 
+export function buildSlaInboxMessage(items: { name: string | null; phone: string; waitedMinutes: number }[], slaMinutes: number): string {
+  const daftar = items
+    .slice(0, 10)
+    .map((i) => `• ${i.name || i.phone} — menunggu ${i.waitedMinutes} menit`)
+    .join("\n");
+  return [
+    `⏰ *Chat WA belum dibalas > ${slaMinutes} menit*`,
+    ``,
+    daftar,
+    items.length > 10 ? `…dan ${items.length - 10} lainnya` : null,
+    ``,
+    `Buka CRM → Inbox WA untuk membalas.`,
+  ]
+    .filter((l): l is string => l !== null)
+    .join("\n");
+}
+
 export function buildReviewRendahMessage(input: {
   reviewerName: string | null;
   starRating: number;

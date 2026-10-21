@@ -10,6 +10,7 @@ import {
   type ComplaintCategory,
   complaintCode,
   complaintDeadlines,
+  complaintEscalationMessage,
   type ComplaintPriority,
   type ComplaintSettings,
   type ComplaintSlaRules,
@@ -17,11 +18,16 @@ import {
   type ComplaintStatus,
   complaintTitle,
   defaultComplaintPriority,
+  dueEscalations,
+  type EscalationKind,
+  escalationSendableNow,
   isComplaintOpen,
   normalizeSlaRules,
   transitionNeedsNote,
 } from "@/lib/studio/complaints";
 import { listBackupCandidates as listBackofficeUsers } from "@/lib/studio/coach-leave-server";
+import { sendStaffWa } from "@/lib/studio/staff-wa";
+import { sendOwnerNotification } from "@/lib/wa/notifications-sender";
 import { normalizeMemberPhone, VENUE_TODAY_SQL } from "@/lib/studio/pass-server";
 
 /** Tiket keluhan pelanggan (EPIC-067 T-067-B1/B2) — query, pembuatan, dan alur penyelesaian. */
@@ -114,6 +120,8 @@ export interface ComplaintRow {
   resolve_by: string | null;
   first_response_at: string | null;
   resolved_at: string | null;
+  respond_escalated_at: string | null;
+  resolve_escalated_at: string | null;
   created_by_name: string | null;
   created_at: string;
 }
@@ -126,6 +134,7 @@ const COMPLAINT_SELECT = `
          CASE WHEN s.id IS NULL THEN NULL ELSE p.name || ' · ' || to_char(s.session_date, 'DD/MM') || ' ' || to_char(s.start_time, 'HH24:MI') END AS session_label,
          k.wa_conversation_id, k.assignee_user_id, au.full_name AS assignee_name,
          k.respond_by, k.resolve_by, k.first_response_at, k.resolved_at,
+         k.respond_escalated_at, k.resolve_escalated_at,
          cu.full_name AS created_by_name, k.created_at
   FROM studio.complaints k
   LEFT JOIN pos.pos_customers c ON c.id = k.customer_id
@@ -398,4 +407,92 @@ export async function addComplaintNote(branchId: string, id: string, actorId: st
   if (!ok) throw ApiError.notFound("Tiket tidak ditemukan");
   await query(`INSERT INTO studio.complaint_events (complaint_id, kind, body, actor_user_id) VALUES ($1, 'note', $2, $3)`, [id, body.trim(), actorId]);
   await query(`UPDATE studio.complaints SET updated_at = now() WHERE id = $1`, [id]);
+}
+
+// ── Eskalasi (B3) ──────────────────────────────────────────────────────────
+
+const complaintsUrl = () => `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/dashboard/studio/complaints`;
+
+export interface EscalationResult {
+  escalated: number;
+  held: number;
+}
+
+/**
+ * Dipanggil watcher job tiap tick. Tiket terbuka yang lewat batas respons
+ * (belum ditangani) atau batas selesai dieskalasi SEKALI per jenis:
+ * WA ke penerima Notifikasi WA owner (Head Coach/Ops, jenis "eskalasiKomplain")
+ * dan ke PIC tiket bila ada nomornya, lalu dicatat di riwayat. Di luar
+ * 08.00–21.00 hanya tiket cedera / prioritas tinggi yang langsung dikirim.
+ */
+export async function escalateOverdueComplaints(now = new Date()): Promise<EscalationResult> {
+  const rows = await query<{
+    id: string; code: string; title: string; category: ComplaintCategory; priority: ComplaintPriority; status: ComplaintStatus;
+    respond_by: string | null; resolve_by: string | null; first_response_at: string | null;
+    respond_escalated_at: string | null; resolve_escalated_at: string | null;
+    reporter: string | null; coach: string | null; assignee_user_id: string | null; assignee: string | null; assignee_phone: string | null;
+  }>(
+    `SELECT k.id, k.code, k.title, k.category, k.priority, k.status, k.respond_by, k.resolve_by, k.first_response_at,
+            k.respond_escalated_at, k.resolve_escalated_at,
+            COALESCE(c.name, k.contact_name) AS reporter, COALESCE(co.display_name, co.full_name) AS coach,
+            k.assignee_user_id, au.full_name AS assignee,
+            (SELECT e.phone FROM hris.employees e WHERE e.user_id = k.assignee_user_id LIMIT 1) AS assignee_phone
+     FROM studio.complaints k
+     LEFT JOIN pos.pos_customers c ON c.id = k.customer_id
+     LEFT JOIN studio.coaches co ON co.id = k.coach_id
+     LEFT JOIN configuration.users au ON au.id = k.assignee_user_id
+     WHERE k.status IN ('received','in_progress')
+       AND ((k.first_response_at IS NULL AND k.respond_escalated_at IS NULL AND k.respond_by < $1)
+         OR (k.resolve_escalated_at IS NULL AND k.resolve_by < $1))
+     ORDER BY k.created_at
+     LIMIT 100`,
+    [now.toISOString()]
+  );
+  const out: EscalationResult = { escalated: 0, held: 0 };
+  for (const t of rows) {
+    const due = dueEscalations(t, now);
+    if (due.length === 0) continue;
+    if (!escalationSendableNow(now, t)) {
+      out.held += 1;
+      continue;
+    }
+    // Tiket yang dua-duanya terlewat cukup satu pesan: pakai yang paling berat (selesai).
+    const kind: EscalationKind = due.includes("resolve") ? "resolve" : "respond";
+    // Klaim atomik: hanya satu proses yang menandai & mengirim. Eskalasi selesai
+    // sekaligus menutup eskalasi respons yang tertunda (tidak dikirim dua kali).
+    const claimed =
+      kind === "respond"
+        ? await query(`UPDATE studio.complaints SET respond_escalated_at = now() WHERE id = $1 AND respond_escalated_at IS NULL RETURNING id`, [t.id])
+        : await query(
+            `UPDATE studio.complaints SET resolve_escalated_at = now(),
+               respond_escalated_at = CASE WHEN $2::boolean THEN COALESCE(respond_escalated_at, now()) ELSE respond_escalated_at END
+             WHERE id = $1 AND resolve_escalated_at IS NULL RETURNING id`,
+            [t.id, due.includes("respond")]
+          );
+    if (claimed.length === 0) continue;
+    const message = complaintEscalationMessage({
+      kind,
+      code: t.code,
+      title: t.title,
+      category: t.category,
+      priority: t.priority,
+      reporter: t.reporter,
+      coach: t.coach,
+      assignee: t.assignee,
+      deadline: (kind === "respond" ? t.respond_by : t.resolve_by)!,
+      url: complaintsUrl(),
+    });
+    const owner = await sendOwnerNotification({ type: "eskalasiKomplain", dedupKey: `complaint:${t.id}:${kind}`, message }).catch(() => ({ sent: false as const, reason: "gateway-gagal" as const }));
+    const toPic = t.assignee_user_id ? await sendStaffWa("complaint_escalation", `complaint:${t.id}:${kind}:pic`, t.assignee_phone, message).catch(() => false) : false;
+    const targets = [owner.sent ? `penerima notifikasi (${owner.recipients})` : null, toPic ? `PIC ${t.assignee}` : null].filter(Boolean);
+    await query(
+      `INSERT INTO studio.complaint_events (complaint_id, kind, body) VALUES ($1, 'escalated', $2)`,
+      [
+        t.id,
+        `${kind === "respond" ? "Lewat batas respons" : "Lewat batas selesai"} — ${targets.length ? `WA ke ${targets.join(" & ")}` : "WA tidak terkirim (penerima/WA Gateway belum diatur)"}`,
+      ]
+    );
+    out.escalated += 1;
+  }
+  return out;
 }

@@ -7,6 +7,7 @@ import {
   buildKontrakHabisMessage,
   buildOmzetAnjlokMessage,
   buildReviewRendahMessage,
+  buildSlaInboxMessage,
   buildStokHabisMessage,
   buildVoidBesarMessage,
   digestDedupKey,
@@ -294,5 +295,16 @@ describe("tanggal pesan WA = tanggal WIB, apa pun zona waktu server", () => {
   it("judul Ringkasan Harian 2026-10-01 → Kamis, 1 Oktober 2026", () => {
     const msg = buildDigestMessage(overviewKosong, "2026-10-01");
     expect(msg).toContain("Ringkasan Harian — Kamis, 1 Oktober 2026");
+  });
+});
+
+describe("buildSlaInboxMessage (EPIC-067 B3)", () => {
+  it("meringkas percakapan, maksimal 10 baris", () => {
+    const items = Array.from({ length: 12 }, (_, i) => ({ name: i === 0 ? "Maya" : null, phone: `6281${i}`, waitedMinutes: 20 + i }));
+    const msg = buildSlaInboxMessage(items, 15);
+    expect(msg).toContain("belum dibalas > 15 menit");
+    expect(msg).toContain("• Maya — menunggu 20 menit");
+    expect(msg).toContain("…dan 2 lainnya");
+    expect(msg.split("\n").filter((l) => l.startsWith("•"))).toHaveLength(10);
   });
 });

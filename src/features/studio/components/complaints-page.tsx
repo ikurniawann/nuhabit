@@ -52,6 +52,8 @@ interface ComplaintItem {
   respond_by: string | null;
   resolve_by: string | null;
   first_response_at: string | null;
+  respond_escalated_at: string | null;
+  resolve_escalated_at: string | null;
   assignee_user_id: string | null;
   assignee_name: string | null;
   created_by_name: string | null;
@@ -200,6 +202,7 @@ export function StudioComplaintsPage() {
                           <Pill tone={PRIORITY_TONE[k.priority]}>{PRIORITY_LABELS[k.priority]}</Pill>
                           <Pill>{COMPLAINT_CATEGORY_LABEL[k.category]}</Pill>
                           {sla !== "ok" && <Pill tone="danger">{SLA_BADGE[sla]}</Pill>}
+                          {(k.respond_escalated_at || k.resolve_escalated_at) && sla !== "ok" && <Pill tone="danger">Dieskalasi</Pill>}
                         </div>
                         <p className="font-medium text-foreground">{k.title}</p>
                         <p className="text-xs text-muted-foreground">
@@ -256,6 +259,11 @@ function ComplaintDetailPanel({ id, rev, staff, onChanged }: { id: string | null
         <Pill tone={STATUS_TONE[d.status]}>{COMPLAINT_STATUS_LABEL[d.status]}</Pill>
         <Pill tone={PRIORITY_TONE[d.priority]}>{PRIORITY_LABELS[d.priority]}</Pill>
         <Pill>{COMPLAINT_CATEGORY_LABEL[d.category]}</Pill>
+        {d.resolve_escalated_at ? (
+          <Pill tone="danger">Dieskalasi: lewat batas selesai</Pill>
+        ) : d.respond_escalated_at ? (
+          <Pill tone="danger">Dieskalasi: lewat batas respons</Pill>
+        ) : null}
       </div>
       {d.description && <p className="mt-3 whitespace-pre-wrap text-sm text-foreground">{d.description}</p>}
       <dl className="mt-4 grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1.5 text-sm">
@@ -288,11 +296,13 @@ function ComplaintDetailPanel({ id, rev, staff, onChanged }: { id: string | null
                     : COMPLAINT_STATUS_LABEL[e.to_status as ComplaintStatus]
                   : e.kind === "note"
                     ? "Catatan"
-                    : (e.body ?? e.kind)}
+                    : e.kind === "escalated"
+                      ? "Eskalasi"
+                      : (e.body ?? e.kind)}
             </span>
             {" · "}
             {e.actor_name ?? "Sistem"} · {waktu(e.created_at)}
-            {(e.kind === "note" || e.kind === "status") && e.body && (
+            {(e.kind === "note" || e.kind === "status" || e.kind === "escalated") && e.body && (
               <span className="mt-0.5 block whitespace-pre-wrap rounded-md bg-secondary/50 px-2 py-1 text-foreground">{e.body}</span>
             )}
           </li>
@@ -438,6 +448,13 @@ function ComplaintSettingsPanel({ staff, onSaved }: { staff: Staff[]; onSaved: (
     <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
       <p className="text-[13px] font-semibold text-foreground">Batas waktu & PIC default per kategori</p>
       <p className="mt-0.5 text-sm text-muted-foreground">Berlaku untuk tiket baru; tiket lama tetap memakai batas waktu saat dibuat.</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Lewat batas waktu → WA eskalasi ke PIC tiket dan ke penerima di{" "}
+        <a href="/dashboard/settings/wa-notifications" className="font-semibold text-foreground underline underline-offset-4">
+          Notifikasi WA
+        </a>{" "}
+        (jenis &ldquo;Tiket keluhan lewat batas waktu&rdquo;) — isi nomor Head Coach / Ops di sana. Di luar 08.00–21.00 hanya tiket cedera atau prioritas tinggi yang langsung dikirim.
+      </p>
       <div className="mt-3 overflow-x-auto">
         <table className="w-full min-w-[520px] text-sm">
           <thead>
