@@ -100,7 +100,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
 - [x] T-067-A9 **(Tahap 1)** Role **Program Director**: role IAM yang bisa di-assign ke user, dengan hak menyetujui cuti
   coach, menunjuk pengganti, membatalkan kelas, mengatur blackout, dan melihat antrean "butuh pengganti". Pengaturan
   approver cadangan. Komisi tidak berubah: peran Ops Director 0% di EPIC-056 tetap terpisah dari role ini.
-- [ ] T-067-A1 **(Tahap 1)** Aturan minimal pemberitahuan H-N per jenis cuti + daftar jenis yang dikecualikan; flag
+- [x] T-067-A1 **(Tahap 1)** Aturan minimal pemberitahuan H-N per jenis cuti + daftar jenis yang dikecualikan; flag
   `is_short_notice`; konfigurasi di pengaturan HRIS/studio; validasi di API cuti (ESS & Coach Portal). Tes logika murni.
 - [ ] T-067-A3 **(Tahap 1)** Pengajuan cuti dari Coach Portal: pilih tanggal → tampil daftar kelas & sesi Personal
   Training yang terdampak → kirim. Status pengajuan terlihat di Coach Portal.
@@ -219,3 +219,33 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
       tidak valid 400, menu komisi 403, halaman 200, tanpa login 401/redirect.
     - `tsc` tanpa error baru (508 error lama sebelum/sesudah); eslint bersih untuk file yang diubah.
     - Belum dicek visual di browser dan belum di-deploy ke nuhabitdev.
+- 2026-10-21 — **T-067-A1 selesai.**
+  - Aturan H-N per jenis cuti di `studio.settings` key `leave_notice_rules` (per venue coach), diatur di halaman Cuti &
+    Pengganti Coach.
+    - Default: tahunan & tanpa upah H-7, menikah H-14, melahirkan & haji/umrah H-30.
+    - Sakit, darurat, haid, cuti ayah, duka: H-1 dan boleh mendadak.
+  - Logika murni `evaluateLeaveNotice` / `normalizeNoticeRules` (`src/lib/studio/coach-leave.ts`), dihitung dari
+    tanggal pengajuan WIB.
+  - Ditegakkan di `POST /api/hris/leaves`, jalur yang dipakai ESS dan nanti Coach Portal (T-067-A3):
+    - **Hanya untuk karyawan yang terhubung ke coach aktif.** Staf non-coach tidak terkena aturan.
+    - Di bawah H-N untuk jenis yang tidak boleh mendadak → 400 `LEAVE_NOTICE_TOO_SHORT` dengan tanggal paling cepat.
+    - Jenis yang boleh mendadak → diterima dengan `is_short_notice`.
+    - **HR yang mencatat untuk coach tidak ditolak, tetapi tetap ditandai mendadak.**
+  - Migrasi `20261021100000_hris_leave_short_notice.sql`:
+    - kolom `hris.leaves.is_short_notice` dan `notice_days` (dasar KPI T-067-A8);
+    - menambah enum `leave_type` `marriage` & `bereavement`. Form ESS sudah menawarkan "Menikah"/"Duka", tetapi
+      pengajuannya gagal disimpan di DB dev.
+  - Badge "Mendadak" di daftar cuti backoffice & ESS; WA ke atasan diberi baris "Catatan : MENDADAK".
+  - Bukti:
+    - 18 unit test + 4 test integrasi + test WA lulus di `nuhabit_test`.
+    - Smoke API dengan akun uji sementara (sudah dihapus):
+      - coach tahunan H-2 → 400;
+      - sakit H-0 → 200 mendadak;
+      - tahunan H-12 → 200;
+      - menikah H-12 → 400, menikah H-26 → 200;
+      - staf non-coach H-2 → 200;
+      - Program Director ubah tahunan ke H-2 → coach H-2 lolos;
+      - nilai di luar 0–90 → 400;
+      - coach ubah pengaturan → 403.
+    - `tsc` tanpa error baru (508); eslint tanpa error baru (3 error lama di file yang disentuh).
+    - Belum dicek visual di browser; belum di-deploy.

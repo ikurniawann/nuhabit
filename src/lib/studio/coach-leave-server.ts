@@ -6,10 +6,16 @@ import {
   COACH_LEAVE_SETTING_KEYS,
   type CoachLeaveSettings,
   DEFAULT_COACH_LEAVE_SETTINGS,
+  evaluateLeaveNotice,
+  type LeaveNoticeRule,
+  normalizeNoticeRules,
+  type NoticeEvaluation,
   PROGRAM_DIRECTOR_ROLE,
   resolveLeaveApprovers,
   type ResolvedApprovers,
 } from "@/lib/studio/coach-leave";
+import { wibNow } from "@/lib/studio/jobs";
+import type { LeaveType } from "@/types/hris";
 
 /**
  * Cuti & pengganti coach (EPIC-067) — query approver & pengaturan.
@@ -27,10 +33,20 @@ export async function loadCoachLeaveSettings(branchId: string): Promise<CoachLea
     const r = rows.find((x) => x.key === key);
     if (r) (out as unknown as Record<string, unknown>)[field] = r.value;
   }
+  out.notice_rules = normalizeNoticeRules(out.notice_rules);
   return out;
 }
 
-export async function saveCoachLeaveSettings(branchId: string, patch: Partial<CoachLeaveSettings>, userId: string) {
+export type CoachLeaveSettingsPatch = Partial<Omit<CoachLeaveSettings, "notice_rules">> & {
+  /** Boleh sebagian (per jenis cuti); digabung dengan aturan tersimpan. */
+  notice_rules?: Partial<Record<LeaveType, LeaveNoticeRule>>;
+};
+
+export async function saveCoachLeaveSettings(branchId: string, patch: CoachLeaveSettingsPatch, userId: string) {
+  if (patch.notice_rules) {
+    const current = await loadCoachLeaveSettings(branchId);
+    patch = { ...patch, notice_rules: normalizeNoticeRules({ ...current.notice_rules, ...patch.notice_rules }) };
+  }
   for (const [field, value] of Object.entries(patch) as [keyof CoachLeaveSettings, unknown][]) {
     if (value === undefined) continue;
     await query(
@@ -124,4 +140,30 @@ export async function listBackupCandidates(branchId: string): Promise<{ id: stri
      ORDER BY u.full_name`,
     [branchId]
   );
+}
+
+export interface CoachLeaveNotice {
+  branchId: string;
+  rule: LeaveNoticeRule;
+  evaluation: NoticeEvaluation;
+}
+
+/**
+ * Aturan H-N untuk pengajuan cuti karyawan yang terhubung ke coach aktif
+ * (T-067-A1). null = bukan coach → aturan tidak berlaku (staf non-coach).
+ */
+export async function evaluateCoachLeaveNotice(
+  employeeId: string,
+  leaveType: LeaveType,
+  startDate: string,
+  now: Date = new Date()
+): Promise<CoachLeaveNotice | null> {
+  const coach = await queryOne<{ branch_id: string }>(
+    `SELECT branch_id FROM studio.coaches WHERE employee_id = $1 AND is_active ORDER BY created_at LIMIT 1`,
+    [employeeId]
+  );
+  if (!coach) return null;
+  const { notice_rules } = await loadCoachLeaveSettings(coach.branch_id);
+  const rule = notice_rules[leaveType];
+  return { branchId: coach.branch_id, rule, evaluation: evaluateLeaveNotice(rule, startDate, wibNow(now).date) };
 }

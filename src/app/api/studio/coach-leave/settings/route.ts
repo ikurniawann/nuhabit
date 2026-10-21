@@ -45,6 +45,6 @@ export async function PATCH(request: NextRequest) {
       }
     }
     const data = await saveCoachLeaveSettings(ctx.branchId, b, ctx.user.id);
-    return NextResponse.json({ success: true, data, message: "Pengaturan approver disimpan" });
+    return NextResponse.json({ success: true, data, message: "Pengaturan cuti coach disimpan" });
   });
 }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_NOTICE_DAYS, NOTICE_LEAVE_TYPES } from "@/lib/studio/coach-leave";
 
 /**
  * Skema validasi API Studio (EPIC-052). Dipisah dari route.ts karena file route
@@ -314,6 +315,13 @@ export const memberStatusSchema = z.object({
 });
 
 // ── Cuti & pengganti coach (EPIC-067) ─────────────────────────────────────
+const noticeRuleSchema = z.object({
+  min_days: z.number().int().min(0).max(MAX_NOTICE_DAYS),
+  allow_short_notice: z.boolean(),
+});
 export const coachLeaveSettingsSchema = z
-  .object({ backup_approver_user_id: z.string().uuid().nullable() })
+  .object({
+    backup_approver_user_id: z.string().uuid().nullable(),
+    notice_rules: z.partialRecord(z.enum(NOTICE_LEAVE_TYPES), noticeRuleSchema),
+  })
   .partial();

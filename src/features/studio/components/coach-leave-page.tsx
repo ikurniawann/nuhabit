@@ -5,8 +5,18 @@ import Link from "next/link";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { apiGet, apiPatch } from "@/lib/api-client";
-import type { ApproverCandidate, ApproverSource, CoachLeaveSettings } from "@/lib/studio/coach-leave";
+import {
+  type ApproverCandidate,
+  type ApproverSource,
+  type CoachLeaveSettings,
+  MAX_NOTICE_DAYS,
+  NOTICE_LEAVE_TYPES,
+  type NoticeRules,
+} from "@/lib/studio/coach-leave";
+import { LEAVE_TYPE_LABELS } from "@/types/hris";
 import { EmptyState, Field, NativeSelect, Pill, StudioPageHeader } from "./ui-bits";
 
 interface CoachLeaveData {
@@ -27,6 +37,7 @@ const SOURCE_LABEL: Record<ApproverSource, string> = {
 export function StudioCoachLeavePage() {
   const [data, setData] = useState<CoachLeaveData | null>(null);
   const [backupId, setBackupId] = useState("");
+  const [rules, setRules] = useState<NoticeRules | null>(null);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(
@@ -35,6 +46,7 @@ export function StudioCoachLeavePage() {
         .then((res) => {
           setData(res.data);
           setBackupId(res.data.settings.backup_approver_user_id ?? "");
+          setRules(res.data.settings.notice_rules);
         })
         .catch((e) => toast.error(e instanceof Error ? e.message : "Gagal memuat pengaturan")),
     []
@@ -44,7 +56,7 @@ export function StudioCoachLeavePage() {
     load();
   }, [load]);
 
-  if (!data) {
+  if (!data || !rules) {
     return (
       <div className="flex justify-center p-16 text-muted-foreground">
         <Loader2 className="size-5 animate-spin" />
@@ -54,13 +66,18 @@ export function StudioCoachLeavePage() {
 
   const directorIds = new Set(data.program_directors.map((p) => p.userId));
   const backupOptions = data.candidates.filter((c) => !directorIds.has(c.id));
-  const dirty = backupId !== (data.settings.backup_approver_user_id ?? "");
+  const dirty =
+    backupId !== (data.settings.backup_approver_user_id ?? "") ||
+    JSON.stringify(rules) !== JSON.stringify(data.settings.notice_rules);
+  const setRule = (type: keyof NoticeRules, patch: Partial<NoticeRules[keyof NoticeRules]>) =>
+    setRules((r) => (r ? { ...r, [type]: { ...r[type], ...patch } } : r));
 
   async function save() {
     setSaving(true);
     try {
       const res = await apiPatch<{ message?: string }>("/api/studio/coach-leave/settings", {
         backup_approver_user_id: backupId || null,
+        notice_rules: rules,
       });
       toast.success(res.message ?? "Tersimpan");
       await load();
@@ -75,7 +92,7 @@ export function StudioCoachLeavePage() {
     <div className="p-4 sm:p-6">
       <StudioPageHeader
         title="Cuti & Pengganti Coach"
-        subtitle="Program Director menyetujui cuti coach, menunjuk pengganti, dan membatalkan kelas. Approver cadangan dipakai saat Program Director sedang cuti atau belum ada."
+        subtitle="Program Director menyetujui cuti coach, menunjuk pengganti, dan membatalkan kelas. Atur approver cadangan dan minimal pemberitahuan cuti sesuai SOP coach."
       />
       <div className="grid max-w-3xl gap-4">
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
@@ -138,12 +155,59 @@ export function StudioCoachLeavePage() {
           {data.backup?.onLeave && (
             <p className="text-sm text-muted-foreground">{data.backup.name} sedang cuti hari ini.</p>
           )}
-          <div>
-            <Button onClick={save} disabled={saving || !dirty}>
-              {saving && <Loader2 className="size-4 animate-spin" />} Simpan
-            </Button>
+        </section>
+
+        <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-[13px] font-semibold text-foreground">Minimal pemberitahuan cuti coach</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            H-N = tanggal mulai paling cepat N hari setelah tanggal pengajuan. Di bawah itu pengajuan ditolak, kecuali jenis yang
+            boleh mendadak: tetap diterima tetapi ditandai <span className="font-semibold text-foreground">Mendadak</span>. Hanya
+            berlaku untuk karyawan yang terhubung ke profil coach.
+          </p>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[420px] text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                  <th className="py-2 pr-3 font-semibold">Jenis cuti</th>
+                  <th className="w-28 py-2 pr-3 font-semibold">Minimal H-</th>
+                  <th className="w-32 py-2 font-semibold">Boleh mendadak</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {NOTICE_LEAVE_TYPES.map((type) => (
+                  <tr key={type}>
+                    <td className="py-2 pr-3 text-foreground">{LEAVE_TYPE_LABELS[type]}</td>
+                    <td className="py-2 pr-3">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={MAX_NOTICE_DAYS}
+                        value={rules[type].min_days}
+                        aria-label={`Minimal H- ${LEAVE_TYPE_LABELS[type]}`}
+                        onChange={(e) =>
+                          setRule(type, { min_days: Math.min(MAX_NOTICE_DAYS, Math.max(0, Math.floor(Number(e.target.value) || 0))) })
+                        }
+                      />
+                    </td>
+                    <td className="py-2">
+                      <Switch
+                        checked={rules[type].allow_short_notice}
+                        onCheckedChange={(v) => setRule(type, { allow_short_notice: v })}
+                        aria-label={`${LEAVE_TYPE_LABELS[type]} boleh mendadak`}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
+
+        <div>
+          <Button onClick={save} disabled={saving || !dirty}>
+            {saving && <Loader2 className="size-4 animate-spin" />} Simpan pengaturan
+          </Button>
+        </div>
       </div>
     </div>
   );

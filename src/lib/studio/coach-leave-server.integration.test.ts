@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { query } from "@/lib/db";
 import {
   assertCanDecideCoachLeave,
+  evaluateCoachLeaveNotice,
   getCoachLeaveApprovers,
   listProgramDirectors,
   loadCoachLeaveSettings,
@@ -31,6 +32,8 @@ const backup = user("cadangan");
 const plainAdmin = user("admin");
 const allUsers = [pdColumn, pdIam, pdHrisLeave, pdTimeOff, pdInactive, backup, plainAdmin];
 const employeeIds: string[] = [];
+let hrisEmp = "";
+let coachEmp = "";
 
 async function createUser(u: { id: string; name: string }, role: string, status = "active") {
   await query(`INSERT INTO auth.users (id, email, password_hash) VALUES ($1, $2, 'x')`, [u.id, `${u.id}@a9.test`]);
@@ -64,13 +67,13 @@ describe.skipIf(!IS_TEST_DB)("coach leave approvers (DB)", () => {
     await createUser(backup, "admin");
     await createUser(plainAdmin, "admin");
 
-    const hrisEmp = await createEmployee(pdHrisLeave);
+    hrisEmp = await createEmployee(pdHrisLeave);
     await query(
       `INSERT INTO hris.leaves (employee_id, leave_type, start_date, end_date, total_days, reason, status)
        VALUES ($1, 'annual', CURRENT_DATE - 1, CURRENT_DATE + 1, 3, 'A9 test', 'approved')`,
       [hrisEmp]
     );
-    const coachEmp = await createEmployee(pdTimeOff);
+    coachEmp = await createEmployee(pdTimeOff);
     const coach = await query<{ id: string }>(
       `INSERT INTO studio.coaches (company_id, branch_id, full_name, employee_id) VALUES ($1, $1, $2, $3) RETURNING id`,
       [branchId, pdTimeOff.name, coachEmp]
@@ -119,5 +122,25 @@ describe.skipIf(!IS_TEST_DB)("coach leave approvers (DB)", () => {
     await expect(
       assertCanDecideCoachLeave(branchId, { id: pdColumn.id, role: "program_director" }, pdColumn.id)
     ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("aturan H-N hanya untuk karyawan coach, memakai pengaturan venue coach (sebagian digabung default)", async () => {
+    // 21 Okt 2026 10.00 WIB
+    const now = new Date("2026-10-21T03:00:00Z");
+    expect(await evaluateCoachLeaveNotice(hrisEmp, "annual", "2026-10-22", now)).toBeNull();
+
+    const before = await evaluateCoachLeaveNotice(coachEmp, "annual", "2026-10-24", now);
+    expect(before).toMatchObject({ branchId, rule: { min_days: 7 }, evaluation: { ok: false, earliestStart: "2026-10-28" } });
+
+    await saveCoachLeaveSettings(branchId, { notice_rules: { annual: { min_days: 2, allow_short_notice: false } } }, plainAdmin.id);
+    const after = await evaluateCoachLeaveNotice(coachEmp, "annual", "2026-10-24", now);
+    expect(after?.evaluation).toEqual({ ok: true, shortNotice: false, noticeDays: 3 });
+
+    const settings = await loadCoachLeaveSettings(branchId);
+    expect(settings.notice_rules.sick).toEqual({ min_days: 1, allow_short_notice: true });
+    expect(settings.backup_approver_user_id).toBe(backup.id);
+
+    const sickToday = await evaluateCoachLeaveNotice(coachEmp, "sick", "2026-10-21", now);
+    expect(sickToday?.evaluation).toEqual({ ok: true, shortNotice: true, noticeDays: 0 });
   });
 });

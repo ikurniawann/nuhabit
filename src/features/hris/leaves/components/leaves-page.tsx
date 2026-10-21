@@ -208,6 +208,21 @@ export function LeavesPage() {
                       <Badge variant="outline" className="mt-1">
                         {LEAVE_TYPE_LABELS[leave.leave_type as keyof typeof LEAVE_TYPE_LABELS] || leave.leave_type}
                       </Badge>
+                      {leave.is_short_notice && (
+                        <Badge
+                          variant="outline"
+                          className="mt-1 ml-2 border-amber-200 bg-amber-50 text-amber-800"
+                          title={
+                            leave.notice_days == null
+                              ? undefined
+                              : leave.notice_days >= 0
+                                ? `Diajukan H-${leave.notice_days}, di bawah minimal SOP coach`
+                                : `Diajukan ${-leave.notice_days} hari setelah tanggal mulai`
+                          }
+                        >
+                          Mendadak
+                        </Badge>
+                      )}
                     </div>
 
                     <div>

@@ -54,6 +54,8 @@ export interface LeaveRequestWaInput {
   totalDays: number;
   reason?: string | null;
   approverName?: string | null;
+  /** Di bawah minimal pemberitahuan SOP coach (EPIC-067). */
+  shortNotice?: boolean;
 }
 
 /** Pure & unit-testable — isi pesan WA ke atasan. */
@@ -68,6 +70,7 @@ export function buildLeaveRequestWaMessage(input: LeaveRequestWaInput): string {
     `Karyawan : ${input.employeeName}`,
     `Tanggal : ${rentang} (${input.totalDays} hari kerja)`,
   ];
+  if (input.shortNotice) baris.push("Catatan : MENDADAK (di bawah minimal pemberitahuan SOP coach)");
   if (input.reason?.trim()) baris.push(`Alasan : ${input.reason.trim()}`);
   baris.push("", "Mohon ditinjau di dashboard Arkiv OS (Kehadiran & Cuti → Cuti & Izin).");
   return baris.join("\n");

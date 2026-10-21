@@ -4,6 +4,8 @@ import { getWorkforceActor } from "@/lib/hris/workforce-auth";
 import { notifyLeaveRequestWa } from "@/lib/hris/leave-wa";
 import { loadHolidayIndex } from "@/lib/hris/holidays-db";
 import { describeLeaveDays } from "@/lib/hris/holidays";
+import { evaluateCoachLeaveNotice } from "@/lib/studio/coach-leave-server";
+import { noticeRejectionMessage, shortNoticeMessage } from "@/lib/studio/coach-leave";
 import { z } from 'zod';
 
 const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -184,6 +186,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // SOP coach (EPIC-067 T-067-A1): minimal pemberitahuan H-N per jenis cuti.
+    // Hanya untuk karyawan yang terhubung ke coach aktif. Di bawah H-N →
+    // ditolak, kecuali jenis yang boleh mendadak (sakit, darurat, …) atau HR
+    // yang mencatat → diterima dan ditandai is_short_notice.
+    const notice = await evaluateCoachLeaveNotice(empId, validated.leave_type, validated.start_date);
+    if (notice && !notice.evaluation.ok && !actor.isHr) {
+      return NextResponse.json(
+        {
+          error: noticeRejectionMessage(validated.leave_type, notice.rule, notice.evaluation.earliestStart),
+          code: 'LEAVE_NOTICE_TOO_SHORT',
+          min_days: notice.rule.min_days,
+          earliest_start: notice.evaluation.earliestStart,
+        },
+        { status: 400 }
+      );
+    }
+    const isShortNotice = notice ? !notice.evaluation.ok || notice.evaluation.shortNotice : false;
+
     // Hari yang benar-benar memotong jatah: akhir pekan dan libur nasional
     // dikecualikan, cuti bersama TETAP memotong (SKB). EPIC-036 Fase D —
     // sebelumnya hanya akhir pekan yang dikecualikan, sehingga cuti yang
@@ -244,6 +264,8 @@ export async function POST(request: NextRequest) {
         reason: validated.reason,
         attachment_url: validated.attachment_url || null,
         status: 'pending',
+        is_short_notice: isShortNotice,
+        notice_days: notice ? notice.evaluation.noticeDays : null,
       })
       .select('*')
       .single();
@@ -267,10 +289,13 @@ export async function POST(request: NextRequest) {
       endDate: validated.end_date,
       totalDays,
       reason: validated.reason ?? null,
+      shortNotice: isShortNotice,
     });
 
     return NextResponse.json({
-      message: 'Leave request submitted successfully',
+      message: notice && isShortNotice
+        ? shortNoticeMessage(notice.rule, notice.evaluation.noticeDays)
+        : 'Leave request submitted successfully',
       data,
       // Supaya pemanggil bisa menjelaskan kenapa total_days lebih kecil dari
       // rentang kalendernya (EPIC-036 Fase D).

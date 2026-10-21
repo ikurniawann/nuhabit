@@ -14,6 +14,9 @@ export interface LeaveItem {
   total_days: number;
   reason: string;
   status: string;
+  /** Di bawah minimal pemberitahuan SOP coach (EPIC-067). */
+  is_short_notice?: boolean;
+  notice_days?: number | null;
   created_at: string;
   employee?: {
     full_name: string;

@@ -401,6 +401,10 @@ export interface Leave {
   approved_by: string | null;
   approved_at: string | null;
   rejection_reason: string | null;
+  /** Di bawah minimal pemberitahuan SOP coach (EPIC-067). */
+  is_short_notice?: boolean;
+  /** H-N saat diajukan; null untuk non-coach / cuti lama. */
+  notice_days?: number | null;
   created_at: string;
   updated_at: string;
 }

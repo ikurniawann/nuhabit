@@ -41,6 +41,7 @@ interface LeaveRow {
   status: string;
   reason: string;
   rejection_reason: string | null;
+  is_short_notice?: boolean;
 }
 
 const LEAVE_TYPE_OPTIONS = [
@@ -173,7 +174,8 @@ export function EssCutiPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Gagal mengajukan");
-      showToast("Pengajuan terkirim — menunggu persetujuan");
+      // Coach di bawah minimal pemberitahuan SOP → pesan "tercatat mendadak" dari API (EPIC-067).
+      showToast(json.data?.is_short_notice && json.message ? json.message : "Pengajuan terkirim — menunggu persetujuan");
       setLeaveDialog(false);
       setLeaveForm(EMPTY_LEAVE_FORM);
       setAttachment(null);
@@ -252,6 +254,11 @@ export function EssCutiPage() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900">
                         {leaveTypeLabel(leave.leave_type)} · {leave.total_days} hari
+                        {leave.is_short_notice && (
+                          <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                            Mendadak
+                          </span>
+                        )}
                       </p>
                       <p className="truncate text-xs text-gray-500">
                         {formatDate(leave.start_date)} — {formatDate(leave.end_date)}

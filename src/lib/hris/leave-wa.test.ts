@@ -44,4 +44,10 @@ describe("buildLeaveRequestWaMessage", () => {
     expect(pesan).not.toContain("Alasan");
     expect(pesan).toContain("(1 hari kerja)");
   });
+
+  it("cuti mendadak coach diberi catatan; pengajuan biasa tidak", () => {
+    const base = { leaveId: "x", employeeName: "Coach Pras", leaveType: "sick", startDate: "2026-10-21", endDate: "2026-10-21", totalDays: 1 };
+    expect(buildLeaveRequestWaMessage({ ...base, shortNotice: true })).toContain("Catatan : MENDADAK");
+    expect(buildLeaveRequestWaMessage(base)).not.toContain("MENDADAK");
+  });
 });
