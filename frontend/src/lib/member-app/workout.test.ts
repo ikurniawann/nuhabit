@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { WorkoutBlock } from "@/lib/gym/hyrox";
-import type { MemberRaceView, RaceEventRow } from "@/lib/gym/races-server";
-import type { WorkoutHistoryItem, WorkoutSessionView } from "@/lib/gym/training-server";
+import type { WorkoutBlock, WorkoutHistoryItem, WorkoutSessionView } from "@/lib/gym/hyrox";
+import type { MemberRaceView, RaceEventRow } from "@/lib/gym/races";
 import {
   flattenWorkoutHistory,
   parseHms,

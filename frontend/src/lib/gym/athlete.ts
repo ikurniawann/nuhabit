@@ -672,3 +672,148 @@ const WORKOUT_TITLES: Record<string, string> = {
 };
 export const workoutActivityTitle = (type: string) =>
   WORKOUT_TITLES[type] ?? "HYROX station practice";
+
+/* ── Bentuk respons tab Train (Go: /api/member-portal/app/train) ─────── */
+
+export interface ActivityCardView {
+  id: string;
+  memberId: string;
+  memberName: string;
+  memberAvatarUrl: string | null;
+  isOwn: boolean;
+  type: ActivityType;
+  title: string;
+  startedAt: string;
+  distanceM: number;
+  movingSec: number;
+  elapsedSec: number;
+  avgPaceSecPerKm: number | null;
+  elevationGainM: number;
+  visibility: ActivityVisibility;
+  thumbnail: TrackPoint[];
+  photoCount: number;
+  kudosCount: number;
+  hasKudoed: boolean;
+  commentCount: number;
+}
+
+export interface ActivityDetailView extends ActivityCardView {
+  description: string;
+  points: TrackPoint[];
+  photos: string[];
+  splits: ActivitySplit[];
+  bestSplitPaceSec: number | null;
+  gearName: string | null;
+  efforts: {
+    segmentId: string;
+    segmentName: string;
+    distanceM: number;
+    elapsedSec: number;
+    rank: number;
+    totalEfforts: number;
+    isPersonalBest: boolean;
+  }[];
+  comments: ActivityCommentView[];
+  groupedWith: { activityId: string; memberName: string }[];
+}
+
+export interface ActivityCommentView {
+  id: string;
+  memberId: string;
+  memberName: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface GearView {
+  id: string;
+  memberId: string;
+  name: string;
+  kind: GearKind;
+  distanceM: number;
+  retired: boolean;
+}
+
+export interface AthleteSettingsView {
+  units: "METRIC" | "IMPERIAL";
+  bookingReminders: boolean;
+  weeklyGoalKm: number | null;
+  language: "EN" | "ID";
+}
+
+export interface AthleteStatsView {
+  weekly: WeekBucket[];
+  totals: { activities: number; distanceKm: number; movingSec: number };
+  thisWeekKm: number;
+  goal: { targetKm: number | null; currentKm: number };
+  prs: PersonalRecords;
+  gear: GearView[];
+  settings: AthleteSettingsView;
+  followingCount: number;
+  followerCount: number;
+}
+
+export interface SegmentView {
+  id: string;
+  name: string;
+  type: ActivityType;
+  distanceM: number;
+  location: string;
+  path: TrackPoint[];
+}
+
+export interface ChallengeView {
+  challenge: {
+    id: string;
+    name: string;
+    description: string;
+    type: ChallengeType;
+    targetKm: number;
+    startsAt: string;
+    endsAt: string;
+  };
+  joined: boolean;
+  participantCount: number;
+  progressKm: number;
+  leaderboard: LeaderboardEntry[];
+}
+
+export interface AthleteLite {
+  memberId: string;
+  name: string;
+  weeklyKm: number;
+  isFollowing: boolean;
+}
+
+export interface RouteView {
+  id: string;
+  name: string;
+  distanceM: number;
+  points: TrackPoint[];
+  createdAt: string;
+}
+
+export interface SaveActivityInput {
+  type: ActivityType;
+  title: string;
+  description: string;
+  startedAt: string | null;
+  points: TrackPoint[];
+  manualElapsedSec: number | null;
+  gearId: string | null;
+  visibility: ActivityVisibility;
+  photos: string[];
+}
+
+export interface ActivityPatch {
+  title?: string;
+  description?: string;
+  visibility?: ActivityVisibility;
+  gearId?: string | null;
+}
+
+export interface GearInput {
+  name: string;
+  kind: GearKind;
+  retired: boolean;
+}

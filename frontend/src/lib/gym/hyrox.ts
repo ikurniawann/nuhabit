@@ -1,7 +1,7 @@
 /**
  * HYROX: pustaka latihan, generator workout, dan sesi workout aktif.
  * Port dari packages/domain/src/hyrox.ts (referensi NüHabit). Fungsi murni;
- * akses DB ada di training-server.ts.
+ * akses DB ada di backend Go (gymtraining).
  */
 
 /* ── Pustaka latihan ─────────────────────────────────────────────────── */
@@ -457,4 +457,36 @@ export function replaceBlockExercise(block: WorkoutBlock, replacement: Exercise,
     weightNote: null,
     videoUrl: replacement.videoUrl,
   };
+}
+
+/* ── Bentuk respons API workout (Go: /api/member-portal/app/workouts) ── */
+
+export interface WorkoutView {
+  id: string;
+  type: WorkoutType;
+  division: Division;
+  blocks: WorkoutBlock[];
+  total_target_sec: number;
+  excluded_exercise_ids: string[];
+  available_equipment: string[] | null;
+  created_at: string;
+}
+
+export interface WorkoutSessionView {
+  id: string;
+  workout_id: string;
+  status: WorkoutSessionState["status"];
+  current_block: number;
+  started_at: string | null;
+  ended_at: string | null;
+  paused_at: string | null;
+  block_results: WorkoutBlockResult[];
+  pause_count: number;
+  total_pause_sec: number;
+  active_sec: number;
+  created_at: string;
+}
+
+export interface WorkoutHistoryItem extends WorkoutView {
+  sessions: WorkoutSessionView[];
 }
