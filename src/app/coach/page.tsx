@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { CalendarDays, Check, ChevronDown, Loader2, LogOut, Users, Wallet } from "lucide-react";
+import { CalendarDays, CalendarOff, Check, ChevronDown, Loader2, LogOut, Users, Wallet } from "lucide-react";
 import { periodLabel } from "@/lib/studio/commission";
 import { COACH_LEVEL_LABEL } from "@/lib/studio/schedule";
 import { formatDayLabel, rupiah } from "@/features/studio/types";
+import { CoachLeaveTab } from "@/features/studio/components/coach-leave-tab";
 
 interface Me {
   id: string;
@@ -60,7 +61,7 @@ const kindLabel = (kind: string) => (kind === "pt" ? "Personal Training" : "Kela
 export default function CoachPortalPage() {
   const [me, setMe] = useState<Me | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"schedule" | "commission">("schedule");
+  const [tab, setTab] = useState<"schedule" | "leave" | "commission">("schedule");
 
   useEffect(() => {
     getJson<{ data: Me }>("/api/coach/me")
@@ -103,9 +104,10 @@ export default function CoachPortalPage() {
         </div>
       ) : (
         <>
-          <main className="flex-1 px-4 pb-28 pt-4">{tab === "schedule" ? <ScheduleTab /> : <CommissionTab />}</main>
+          <main className="flex-1 px-4 pb-28 pt-4">{tab === "schedule" ? <ScheduleTab /> : tab === "leave" ? <CoachLeaveTab /> : <CommissionTab />}</main>
           <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto flex max-w-xl gap-2 border-t border-white/10 bg-nh-forest/95 p-3 backdrop-blur">
             <TabButton active={tab === "schedule"} onClick={() => setTab("schedule")} icon={<CalendarDays className="size-4" />} label="Jadwal" />
+            <TabButton active={tab === "leave"} onClick={() => setTab("leave")} icon={<CalendarOff className="size-4" />} label="Cuti" />
             <TabButton active={tab === "commission"} onClick={() => setTab("commission")} icon={<Wallet className="size-4" />} label="Komisi" />
           </nav>
         </>

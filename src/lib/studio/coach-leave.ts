@@ -3,6 +3,7 @@
  * siapa yang boleh memutus bisa dites. Query ada di coach-leave-server.ts.
  */
 
+import { addDays } from "@/lib/studio/schedule";
 import { LEAVE_TYPE_LABELS, type LeaveType } from "@/types/hris";
 
 export const PROGRAM_DIRECTOR_ROLE = "program_director";
@@ -84,12 +85,7 @@ export function normalizeNoticeRules(raw: unknown): NoticeRules {
   return out;
 }
 
-const DAY_MS = 86_400_000;
-const dayNumber = (iso: string) => Date.parse(`${iso}T00:00:00Z`) / DAY_MS;
-
-export function addIsoDays(iso: string, days: number): string {
-  return new Date(Date.parse(`${iso}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
-}
+const dayNumber = (iso: string) => Date.parse(`${iso}T00:00:00Z`) / 86_400_000;
 
 export type NoticeEvaluation =
   | { ok: true; shortNotice: boolean; noticeDays: number }
@@ -100,7 +96,7 @@ export function evaluateLeaveNotice(rule: LeaveNoticeRule, startDate: string, to
   const noticeDays = dayNumber(startDate) - dayNumber(today);
   if (noticeDays >= rule.min_days) return { ok: true, shortNotice: false, noticeDays };
   if (rule.allow_short_notice) return { ok: true, shortNotice: true, noticeDays };
-  return { ok: false, noticeDays, earliestStart: addIsoDays(today, rule.min_days) };
+  return { ok: false, noticeDays, earliestStart: addDays(today, rule.min_days) };
 }
 
 const tanggalId = (iso: string) =>
@@ -167,4 +163,30 @@ export function canDecideCoachLeave(
   if (requesterUserId && user.id === requesterUserId) return false;
   if (user.role === "super_admin") return true;
   return resolved.approvers.some((a) => a.userId === user.id);
+}
+
+/** Sesi mengajar coach yang jatuh di rentang cuti (T-067-A3). */
+export interface ImpactedSession {
+  id: string;
+  session_date: string;
+  start_time: string;
+  end_time: string;
+  program_name: string;
+  program_kind: string;
+  booked_count: number;
+}
+
+/** Batas rentang cek sesi terdampak (hari kalender, inklusif). */
+export const MAX_IMPACT_RANGE_DAYS = 62;
+
+export function summarizeImpact(sessions: ImpactedSession[]): { classes: number; pt: number; members: number } {
+  let classes = 0;
+  let pt = 0;
+  let members = 0;
+  for (const s of sessions) {
+    if (s.program_kind === "pt") pt += 1;
+    else classes += 1;
+    members += s.booked_count;
+  }
+  return { classes, pt, members };
 }

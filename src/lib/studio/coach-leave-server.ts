@@ -7,6 +7,7 @@ import {
   type CoachLeaveSettings,
   DEFAULT_COACH_LEAVE_SETTINGS,
   evaluateLeaveNotice,
+  type ImpactedSession,
   type LeaveNoticeRule,
   normalizeNoticeRules,
   type NoticeEvaluation,
@@ -166,4 +167,48 @@ export async function evaluateCoachLeaveNotice(
   const { notice_rules } = await loadCoachLeaveSettings(coach.branch_id);
   const rule = notice_rules[leaveType];
   return { branchId: coach.branch_id, rule, evaluation: evaluateLeaveNotice(rule, startDate, wibNow(now).date) };
+}
+
+/**
+ * Sesi terjadwal (kelas & Personal Training) milik coach di rentang tanggal —
+ * yang butuh pengganti bila cutinya disetujui. Sesi selesai/batal tidak ikut.
+ */
+export async function listCoachSessionsInRange(coachId: string, start: string, end: string): Promise<ImpactedSession[]> {
+  return query<ImpactedSession>(
+    `SELECT s.id, s.session_date::text AS session_date, to_char(s.start_time,'HH24:MI') AS start_time,
+            to_char(s.end_time,'HH24:MI') AS end_time, p.name AS program_name, p.kind AS program_kind,
+            (SELECT COUNT(*) FROM studio.bookings b WHERE b.session_id = s.id AND b.status IN ('booked','attended'))::int AS booked_count
+     FROM studio.class_sessions s
+     JOIN studio.programs p ON p.id = s.program_id
+     WHERE s.coach_id = $1 AND s.status = 'scheduled' AND s.session_date BETWEEN $2::date AND $3::date
+     ORDER BY s.session_date, s.start_time`,
+    [coachId, start, end]
+  );
+}
+
+export interface CoachLeaveRow {
+  id: string;
+  leave_type: LeaveType;
+  start_date: string;
+  end_date: string;
+  total_days: number;
+  status: string;
+  reason: string;
+  rejection_reason: string | null;
+  is_short_notice: boolean;
+  notice_days: number | null;
+  created_at: string;
+}
+
+/** Riwayat pengajuan cuti coach (lewat karyawan yang tertaut ke profil coach). */
+export async function listCoachLeaves(coachId: string, limit = 20): Promise<CoachLeaveRow[]> {
+  return query<CoachLeaveRow>(
+    `SELECT l.id, l.leave_type, l.start_date::text AS start_date, l.end_date::text AS end_date, l.total_days, l.status,
+            l.reason, l.rejection_reason, l.is_short_notice, l.notice_days, l.created_at
+     FROM hris.leaves l JOIN studio.coaches c ON c.employee_id = l.employee_id
+     WHERE c.id = $1
+     ORDER BY l.created_at DESC
+     LIMIT $2`,
+    [coachId, limit]
+  );
 }

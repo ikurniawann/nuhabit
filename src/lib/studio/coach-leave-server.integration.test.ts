@@ -12,6 +12,8 @@ import {
   assertCanDecideCoachLeave,
   evaluateCoachLeaveNotice,
   getCoachLeaveApprovers,
+  listCoachLeaves,
+  listCoachSessionsInRange,
   listProgramDirectors,
   loadCoachLeaveSettings,
   saveCoachLeaveSettings,
@@ -34,6 +36,7 @@ const allUsers = [pdColumn, pdIam, pdHrisLeave, pdTimeOff, pdInactive, backup, p
 const employeeIds: string[] = [];
 let hrisEmp = "";
 let coachEmp = "";
+let coachId = "";
 
 async function createUser(u: { id: string; name: string }, role: string, status = "active") {
   await query(`INSERT INTO auth.users (id, email, password_hash) VALUES ($1, $2, 'x')`, [u.id, `${u.id}@a9.test`]);
@@ -78,6 +81,7 @@ describe.skipIf(!IS_TEST_DB)("coach leave approvers (DB)", () => {
       `INSERT INTO studio.coaches (company_id, branch_id, full_name, employee_id) VALUES ($1, $1, $2, $3) RETURNING id`,
       [branchId, pdTimeOff.name, coachEmp]
     );
+    coachId = coach[0].id;
     await query(
       `INSERT INTO studio.coach_time_off (company_id, branch_id, coach_id, date_from, date_to, reason)
        VALUES ($1, $1, $2, CURRENT_DATE, CURRENT_DATE, 'A9 test')`,
@@ -87,6 +91,8 @@ describe.skipIf(!IS_TEST_DB)("coach leave approvers (DB)", () => {
 
   afterAll(async () => {
     await query(`DELETE FROM studio.settings WHERE branch_id = $1`, [branchId]);
+    await query(`DELETE FROM studio.class_sessions WHERE branch_id = $1`, [branchId]);
+    await query(`DELETE FROM studio.programs WHERE branch_id = $1`, [branchId]);
     await query(`DELETE FROM studio.coaches WHERE branch_id = $1`, [branchId]);
     await query(`DELETE FROM hris.leaves WHERE employee_id = ANY($1::uuid[])`, [employeeIds]);
     await query(`DELETE FROM hris.employees WHERE id = ANY($1::uuid[])`, [employeeIds]);
@@ -142,5 +148,43 @@ describe.skipIf(!IS_TEST_DB)("coach leave approvers (DB)", () => {
 
     const sickToday = await evaluateCoachLeaveNotice(coachEmp, "sick", "2026-10-21", now);
     expect(sickToday?.evaluation).toEqual({ ok: true, shortNotice: true, noticeDays: 0 });
+  });
+
+  it("sesi terdampak: hanya sesi terjadwal coach ini di rentang, kelas & Personal Training, dengan jumlah booking", async () => {
+    const program = async (code: string, kind: string) =>
+      (await query<{ id: string }>(
+        `INSERT INTO studio.programs (company_id, branch_id, code, name, kind) VALUES ($1, $1, $2, $3, $4) RETURNING id`,
+        [branchId, `${code}-${tag}`, `A3 ${code}`, kind]
+      ))[0].id;
+    const cls = await program("CLS", "class");
+    const pt = await program("PT", "pt");
+    const session = (programId: string, date: string, time: string, status = "scheduled", coach: string | null = coachId) =>
+      query(
+        `INSERT INTO studio.class_sessions (company_id, branch_id, session_date, start_time, end_time, program_id, capacity, coach_id, status)
+         VALUES ($1, $1, $2, $3::time, $3::time + interval '1 hour', $4, 10, $5, $6)`,
+        [branchId, date, time, programId, coach, status]
+      );
+    await session(cls, "2026-11-02", "07:00");
+    await session(pt, "2026-11-03", "18:00");
+    await session(cls, "2026-11-03", "06:00", "cancelled");
+    await session(cls, "2026-11-04", "07:00", "scheduled", null);
+    await session(cls, "2026-11-10", "07:00");
+
+    const list = await listCoachSessionsInRange(coachId, "2026-11-02", "2026-11-04");
+    expect(list.map((s) => [s.session_date, s.start_time, s.program_kind, s.booked_count])).toEqual([
+      ["2026-11-02", "07:00", "class", 0],
+      ["2026-11-03", "18:00", "pt", 0],
+    ]);
+  });
+
+  it("riwayat cuti coach diambil lewat karyawan yang tertaut, dengan tanggal teks & flag mendadak", async () => {
+    await query(
+      `INSERT INTO hris.leaves (employee_id, leave_type, start_date, end_date, total_days, reason, status, is_short_notice, notice_days)
+       VALUES ($1, 'sick', '2026-10-21', '2026-10-21', 1, 'A3 test sakit', 'pending', true, 0)`,
+      [coachEmp]
+    );
+    const rows = await listCoachLeaves(coachId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ leave_type: "sick", start_date: "2026-10-21", is_short_notice: true, notice_days: 0 });
   });
 });

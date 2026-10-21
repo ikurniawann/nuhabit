@@ -501,18 +501,25 @@ select:focus-visible,
 input.nh-dark-input.nh-dark-input,
 input.nh-dark-input.nh-dark-input:hover,
 input.nh-dark-input.nh-dark-input:focus,
-input.nh-dark-input.nh-dark-input:focus-visible {
+input.nh-dark-input.nh-dark-input:focus-visible,
+select.nh-dark-input.nh-dark-input,
+select.nh-dark-input.nh-dark-input:focus,
+textarea.nh-dark-input.nh-dark-input,
+textarea.nh-dark-input.nh-dark-input:focus {
   background: rgba(243, 236, 226, 0.08) !important;
   border-color: rgba(243, 236, 226, 0.22) !important;
   color: #f3ece2 !important;
   -webkit-text-fill-color: #f3ece2 !important;
 }
 input.nh-dark-input.nh-dark-input:focus,
-input.nh-dark-input.nh-dark-input:focus-visible {
+input.nh-dark-input.nh-dark-input:focus-visible,
+select.nh-dark-input.nh-dark-input:focus,
+textarea.nh-dark-input.nh-dark-input:focus {
   border-color: #daff59 !important;
   box-shadow: 0 0 0 4px rgba(218, 255, 89, 0.2) !important;
 }
-input.nh-dark-input.nh-dark-input::placeholder {
+input.nh-dark-input.nh-dark-input::placeholder,
+textarea.nh-dark-input.nh-dark-input::placeholder {
   color: rgba(243, 236, 226, 0.4) !important;
   -webkit-text-fill-color: rgba(243, 236, 226, 0.4) !important;
 }

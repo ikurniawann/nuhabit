@@ -6,6 +6,7 @@ import {
   normalizeNoticeRules,
   noticeRejectionMessage,
   shortNoticeMessage,
+  summarizeImpact,
   resolveLeaveApprovers,
   type ApproverCandidate,
 } from "./coach-leave";
@@ -127,5 +128,16 @@ describe("pesan aturan H-N", () => {
     const rule = { min_days: 1, allow_short_notice: true };
     expect(shortNoticeMessage(rule, 0)).toBe("Tercatat sebagai cuti mendadak (diajukan H-0, SOP minimal H-1).");
     expect(shortNoticeMessage(rule, -2)).toContain("2 hari setelah tanggal mulai");
+  });
+});
+
+describe("summarizeImpact", () => {
+  const sess = (kind: string, booked: number) => ({
+    id: kind + booked, session_date: "2026-10-28", start_time: "07:00", end_time: "08:00", program_name: "X", program_kind: kind, booked_count: booked,
+  });
+
+  it("menghitung kelas, Personal Training, dan member yang sudah booking", () => {
+    expect(summarizeImpact([sess("class", 8), sess("pt", 1), sess("class", 0)])).toEqual({ classes: 2, pt: 1, members: 9 });
+    expect(summarizeImpact([])).toEqual({ classes: 0, pt: 0, members: 0 });
   });
 });

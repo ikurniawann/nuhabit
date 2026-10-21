@@ -102,7 +102,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
   approver cadangan. Komisi tidak berubah: peran Ops Director 0% di EPIC-056 tetap terpisah dari role ini.
 - [x] T-067-A1 **(Tahap 1)** Aturan minimal pemberitahuan H-N per jenis cuti + daftar jenis yang dikecualikan; flag
   `is_short_notice`; konfigurasi di pengaturan HRIS/studio; validasi di API cuti (ESS & Coach Portal). Tes logika murni.
-- [ ] T-067-A3 **(Tahap 1)** Pengajuan cuti dari Coach Portal: pilih tanggal → tampil daftar kelas & sesi Personal
+- [x] T-067-A3 **(Tahap 1)** Pengajuan cuti dari Coach Portal: pilih tanggal → tampil daftar kelas & sesi Personal
   Training yang terdampak → kirim. Status pengajuan terlihat di Coach Portal.
 - [ ] T-067-A4 **(Tahap 1)** Alur pengganti sesuai Keputusan desain: saran coach yang kosong; terima/tolak dari Coach
   Portal + WA dengan batas waktu yang bisa diatur; antrean "butuh pengganti" untuk Program Director (tunjuk langsung
@@ -249,3 +249,26 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
       - coach ubah pengaturan → 403.
     - `tsc` tanpa error baru (508); eslint tanpa error baru (3 error lama di file yang disentuh).
     - Belum dicek visual di browser; belum di-deploy.
+- 2026-10-21 — **T-067-A3 selesai.** Tab **Cuti** di Coach Portal (`src/features/studio/components/coach-leave-tab.tsx`):
+  - Isi tab:
+    - pilih jenis & tanggal;
+    - peringatan H-N langsung di form (pakai `evaluateLeaveNotice` + aturan venue coach);
+    - daftar sesi terdampak (kelas & Personal Training terjadwal, dengan jumlah member booking) sebelum mengirim;
+    - riwayat pengajuan dengan status, badge Mendadak, dan alasan ditolak;
+    - batalkan pengajuan yang masih menunggu.
+  - Keputusan: **pengajuan memakai `POST /api/hris/leaves` (jalur ESS), bukan endpoint baru.** Aturan H-N, kuota, WA
+    ke atasan, dan flag mendadak tetap satu sumber. Akun coach sudah tertaut ke karyawan, jadi `getWorkforceActor` bekerja.
+  - API baru (`requireCoach`):
+    - `GET /api/coach/leave` — aturan + riwayat;
+    - `GET /api/coach/leave/impact?start&end` — maks 62 hari; sesi selesai/batal tidak ikut.
+  - Kelas `nh-dark-input` di `globals.css` diperluas ke `select` & `textarea`. Tanpa itu, aturan global input terang
+    membuat kolom form di Coach Portal tidak terbaca (terlihat saat cek visual).
+  - Bukti:
+    - 19 unit test + 6 test integrasi lulus di `nuhabit_test`.
+    - Cek visual headless (Playwright, viewport 390 px) dengan coach uji + 4 sesi (sudah dihapus):
+      - tahunan 2–5 Nov → "Sesuai SOP", 3 kelas + 1 Personal Training terdampak;
+      - tahunan 23 Okt → peringatan H-7 merah & tombol nonaktif;
+      - sakit hari ini → terkirim, "Tercatat sebagai cuti mendadak", muncul di riwayat dengan tombol batal;
+      - tanpa error console.
+    - `tsc` tanpa error baru (508); eslint bersih untuk file baru.
+  - Catatan: unggah lampiran (surat dokter) belum ada di Coach Portal, masih lewat Area Karyawan. Belum di-deploy.
