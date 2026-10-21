@@ -312,3 +312,8 @@ export const memberStatusSchema = z.object({
   status: z.enum(["active", "suspended", "banned"]),
   reason: z.string().trim().max(300).nullable().optional(),
 });
+
+// ── Cuti & pengganti coach (EPIC-067) ─────────────────────────────────────
+export const coachLeaveSettingsSchema = z
+  .object({ backup_approver_user_id: z.string().uuid().nullable() })
+  .partial();

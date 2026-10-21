@@ -282,4 +282,6 @@ WHERE deleted_at IS NULL
     -- EPIC-058 Otomasi & Pengingat:
     'studio.automation',
     -- EPIC-066 Program Loyalitas:
-    'studio.loyalty');
+    'studio.loyalty',
+    -- EPIC-067 Cuti & Pengganti Coach:
+    'studio.coach-leave');

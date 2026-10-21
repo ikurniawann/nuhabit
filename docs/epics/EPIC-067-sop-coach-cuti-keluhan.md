@@ -1,6 +1,6 @@
 # EPIC-067: SOP Coach — Cuti Terencana, Keluhan & Member Perhatian Khusus
 
-status: backlog
+status: on-progress
 environment: dev
 retries: 0
 
@@ -97,7 +97,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
 
 ### A. Cuti & ketidakhadiran coach
 
-- [ ] T-067-A9 **(Tahap 1)** Role **Program Director**: role IAM yang bisa di-assign ke user, dengan hak menyetujui cuti
+- [x] T-067-A9 **(Tahap 1)** Role **Program Director**: role IAM yang bisa di-assign ke user, dengan hak menyetujui cuti
   coach, menunjuk pengganti, membatalkan kelas, mengatur blackout, dan melihat antrean "butuh pengganti". Pengaturan
   approver cadangan. Komisi tidak berubah: peran Ops Director 0% di EPIC-056 tetap terpisah dari role ini.
 - [ ] T-067-A1 **(Tahap 1)** Aturan minimal pemberitahuan H-N per jenis cuti + daftar jenis yang dikecualikan; flag
@@ -196,3 +196,26 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
   - Alur pengganti diserahkan ke best practice: pengganti menerima → Program Director menunjuk → Program Director
     membatalkan dengan alasan.
   - Tafsiran poin 9: front desk/admin hanya melihat ikon "ada penanda medis" tanpa isi.
+- 2026-10-21 — **T-067-A9 selesai** (status epic → on-progress).
+  - Migrasi `20261021090000_studio_program_director.sql`:
+    - role `program_director`;
+    - menu `studio.coach-leave` "Cuti & Pengganti Coach" (read/update);
+    - grant Program Director (read/update di jadwal, kalender, ketersediaan, Personal Training, check-in; read di
+      coach; area karyawan);
+    - CHECK `users_role_check` dibangun ulang. Selain `program_director`, CHECK ini juga ditambah employee/sales/marketing:
+      ketiganya sudah ada di UI tetapi belum ada di CHECK, jadi memberi role itu ke user gagal di DB dev.
+  - Hak memutus cuti ditentukan oleh role, bukan aksi menu:
+    - `resolveLeaveApprovers` memakai Program Director yang tidak cuti hari ini; bila tidak ada → approver cadangan
+      (`studio.settings` key `leave_backup_approver_user_id`); bila tidak ada juga → hanya Super Admin.
+    - Tidak ada yang bisa memutus pengajuannya sendiri.
+    - `assertCanDecideCoachLeave` siap dipakai di T-067-A4.
+    - "Sedang cuti" = cuti HRIS disetujui atau `coach_time_off` hari ini (WIB).
+  - Halaman `/dashboard/studio/coach-leave` + API `/api/studio/coach-leave/settings`.
+  - Bukti:
+    - 9 unit test (`coach-leave.test.ts`) dan 3 test integrasi (`coach-leave-server.integration.test.ts`, hanya jalan
+      di DB `*_test`, fixture dibersihkan) lulus di `nuhabit_test`.
+    - Migrasi idempoten dan tidak di-prune oleh seeder `iam-menus.sql`.
+    - Smoke test dengan akun uji sementara di `nuhabit_test` (sudah dihapus): Program Director GET/PATCH 200, cadangan
+      tidak valid 400, menu komisi 403, halaman 200, tanpa login 401/redirect.
+    - `tsc` tanpa error baru (508 error lama sebelum/sesudah); eslint bersih untuk file yang diubah.
+    - Belum dicek visual di browser dan belum di-deploy ke nuhabitdev.
