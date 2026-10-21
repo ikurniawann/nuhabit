@@ -118,7 +118,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
   sesi; KPI `leave_request_discipline` memakai ambang H-N; potongan porsi insentif per kejadian di `commission_lines`
   (persentase bisa diatur); SP otomatis diusulkan ke Program Director setelah N kejadian dalam periode (N & periode
   bisa diatur). Ketiganya aktif bersamaan sesuai keputusan client no. 3.
-- [ ] T-067-A2 **(Tahap 3)** Tanggal blackout cuti (rentang tanggal + alasan) diatur Program Director dan menolak
+- [x] T-067-A2 **(Tahap 3)** Tanggal blackout cuti (rentang tanggal + alasan) diatur Program Director dan menolak
   pengajuan; pengecualian per pengajuan hanya oleh Program Director dengan alasan.
 - [ ] T-067-A7 **(Tahap 3)** Reschedule sesi Personal Training (coach/admin/member) tanpa batal-lalu-booking; kredit tetap,
   WA ke pihak lain.
@@ -585,3 +585,31 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
     1. jalankan ulang container dengan image `nuhabitdev:pre-epic067-t2`;
     2. migrasi hanya menambah, jadi image lama tetap jalan dengan skema baru;
     3. restore dump di atas bila perlu.
+- 2026-10-22 — **T-067-A2 selesai** (tanggal blackout cuti coach).
+  - Migrasi `20261023090000_studio_coach_leave_blackouts.sql`:
+    - tabel `studio.coach_leave_blackouts` (rentang tanggal inklusif + alasan per venue, maks 31 hari);
+    - `hris.leaves.blackout_exception_requested`, `blackout_override_reason/_by/_at`.
+  - Keputusan desain:
+    - **Jenis cuti yang kena blackout** diatur per jenis (kolom "Kena blackout" di tabel minimal pemberitahuan,
+      `leave_notice_rules.*.blackout`). Default: Cuti Tahunan, Tanpa Upah, Pernikahan. Sakit, darurat, haid, ayah,
+      duka (tidak bisa direncanakan) dan melahirkan, haji/umrah (hak normatif) tidak, kecuali diubah.
+    - **Pengajuan coach** yang beririsan ditolak (`LEAVE_BLACKOUT`), kecuali coach mencentang "Minta pengecualian
+      ke Program Director" di Coach Portal. ESS menolak dan mengarahkan ke Coach Portal. HR yang mencatat tetap bisa.
+    - **Pengecualian per pengajuan** hanya oleh approver cuti coach (Program Director / cadangan / Super Admin)
+      dengan alasan minimal 10 karakter (`LEAVE_BLACKOUT_OVERRIDE_REQUIRED`). Blackout dicek ulang saat persetujuan,
+      jadi blackout yang dibuat setelah pengajuan juga berlaku.
+    - **Cuti yang sudah ada** di rentang blackout baru tidak dibatalkan otomatis; daftarnya ditampilkan ke Program
+      Director saat blackout dibuat.
+    - Template SOP menyebut jenis cuti yang kena blackout dari pengaturan.
+  - UI: seksi "Tanggal blackout cuti" di Cuti & Pengganti Coach (tambah/hapus); pill "Masa blackout" + kolom alasan
+    pengecualian di antrean; daftar blackout, peringatan, dan centang pengecualian di tab Cuti Coach Portal; badge
+    Blackout + alasan pengecualian di riwayat.
+  - Bukti:
+    - unit test `blackoutConflicts` (tepi rentang inklusif, jenis yang dikecualikan, pesan) + test integrasi DB
+      (konflik per jenis, cuti terdampak dilaporkan, blackout lewat tidak tampil, simpan sebagian kolom, hapus 404)
+      lulus di `nuhabit_test`; 410 test studio/HRIS/KPI lulus;
+    - E2E headless (PD, coach uji; fixture dihapus): PD tambah blackout → coach ditolak (tombol mati, API paksa 400)
+      → minta pengecualian → PD tidak bisa setujui tanpa alasan (UI & API 400) → setujui dengan alasan → coach melihat
+      alasan; tanpa error console;
+    - `tsc` tetap 508 (baseline), eslint tanpa error baru.
+  - Belum di-deploy.

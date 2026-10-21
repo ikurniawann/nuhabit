@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiGet, apiPost } from "@/lib/api-client";
 import { COVER_STATUS_LABEL, coverBlockers, type CoverStatus, type SubstituteCandidate } from "@/lib/studio/coach-cover";
+import { type BlackoutPeriod, describeBlackouts, MIN_BLACKOUT_OVERRIDE_REASON } from "@/lib/studio/coach-leave";
 import { LEAVE_TYPE_LABELS, type LeaveType } from "@/types/hris";
 import { formatDayLabel } from "../types";
 import { EmptyState, NativeSelect, Pill } from "./ui-bits";
@@ -43,6 +44,8 @@ interface QueueLeave {
   coachName: string;
   canDecide: boolean;
   covers: QueueCover[];
+  /** Blackout yang berlaku → setujui = pengecualian dengan alasan (T-067-A2). */
+  blackouts: BlackoutPeriod[];
 }
 
 const TONE: Record<CoverStatus, "positive" | "warning" | "danger" | "neutral"> = {
@@ -97,7 +100,10 @@ function LeaveCard({ leave: l, onChanged }: { leave: QueueLeave; onChanged: () =
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  const [overrideReason, setOverrideReason] = useState("");
   const blockers = coverBlockers(l.covers).length;
+  const inBlackout = l.blackouts.length > 0;
+  const overrideOk = !inBlackout || overrideReason.trim().length >= MIN_BLACKOUT_OVERRIDE_REASON;
   const range = l.startDate === l.endDate ? formatDayLabel(l.startDate) : `${formatDayLabel(l.startDate)} – ${formatDayLabel(l.endDate)}`;
 
   async function decide(action: "approve" | "reject") {
@@ -107,8 +113,15 @@ function LeaveCard({ leave: l, onChanged }: { leave: QueueLeave; onChanged: () =
         leave_id: l.leaveId,
         action,
         ...(action === "reject" ? { rejection_reason: reason.trim() } : {}),
+        ...(action === "approve" && inBlackout ? { blackout_override_reason: overrideReason.trim() } : {}),
       });
-      toast.success(action === "approve" ? "Cuti disetujui — jadwal pengganti diterapkan" : "Cuti ditolak");
+      toast.success(
+        action === "approve"
+          ? inBlackout
+            ? "Cuti disetujui sebagai pengecualian blackout — jadwal pengganti diterapkan"
+            : "Cuti disetujui — jadwal pengganti diterapkan"
+          : "Cuti ditolak"
+      );
       await onChanged();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal memproses");
@@ -118,7 +131,7 @@ function LeaveCard({ leave: l, onChanged }: { leave: QueueLeave; onChanged: () =
   }
 
   return (
-    <article className={`rounded-lg border p-4 ${l.isShortNotice ? "border-nh-ochre/60 bg-nh-ochre/5" : "border-border"}`}>
+    <article className={`rounded-lg border p-4 ${inBlackout ? "border-destructive/50 bg-destructive/5" : l.isShortNotice ? "border-nh-ochre/60 bg-nh-ochre/5" : "border-border"}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-semibold text-foreground">
@@ -129,10 +142,18 @@ function LeaveCard({ leave: l, onChanged }: { leave: QueueLeave; onChanged: () =
           </p>
           <p className="mt-1 text-sm text-foreground">{l.reason}</p>
         </div>
-        {l.isShortNotice && (
-          <Pill tone="warning">Mendadak{l.noticeDays != null ? ` · ${l.noticeDays >= 0 ? `H-${l.noticeDays}` : `${-l.noticeDays} hari terlambat`}` : ""}</Pill>
-        )}
+        <div className="flex flex-wrap gap-1.5">
+          {inBlackout && <Pill tone="danger">Masa blackout</Pill>}
+          {l.isShortNotice && (
+            <Pill tone="warning">Mendadak{l.noticeDays != null ? ` · ${l.noticeDays >= 0 ? `H-${l.noticeDays}` : `${-l.noticeDays} hari terlambat`}` : ""}</Pill>
+          )}
+        </div>
       </div>
+      {inBlackout && (
+        <p className="mt-2 text-sm text-destructive">
+          Jatuh di tanggal blackout: {describeBlackouts(l.blackouts)}. Hanya bisa disetujui sebagai pengecualian dengan alasan.
+        </p>
+      )}
 
       {l.covers.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">Tidak ada sesi terdampak.</p>
@@ -149,11 +170,19 @@ function LeaveCard({ leave: l, onChanged }: { leave: QueueLeave; onChanged: () =
           {rejecting && (
             <Input placeholder="Alasan penolakan" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Alasan penolakan" />
           )}
+          {!rejecting && inBlackout && (
+            <Input
+              placeholder={`Alasan pengecualian blackout (minimal ${MIN_BLACKOUT_OVERRIDE_REASON} karakter)`}
+              value={overrideReason}
+              onChange={(e) => setOverrideReason(e.target.value)}
+              aria-label="Alasan pengecualian blackout"
+            />
+          )}
           <div className="flex flex-wrap items-center gap-2">
             {!rejecting ? (
               <>
-                <Button onClick={() => decide("approve")} disabled={busy !== null || blockers > 0}>
-                  {busy === "approve" && <Loader2 className="size-4 animate-spin" />} Setujui cuti
+                <Button onClick={() => decide("approve")} disabled={busy !== null || blockers > 0 || !overrideOk}>
+                  {busy === "approve" && <Loader2 className="size-4 animate-spin" />} {inBlackout ? "Setujui sebagai pengecualian" : "Setujui cuti"}
                 </Button>
                 <Button variant="outline" onClick={() => setRejecting(true)} disabled={busy !== null}>
                   Tolak

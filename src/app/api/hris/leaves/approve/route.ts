@@ -14,7 +14,8 @@ import {
   syncLeaveTimeOff,
   voidLeaveCovers,
 } from "@/lib/studio/coach-cover-server";
-import { assertCanDecideCoachLeave } from "@/lib/studio/coach-leave-server";
+import { assertCanDecideCoachLeave, leaveBlackoutConflicts } from "@/lib/studio/coach-leave-server";
+import { describeBlackouts, MIN_BLACKOUT_OVERRIDE_REASON } from "@/lib/studio/coach-leave";
 import { recordShortNoticeLeaveIncident } from "@/lib/studio/coach-discipline-server";
 import { LEAVE_TYPE_LABELS } from "@/types/hris";
 import { z } from 'zod';
@@ -24,6 +25,8 @@ const approvalSchema = z.object({
   leave_id: z.string().uuid(),
   action: z.enum(['approve', 'reject']),
   rejection_reason: z.string().optional(),
+  // Pengecualian tanggal blackout cuti coach (EPIC-067 T-067-A2).
+  blackout_override_reason: z.string().trim().max(500).optional(),
 });
 
 /**
@@ -110,6 +113,27 @@ export async function POST(request: NextRequest) {
     const isApprove = validated.action === 'approve';
     const newStatus = isApprove ? 'approved' : 'rejected';
 
+    // Cuti coach di tanggal blackout: hanya bisa disetujui sebagai pengecualian
+    // dengan alasan (dicek ulang sekarang — blackout bisa dibuat setelah pengajuan).
+    let blackoutOverride: string | null = null;
+    if (coachLeave && isApprove) {
+      const conflicts = await leaveBlackoutConflicts(coachLeave);
+      if (conflicts.length > 0) {
+        const r = validated.blackout_override_reason?.trim() ?? '';
+        if (r.length < MIN_BLACKOUT_OVERRIDE_REASON) {
+          return NextResponse.json(
+            {
+              error: `Cuti ini jatuh di tanggal blackout (${describeBlackouts(conflicts)}). Tulis alasan pengecualian minimal ${MIN_BLACKOUT_OVERRIDE_REASON} karakter untuk menyetujuinya.`,
+              code: 'LEAVE_BLACKOUT_OVERRIDE_REQUIRED',
+              blackouts: conflicts,
+            },
+            { status: 400 }
+          );
+        }
+        blackoutOverride = r;
+      }
+    }
+
     // Cuti coach: semua sesi terdampak harus sudah punya pengganti / diputuskan batal.
     if (coachLeave && isApprove) {
       await expireStaleRequests();
@@ -135,6 +159,12 @@ export async function POST(request: NextRequest) {
           validated.action === 'reject' ? (validated.rejection_reason ?? null) : null,
         ]
       );
+      if (blackoutOverride) {
+        await client.query(
+          `UPDATE hris.leaves SET blackout_override_reason = $2, blackout_override_by = $3, blackout_override_at = now() WHERE id = $1`,
+          [validated.leave_id, blackoutOverride, actor.userId]
+        );
+      }
 
       if (isApprove && leave.leave_type === 'annual') {
         await client.query(

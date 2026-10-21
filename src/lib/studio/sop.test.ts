@@ -22,18 +22,20 @@ describe("template SOP coach", () => {
     expect(t).toContain("3 pelanggaran dalam 90 hari");
     expect(t).toContain("Cedera: respons ≤ 2 jam, selesai ≤ 1 hari");
     expect(t).toContain("Coach: respons ≤ 1 hari, selesai ≤ 3 hari");
+    expect(t).toContain("Cuti Tahunan, Cuti Tanpa Upah, Cuti Pernikahan tidak bisa diambil di tanggal tersebut");
   });
 
   it("ikut berubah bila pengaturan diubah", () => {
     const t = buildSopCoachTemplate({
       ...base,
-      noticeRules: { ...DEFAULT_NOTICE_RULES, annual: { min_days: 14, allow_short_notice: false } },
+      noticeRules: { ...DEFAULT_NOTICE_RULES, annual: { min_days: 14, allow_short_notice: false, blackout: false } },
       discipline: { ...DEFAULT_DISCIPLINE_RULES, max_deduction_percent: 30 },
       substituteResponseHours: 6,
     });
     expect(t).toContain("Cuti Tahunan: minimal H-14");
     expect(t).toContain("maksimal 30% per bulan");
     expect(t).toContain("paling lambat 6 jam");
+    expect(t).toContain("e. Program Director menetapkan tanggal blackout (mis. hari event) yang diumumkan di Coach Portal. Cuti Tanpa Upah, Cuti Pernikahan tidak bisa diambil");
   });
 
   it("pesan pengingat memuat judul, versi, dan tautan", () => {

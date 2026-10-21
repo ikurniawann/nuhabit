@@ -29,6 +29,7 @@ export const SOP_COACH_TEMPLATE_TITLE = "SOP Coach — Cuti, Ketidakhadiran & Pe
 export function buildSopCoachTemplate(i: SopTemplateInput): string {
   const planned = NOTICE_LEAVE_TYPES.filter((t) => !i.noticeRules[t].allow_short_notice && i.noticeRules[t].min_days > 0);
   const flexible = NOTICE_LEAVE_TYPES.filter((t) => i.noticeRules[t].allow_short_notice);
+  const blackout = NOTICE_LEAVE_TYPES.filter((t) => i.noticeRules[t].blackout);
   const d = i.discipline;
   return [
     "1. TUJUAN",
@@ -40,7 +41,9 @@ export function buildSopCoachTemplate(i: SopTemplateInput): string {
     ...planned.map((t) => `   • ${LEAVE_TYPE_LABELS[t]}: minimal H-${i.noticeRules[t].min_days}`),
     `c. ${flexible.map((t) => LEAVE_TYPE_LABELS[t]).join(", ")} boleh diajukan mendadak, tetapi wajib disertai alasan yang jelas (dan surat dokter untuk sakit bila ada). Pengajuan di bawah minimal pemberitahuan tercatat sebagai CUTI MENDADAK.`,
     "d. Bila sakit atau darurat di hari mengajar: kabari Program Director secepatnya, lalu ajukan di Coach Portal di hari yang sama.",
-    "e. Program Director dapat menetapkan tanggal tertentu (mis. hari event) sebagai tanggal yang tidak boleh diambil cuti.",
+    blackout.length > 0
+      ? `e. Program Director menetapkan tanggal blackout (mis. hari event) yang diumumkan di Coach Portal. ${blackout.map((t) => LEAVE_TYPE_LABELS[t]).join(", ")} tidak bisa diambil di tanggal tersebut; pengecualian hanya diberikan Program Director dengan alasan tertulis.`
+      : "e. Program Director dapat menetapkan tanggal blackout (mis. hari event) yang diumumkan di Coach Portal.",
     "",
     "3. PENGGANTI SESI",
     "a. Saat mengajukan cuti, Coach Portal menampilkan semua kelas dan sesi Personal Training yang terdampak.",

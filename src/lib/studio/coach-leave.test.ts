@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  blackoutConflicts,
+  blackoutRejectionMessage,
   canDecideCoachLeave,
   DEFAULT_NOTICE_RULES,
   evaluateLeaveNotice,
@@ -64,8 +66,8 @@ describe("canDecideCoachLeave", () => {
 });
 
 describe("evaluateLeaveNotice", () => {
-  const h7 = { min_days: 7, allow_short_notice: false };
-  const sick = { min_days: 1, allow_short_notice: true };
+  const h7 = { min_days: 7, allow_short_notice: false, blackout: true };
+  const sick = { min_days: 1, allow_short_notice: true, blackout: false };
 
   it("tepat H-7 atau lebih → diterima, tidak mendadak", () => {
     expect(evaluateLeaveNotice(h7, "2026-10-28", "2026-10-21")).toEqual({ ok: true, shortNotice: false, noticeDays: 7 });
@@ -87,7 +89,7 @@ describe("evaluateLeaveNotice", () => {
   });
 
   it("min_days 0 = tanpa minimal hari, tetapi tanggal mundur tetap ditolak", () => {
-    const none = { min_days: 0, allow_short_notice: false };
+    const none = { min_days: 0, allow_short_notice: false, blackout: false };
     expect(evaluateLeaveNotice(none, "2026-10-21", "2026-10-21")).toMatchObject({ ok: true, shortNotice: false });
     expect(evaluateLeaveNotice(none, "2026-10-20", "2026-10-21")).toMatchObject({ ok: false, earliestStart: "2026-10-21" });
   });
@@ -102,30 +104,61 @@ describe("normalizeNoticeRules", () => {
   it("menimpa per jenis, sisanya default; nilai rusak diabaikan dan dibatasi 0–90", () => {
     const r = normalizeNoticeRules({
       annual: { min_days: 14 },
-      sick: { allow_short_notice: false },
+      sick: { allow_short_notice: false, blackout: true },
       unpaid: { min_days: 500 },
       maternity: { min_days: -3, allow_short_notice: "ya" },
-      marriage: { min_days: 2.5 },
+      marriage: { min_days: 2.5, blackout: "tidak" },
     });
-    expect(r.annual).toEqual({ min_days: 14, allow_short_notice: false });
-    expect(r.sick).toEqual({ min_days: 1, allow_short_notice: false });
+    expect(r.annual).toEqual({ min_days: 14, allow_short_notice: false, blackout: true });
+    expect(r.sick).toEqual({ min_days: 1, allow_short_notice: false, blackout: true });
     expect(r.unpaid.min_days).toBe(90);
-    expect(r.maternity).toEqual({ min_days: 0, allow_short_notice: false });
-    expect(r.marriage.min_days).toBe(DEFAULT_NOTICE_RULES.marriage.min_days);
+    expect(r.maternity).toEqual({ min_days: 0, allow_short_notice: false, blackout: false });
+    expect(r.marriage).toEqual(DEFAULT_NOTICE_RULES.marriage);
     expect(r.pilgrimage).toEqual(DEFAULT_NOTICE_RULES.pilgrimage);
+  });
+});
+
+describe("blackoutConflicts", () => {
+  const annual = DEFAULT_NOTICE_RULES.annual;
+  const event = { id: "e", date_from: "2026-11-14", date_to: "2026-11-16", reason: "Hyrox Jakarta" };
+  const promo = { id: "p", date_from: "2026-12-31", date_to: "2026-12-31", reason: "Tutup tahun" };
+
+  it("default: cuti terencana kena blackout, sakit/darurat/hak normatif tidak", () => {
+    expect(["annual", "unpaid", "marriage"].every((t) => DEFAULT_NOTICE_RULES[t as "annual"].blackout)).toBe(true);
+    expect(["sick", "emergency", "menstrual", "paternity", "bereavement", "maternity", "pilgrimage"].some((t) => DEFAULT_NOTICE_RULES[t as "sick"].blackout)).toBe(false);
+  });
+
+  it("beririsan di tepi rentang (inklusif) → konflik; berdampingan → tidak", () => {
+    expect(blackoutConflicts(annual, [event, promo], "2026-11-10", "2026-11-14")).toEqual([event]);
+    expect(blackoutConflicts(annual, [event, promo], "2026-11-16", "2026-11-20")).toEqual([event]);
+    expect(blackoutConflicts(annual, [event, promo], "2026-11-15", "2026-11-15")).toEqual([event]);
+    expect(blackoutConflicts(annual, [event, promo], "2026-11-10", "2026-11-13")).toEqual([]);
+    expect(blackoutConflicts(annual, [event, promo], "2026-11-17", "2026-11-20")).toEqual([]);
+    expect(blackoutConflicts(annual, [event, promo], "2026-11-01", "2026-12-31")).toEqual([event, promo]);
+  });
+
+  it("jenis cuti yang tidak kena blackout → selalu kosong", () => {
+    expect(blackoutConflicts(DEFAULT_NOTICE_RULES.sick, [event], "2026-11-15", "2026-11-15")).toEqual([]);
+  });
+
+  it("pesan penolakan menyebut rentang dan alasan", () => {
+    const msg = blackoutRejectionMessage("annual", [event, promo]);
+    expect(msg).toContain("Cuti Tahunan");
+    expect(msg).toMatch(/14 Nov 2026 – .*16 Nov 2026 \(Hyrox Jakarta\)/);
+    expect(msg).toMatch(/31 Des 2026 \(Tutup tahun\)/);
   });
 });
 
 describe("pesan aturan H-N", () => {
   it("penolakan menyebut jenis, H-N, dan tanggal paling cepat", () => {
-    const msg = noticeRejectionMessage("annual", { min_days: 7, allow_short_notice: false }, "2026-10-28");
+    const msg = noticeRejectionMessage("annual", { min_days: 7, allow_short_notice: false, blackout: true }, "2026-10-28");
     expect(msg).toContain("Cuti Tahunan");
     expect(msg).toContain("H-7");
     expect(msg).toMatch(/28 Okt 2026/);
   });
 
   it("cuti mendadak menyebut H-0 atau hari setelah tanggal mulai", () => {
-    const rule = { min_days: 1, allow_short_notice: true };
+    const rule = { min_days: 1, allow_short_notice: true, blackout: false };
     expect(shortNoticeMessage(rule, 0)).toBe("Tercatat sebagai cuti mendadak (diajukan H-0, SOP minimal H-1).");
     expect(shortNoticeMessage(rule, -2)).toContain("2 hari setelah tanggal mulai");
   });

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { canDecideCoachLeave } from "@/lib/studio/coach-leave";
-import { getCoachLeaveApprovers } from "@/lib/studio/coach-leave-server";
+import { getCoachLeaveApprovers, leaveBlackoutConflicts } from "@/lib/studio/coach-leave-server";
 import { listPendingCoachLeaves } from "@/lib/studio/coach-cover-server";
 import { requireStudioContext, studioRoute } from "@/lib/studio/server";
 
@@ -12,7 +12,12 @@ export async function GET() {
     const data = [];
     for (const l of leaves) {
       const { resolved } = await getCoachLeaveApprovers(ctx.branchId, l.requesterUserId);
-      data.push({ ...l, canDecide: canDecideCoachLeave(ctx.user, resolved, l.requesterUserId) });
+      data.push({
+        ...l,
+        canDecide: canDecideCoachLeave(ctx.user, resolved, l.requesterUserId),
+        // Blackout yang berlaku sekarang → persetujuan butuh alasan pengecualian (T-067-A2).
+        blackouts: await leaveBlackoutConflicts(l),
+      });
     }
     return NextResponse.json({ success: true, data });
   });

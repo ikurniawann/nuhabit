@@ -2,6 +2,8 @@ import { ApiError } from "@/lib/api/auth";
 import { query, queryOne } from "@/lib/db";
 import {
   type ApproverCandidate,
+  type BlackoutPeriod,
+  blackoutConflicts,
   canDecideCoachLeave,
   COACH_LEAVE_SETTING_KEYS,
   type CoachLeaveSettings,
@@ -39,14 +41,17 @@ export async function loadCoachLeaveSettings(branchId: string): Promise<CoachLea
 }
 
 export type CoachLeaveSettingsPatch = Partial<Omit<CoachLeaveSettings, "notice_rules">> & {
-  /** Boleh sebagian (per jenis cuti); digabung dengan aturan tersimpan. */
-  notice_rules?: Partial<Record<LeaveType, LeaveNoticeRule>>;
+  /** Boleh sebagian (per jenis cuti & per kolom); digabung dengan aturan tersimpan. */
+  notice_rules?: Partial<Record<LeaveType, Partial<LeaveNoticeRule>>>;
 };
 
 export async function saveCoachLeaveSettings(branchId: string, patch: CoachLeaveSettingsPatch, userId: string) {
   if (patch.notice_rules) {
-    const current = await loadCoachLeaveSettings(branchId);
-    patch = { ...patch, notice_rules: normalizeNoticeRules({ ...current.notice_rules, ...patch.notice_rules }) };
+    // Gabung per jenis cuti per kolom: field yang tidak dikirim tetap nilai tersimpan.
+    const current = (await loadCoachLeaveSettings(branchId)).notice_rules;
+    const merged: Record<string, LeaveNoticeRule> = { ...current };
+    for (const [type, rule] of Object.entries(patch.notice_rules)) merged[type] = { ...current[type as LeaveType], ...rule };
+    patch = { ...patch, notice_rules: normalizeNoticeRules(merged) };
   }
   for (const [field, value] of Object.entries(patch) as [keyof CoachLeaveSettings, unknown][]) {
     if (value === undefined) continue;
@@ -147,6 +152,8 @@ export interface CoachLeaveNotice {
   branchId: string;
   rule: LeaveNoticeRule;
   evaluation: NoticeEvaluation;
+  /** Rentang blackout yang beririsan (kosong bila jenis cuti tidak terkena blackout). */
+  blackouts: BlackoutPeriod[];
 }
 
 /**
@@ -157,6 +164,7 @@ export async function evaluateCoachLeaveNotice(
   employeeId: string,
   leaveType: LeaveType,
   startDate: string,
+  endDate: string,
   now: Date = new Date()
 ): Promise<CoachLeaveNotice | null> {
   const coach = await queryOne<{ branch_id: string }>(
@@ -166,7 +174,91 @@ export async function evaluateCoachLeaveNotice(
   if (!coach) return null;
   const { notice_rules } = await loadCoachLeaveSettings(coach.branch_id);
   const rule = notice_rules[leaveType];
-  return { branchId: coach.branch_id, rule, evaluation: evaluateLeaveNotice(rule, startDate, wibNow(now).date) };
+  const blackouts = blackoutConflicts(rule, await listBlackoutsInRange(coach.branch_id, startDate, endDate), startDate, endDate);
+  return { branchId: coach.branch_id, rule, evaluation: evaluateLeaveNotice(rule, startDate, wibNow(now).date), blackouts };
+}
+
+// ── Tanggal blackout (T-067-A2) ────────────────────────────────────────────
+
+const BLACKOUT_COLS = `id, date_from::text AS date_from, date_to::text AS date_to, reason`;
+
+export interface BlackoutRow extends BlackoutPeriod {
+  created_by_name: string | null;
+  created_at: string;
+}
+
+/** Blackout yang belum lewat (date_to ≥ hari ini WIB), urut tanggal. */
+export async function listUpcomingBlackouts(branchId: string, now: Date = new Date()): Promise<BlackoutRow[]> {
+  return query<BlackoutRow>(
+    `SELECT b.id, b.date_from::text AS date_from, b.date_to::text AS date_to, b.reason, u.full_name AS created_by_name, b.created_at
+     FROM studio.coach_leave_blackouts b LEFT JOIN configuration.users u ON u.id = b.created_by
+     WHERE b.branch_id = $1 AND b.date_to >= $2::date
+     ORDER BY b.date_from, b.date_to`,
+    [branchId, wibNow(now).date]
+  );
+}
+
+export async function listBlackoutsInRange(branchId: string, start: string, end: string): Promise<BlackoutPeriod[]> {
+  return query<BlackoutPeriod>(
+    `SELECT ${BLACKOUT_COLS} FROM studio.coach_leave_blackouts
+     WHERE branch_id = $1 AND date_from <= $3::date AND date_to >= $2::date
+     ORDER BY date_from`,
+    [branchId, start, end]
+  );
+}
+
+/** Cuti coach yang sudah disetujui / menunggu dan beririsan dengan rentang — ditampilkan saat blackout dibuat. */
+export interface BlackoutOverlapLeave {
+  leave_id: string;
+  coach_name: string;
+  leave_type: LeaveType;
+  start_date: string;
+  end_date: string;
+  status: "pending" | "approved";
+}
+
+export async function createBlackout(
+  venue: { companyId: string; branchId: string },
+  userId: string,
+  input: { date_from: string; date_to: string; reason: string }
+): Promise<{ id: string; overlapping: BlackoutOverlapLeave[] }> {
+  const row = await queryOne<{ id: string }>(
+    `INSERT INTO studio.coach_leave_blackouts (company_id, branch_id, date_from, date_to, reason, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [venue.companyId, venue.branchId, input.date_from, input.date_to, input.reason.trim(), userId]
+  );
+  // Cuti yang sudah disetujui tidak dibatalkan otomatis; Program Director memutuskan sendiri.
+  const overlapping = await query<BlackoutOverlapLeave>(
+    `SELECT l.id AS leave_id, COALESCE(c.display_name, c.full_name) AS coach_name, l.leave_type,
+            l.start_date::text AS start_date, l.end_date::text AS end_date, l.status
+     FROM hris.leaves l JOIN studio.coaches c ON c.employee_id = l.employee_id AND c.is_active
+     WHERE c.branch_id = $1 AND l.status IN ('pending', 'approved')
+       AND l.start_date <= $3::date AND l.end_date >= $2::date
+     ORDER BY l.start_date`,
+    [venue.branchId, input.date_from, input.date_to]
+  );
+  return { id: row!.id, overlapping };
+}
+
+export async function deleteBlackout(branchId: string, id: string): Promise<void> {
+  const rows = await query(`DELETE FROM studio.coach_leave_blackouts WHERE id = $1 AND branch_id = $2 RETURNING id`, [id, branchId]);
+  if (rows.length === 0) throw ApiError.notFound("Tanggal blackout tidak ditemukan");
+}
+
+/** Blackout yang berlaku untuk cuti coach ini sekarang (dicek ulang saat persetujuan). */
+export async function leaveBlackoutConflicts(leave: {
+  branchId: string;
+  leaveType: LeaveType;
+  startDate: string;
+  endDate: string;
+}): Promise<BlackoutPeriod[]> {
+  const { notice_rules } = await loadCoachLeaveSettings(leave.branchId);
+  return blackoutConflicts(
+    notice_rules[leave.leaveType],
+    await listBlackoutsInRange(leave.branchId, leave.startDate, leave.endDate),
+    leave.startDate,
+    leave.endDate
+  );
 }
 
 /**
@@ -197,6 +289,8 @@ export interface CoachLeaveRow {
   rejection_reason: string | null;
   is_short_notice: boolean;
   notice_days: number | null;
+  blackout_exception_requested: boolean;
+  blackout_override_reason: string | null;
   created_at: string;
 }
 
@@ -204,7 +298,8 @@ export interface CoachLeaveRow {
 export async function listCoachLeaves(coachId: string, limit = 20): Promise<CoachLeaveRow[]> {
   return query<CoachLeaveRow>(
     `SELECT l.id, l.leave_type, l.start_date::text AS start_date, l.end_date::text AS end_date, l.total_days, l.status,
-            l.reason, l.rejection_reason, l.is_short_notice, l.notice_days, l.created_at
+            l.reason, l.rejection_reason, l.is_short_notice, l.notice_days,
+            l.blackout_exception_requested, l.blackout_override_reason, l.created_at
      FROM hris.leaves l JOIN studio.coaches c ON c.employee_id = l.employee_id
      WHERE c.id = $1
      ORDER BY l.created_at DESC

@@ -6,7 +6,7 @@ import { loadHolidayIndex } from "@/lib/hris/holidays-db";
 import { describeLeaveDays } from "@/lib/hris/holidays";
 import { evaluateCoachLeaveNotice } from "@/lib/studio/coach-leave-server";
 import { onCoachLeaveSubmitted } from "@/lib/studio/coach-cover-server";
-import { noticeRejectionMessage, shortNoticeMessage } from "@/lib/studio/coach-leave";
+import { blackoutRejectionMessage, noticeRejectionMessage, shortNoticeMessage } from "@/lib/studio/coach-leave";
 import { z } from 'zod';
 
 const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -19,6 +19,8 @@ const leaveRequestSchema = z.object({
   end_date: z.string().regex(DATE_ISO, 'Tanggal selesai harus berformat YYYY-MM-DD'),
   reason: z.string().min(10, 'Reason must be at least 10 characters'),
   attachment_url: z.string().optional(),
+  // Coach meminta pengecualian tanggal blackout ke Program Director (EPIC-067 T-067-A2).
+  blackout_exception: z.boolean().optional(),
 });
 
 /**
@@ -191,7 +193,7 @@ export async function POST(request: NextRequest) {
     // Hanya untuk karyawan yang terhubung ke coach aktif. Di bawah H-N →
     // ditolak, kecuali jenis yang boleh mendadak (sakit, darurat, …) atau HR
     // yang mencatat → diterima dan ditandai is_short_notice.
-    const notice = await evaluateCoachLeaveNotice(empId, validated.leave_type, validated.start_date);
+    const notice = await evaluateCoachLeaveNotice(empId, validated.leave_type, validated.start_date, validated.end_date);
     if (notice && !notice.evaluation.ok && !actor.isHr) {
       return NextResponse.json(
         {
@@ -204,6 +206,21 @@ export async function POST(request: NextRequest) {
       );
     }
     const isShortNotice = notice ? !notice.evaluation.ok || notice.evaluation.shortNotice : false;
+
+    // Tanggal blackout (T-067-A2): ditolak kecuali coach meminta pengecualian
+    // (atau HR yang mencatat). Pengecualiannya sendiri diputus Program Director
+    // dengan alasan saat menyetujui — lihat /api/hris/leaves/approve.
+    const inBlackout = Boolean(notice && notice.blackouts.length > 0);
+    if (notice && inBlackout && !validated.blackout_exception && !actor.isHr) {
+      return NextResponse.json(
+        {
+          error: blackoutRejectionMessage(validated.leave_type, notice.blackouts),
+          code: 'LEAVE_BLACKOUT',
+          blackouts: notice.blackouts,
+        },
+        { status: 400 }
+      );
+    }
 
     // Hari yang benar-benar memotong jatah: akhir pekan dan libur nasional
     // dikecualikan, cuti bersama TETAP memotong (SKB). EPIC-036 Fase D —
@@ -267,6 +284,7 @@ export async function POST(request: NextRequest) {
         status: 'pending',
         is_short_notice: isShortNotice,
         notice_days: notice ? notice.evaluation.noticeDays : null,
+        blackout_exception_requested: inBlackout,
       })
       .select('*')
       .single();
@@ -296,10 +314,12 @@ export async function POST(request: NextRequest) {
     // Cuti coach: siapkan daftar sesi yang butuh pengganti + kabari approver (EPIC-067 T-067-A4).
     if (notice) void onCoachLeaveSubmitted(String(data.id));
 
+    const notes = [
+      notice && isShortNotice ? shortNoticeMessage(notice.rule, notice.evaluation.noticeDays) : null,
+      inBlackout ? 'Jatuh di tanggal blackout — butuh pengecualian dari Program Director.' : null,
+    ].filter(Boolean);
     return NextResponse.json({
-      message: notice && isShortNotice
-        ? shortNoticeMessage(notice.rule, notice.evaluation.noticeDays)
-        : 'Leave request submitted successfully',
+      message: notes.length > 0 ? notes.join(' ') : 'Leave request submitted successfully',
       data,
       // Supaya pemanggil bisa menjelaskan kenapa total_days lebih kecil dari
       // rentang kalendernya (EPIC-036 Fase D).

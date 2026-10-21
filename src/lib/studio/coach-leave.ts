@@ -19,6 +19,8 @@ export const PROGRAM_DIRECTOR_ROLE = "program_director";
 export interface LeaveNoticeRule {
   min_days: number;
   allow_short_notice: boolean;
+  /** Ditolak di tanggal blackout (T-067-A2). Jenis yang tidak bisa direncanakan / hak normatif default tidak. */
+  blackout: boolean;
 }
 
 export const NOTICE_LEAVE_TYPES = [
@@ -38,18 +40,19 @@ export type NoticeRules = Record<LeaveType, LeaveNoticeRule>;
 
 /** Default keputusan client 2026-10-21; semuanya bisa diubah di pengaturan. */
 export const DEFAULT_NOTICE_RULES: NoticeRules = {
-  annual: { min_days: 7, allow_short_notice: false },
-  unpaid: { min_days: 7, allow_short_notice: false },
-  marriage: { min_days: 14, allow_short_notice: false },
-  maternity: { min_days: 30, allow_short_notice: false },
-  pilgrimage: { min_days: 30, allow_short_notice: false },
+  annual: { min_days: 7, allow_short_notice: false, blackout: true },
+  unpaid: { min_days: 7, allow_short_notice: false, blackout: true },
+  marriage: { min_days: 14, allow_short_notice: false, blackout: true },
+  // Hak normatif (melahirkan, ibadah) tidak terkena blackout secara default.
+  maternity: { min_days: 30, allow_short_notice: false, blackout: false },
+  pilgrimage: { min_days: 30, allow_short_notice: false, blackout: false },
   // Tidak bisa direncanakan: diterima kapan pun, tetapi pengajuan di hari H
   // (atau sesudahnya) tercatat mendadak.
-  sick: { min_days: 1, allow_short_notice: true },
-  emergency: { min_days: 1, allow_short_notice: true },
-  menstrual: { min_days: 1, allow_short_notice: true },
-  paternity: { min_days: 1, allow_short_notice: true },
-  bereavement: { min_days: 1, allow_short_notice: true },
+  sick: { min_days: 1, allow_short_notice: true, blackout: false },
+  emergency: { min_days: 1, allow_short_notice: true, blackout: false },
+  menstrual: { min_days: 1, allow_short_notice: true, blackout: false },
+  paternity: { min_days: 1, allow_short_notice: true, blackout: false },
+  bereavement: { min_days: 1, allow_short_notice: true, blackout: false },
 };
 
 export const MAX_NOTICE_DAYS = 90;
@@ -90,6 +93,7 @@ export function normalizeNoticeRules(raw: unknown): NoticeRules {
     out[type] = {
       min_days: days,
       allow_short_notice: typeof s.allow_short_notice === "boolean" ? s.allow_short_notice : base.allow_short_notice,
+      blackout: typeof s.blackout === "boolean" ? s.blackout : base.blackout,
     };
   }
   return out;
@@ -128,6 +132,41 @@ export function noticeRejectionMessage(type: LeaveType, rule: LeaveNoticeRule, e
 /** Keterangan saat pengajuan diterima sebagai cuti mendadak. */
 export function shortNoticeMessage(rule: LeaveNoticeRule, noticeDays: number): string {
   return `Tercatat sebagai cuti mendadak (diajukan ${hMinus(noticeDays)}, SOP minimal H-${rule.min_days}).`;
+}
+
+/**
+ * Tanggal blackout cuti (T-067-A2): rentang tanggal (inklusif) yang ditetapkan
+ * Program Director, mis. hari event. Pengajuan jenis cuti yang `blackout`-nya
+ * aktif dan beririsan dengan rentang ini ditolak, kecuali coach meminta
+ * pengecualian — lalu Program Director wajib menulis alasan saat menyetujui.
+ */
+export interface BlackoutPeriod {
+  id: string;
+  date_from: string;
+  date_to: string;
+  reason: string;
+}
+
+/** Panjang maksimal satu rentang blackout (hari kalender, inklusif). */
+export const MAX_BLACKOUT_DAYS = 31;
+export const MIN_BLACKOUT_OVERRIDE_REASON = 10;
+
+/** Rentang blackout yang beririsan dengan cuti start..end — kosong bila jenis cuti tidak terkena blackout. */
+export function blackoutConflicts(rule: LeaveNoticeRule, blackouts: BlackoutPeriod[], start: string, end: string): BlackoutPeriod[] {
+  if (!rule.blackout) return [];
+  return blackouts.filter((b) => b.date_from <= end && b.date_to >= start);
+}
+
+const blackoutRange = (b: Pick<BlackoutPeriod, "date_from" | "date_to">) =>
+  b.date_from === b.date_to ? tanggalId(b.date_from) : `${tanggalId(b.date_from)} – ${tanggalId(b.date_to)}`;
+
+export function describeBlackouts(conflicts: BlackoutPeriod[]): string {
+  return conflicts.map((b) => `${blackoutRange(b)} (${b.reason})`).join("; ");
+}
+
+/** Pesan penolakan untuk coach (ESS / Coach Portal). */
+export function blackoutRejectionMessage(type: LeaveType, conflicts: BlackoutPeriod[]): string {
+  return `${LEAVE_TYPE_LABELS[type]} tidak bisa diambil di tanggal blackout: ${describeBlackouts(conflicts)}. Pilih tanggal lain, atau ajukan lewat Coach Portal dengan permintaan pengecualian ke Program Director.`;
 }
 
 export interface ApproverCandidate {

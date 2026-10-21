@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MAX_SUBSTITUTE_RESPONSE_HOURS } from "@/lib/studio/coach-cover";
 import { MAX_MEMBER_NOTICE_MIN_HOURS } from "@/lib/studio/session-change";
-import { MAX_NOTICE_DAYS, NOTICE_LEAVE_TYPES } from "@/lib/studio/coach-leave";
+import { MAX_BLACKOUT_DAYS, MAX_NOTICE_DAYS, NOTICE_LEAVE_TYPES } from "@/lib/studio/coach-leave";
 import { FLAG_NOTE_MAX, FLAG_SEVERITIES } from "@/lib/studio/member-flags";
 import { COMPLAINT_CATEGORIES, COMPLAINT_STATUSES, MAX_SLA_HOURS } from "@/lib/studio/complaints";
 import { SOP_BODY_MAX, SOP_TITLE_MAX } from "@/lib/studio/sop";
@@ -324,15 +324,27 @@ export const memberStatusSchema = z.object({
 const noticeRuleSchema = z.object({
   min_days: z.number().int().min(0).max(MAX_NOTICE_DAYS),
   allow_short_notice: z.boolean(),
+  blackout: z.boolean(),
 });
 export const coachLeaveSettingsSchema = z
   .object({
     backup_approver_user_id: z.string().uuid().nullable(),
-    notice_rules: z.partialRecord(z.enum(NOTICE_LEAVE_TYPES), noticeRuleSchema),
+    notice_rules: z.partialRecord(z.enum(NOTICE_LEAVE_TYPES), noticeRuleSchema.partial()),
     substitute_response_hours: z.number().int().min(1).max(MAX_SUBSTITUTE_RESPONSE_HOURS),
     member_notice_min_hours: z.number().int().min(0).max(MAX_MEMBER_NOTICE_MIN_HOURS),
   })
   .partial();
+export const blackoutCreateSchema = z
+  .object({
+    date_from: date,
+    date_to: date,
+    reason: z.string().trim().min(3, "Alasan minimal 3 karakter").max(200),
+  })
+  .refine((b) => b.date_to >= b.date_from, { message: "Tanggal selesai tidak boleh sebelum tanggal mulai", path: ["date_to"] })
+  .refine((b) => (Date.parse(b.date_to) - Date.parse(b.date_from)) / 86_400_000 < MAX_BLACKOUT_DAYS, {
+    message: `Satu rentang blackout maksimal ${MAX_BLACKOUT_DAYS} hari`,
+    path: ["date_to"],
+  });
 export const substituteChoiceSchema = z.object({ substitute_coach_id: z.string().uuid() });
 export const substituteResponseSchema = z.object({ accept: z.boolean() });
 export const coverCancelSchema = z.object({ reason: z.string().trim().min(5).max(300) });

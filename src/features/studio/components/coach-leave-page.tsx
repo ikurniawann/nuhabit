@@ -20,6 +20,7 @@ import { LEAVE_TYPE_LABELS } from "@/types/hris";
 import { MAX_SUBSTITUTE_RESPONSE_HOURS } from "@/lib/studio/coach-cover";
 import { MAX_MEMBER_NOTICE_MIN_HOURS } from "@/lib/studio/session-change";
 import { CoachDisciplineSection } from "./coach-discipline-section";
+import { CoachLeaveBlackouts } from "./coach-leave-blackouts";
 import { CoachLeaveQueue } from "./coach-leave-queue";
 import { SessionChangeReport } from "./session-change-report";
 import { EmptyState, Field, NativeSelect, Pill, StudioPageHeader } from "./ui-bits";
@@ -110,6 +111,7 @@ export function StudioCoachLeavePage() {
       <div className="grid max-w-3xl gap-4">
         <CoachLeaveQueue />
         <SessionChangeReport minHours={data.settings.member_notice_min_hours} />
+        <CoachLeaveBlackouts blackoutTypes={NOTICE_LEAVE_TYPES.filter((t) => data.settings.notice_rules[t].blackout)} />
         <CoachDisciplineSection />
 
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
@@ -205,15 +207,17 @@ export function StudioCoachLeavePage() {
           <p className="mt-0.5 text-sm text-muted-foreground">
             H-N = tanggal mulai paling cepat N hari setelah tanggal pengajuan. Di bawah itu pengajuan ditolak, kecuali jenis yang
             boleh mendadak: tetap diterima tetapi ditandai <span className="font-semibold text-foreground">Mendadak</span>. Hanya
-            berlaku untuk karyawan yang terhubung ke profil coach.
+            berlaku untuk karyawan yang terhubung ke profil coach. <span className="font-semibold text-foreground">Kena blackout</span> = jenis
+            cuti ini ditolak di tanggal blackout kecuali disetujui sebagai pengecualian.
           </p>
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[420px] text-sm">
+            <table className="w-full min-w-[520px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs text-muted-foreground">
                   <th className="py-2 pr-3 font-semibold">Jenis cuti</th>
                   <th className="w-28 py-2 pr-3 font-semibold">Minimal H-</th>
-                  <th className="w-32 py-2 font-semibold">Boleh mendadak</th>
+                  <th className="w-32 py-2 pr-3 font-semibold">Boleh mendadak</th>
+                  <th className="w-28 py-2 font-semibold">Kena blackout</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -232,11 +236,18 @@ export function StudioCoachLeavePage() {
                         }
                       />
                     </td>
-                    <td className="py-2">
+                    <td className="py-2 pr-3">
                       <Switch
                         checked={rules[type].allow_short_notice}
                         onCheckedChange={(v) => setRule(type, { allow_short_notice: v })}
                         aria-label={`${LEAVE_TYPE_LABELS[type]} boleh mendadak`}
+                      />
+                    </td>
+                    <td className="py-2">
+                      <Switch
+                        checked={rules[type].blackout}
+                        onCheckedChange={(v) => setRule(type, { blackout: v })}
+                        aria-label={`${LEAVE_TYPE_LABELS[type]} kena blackout`}
                       />
                     </td>
                   </tr>

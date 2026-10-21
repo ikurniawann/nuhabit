@@ -10,11 +10,15 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { query } from "@/lib/db";
 import {
   assertCanDecideCoachLeave,
+  createBlackout,
+  deleteBlackout,
   evaluateCoachLeaveNotice,
   getCoachLeaveApprovers,
+  leaveBlackoutConflicts,
   listCoachLeaves,
   listCoachSessionsInRange,
   listProgramDirectors,
+  listUpcomingBlackouts,
   loadCoachLeaveSettings,
   saveCoachLeaveSettings,
 } from "./coach-leave-server";
@@ -91,6 +95,7 @@ describe.skipIf(!IS_TEST_DB)("coach leave approvers (DB)", () => {
 
   afterAll(async () => {
     await query(`DELETE FROM studio.settings WHERE branch_id = $1`, [branchId]);
+    await query(`DELETE FROM studio.coach_leave_blackouts WHERE branch_id = $1`, [branchId]);
     await query(`DELETE FROM studio.class_sessions WHERE branch_id = $1`, [branchId]);
     await query(`DELETE FROM studio.programs WHERE branch_id = $1`, [branchId]);
     await query(`DELETE FROM studio.coaches WHERE branch_id = $1`, [branchId]);
@@ -133,20 +138,20 @@ describe.skipIf(!IS_TEST_DB)("coach leave approvers (DB)", () => {
   it("aturan H-N hanya untuk karyawan coach, memakai pengaturan venue coach (sebagian digabung default)", async () => {
     // 21 Okt 2026 10.00 WIB
     const now = new Date("2026-10-21T03:00:00Z");
-    expect(await evaluateCoachLeaveNotice(hrisEmp, "annual", "2026-10-22", now)).toBeNull();
+    expect(await evaluateCoachLeaveNotice(hrisEmp, "annual", "2026-10-22", "2026-10-22", now)).toBeNull();
 
-    const before = await evaluateCoachLeaveNotice(coachEmp, "annual", "2026-10-24", now);
+    const before = await evaluateCoachLeaveNotice(coachEmp, "annual", "2026-10-24", "2026-10-24", now);
     expect(before).toMatchObject({ branchId, rule: { min_days: 7 }, evaluation: { ok: false, earliestStart: "2026-10-28" } });
 
     await saveCoachLeaveSettings(branchId, { notice_rules: { annual: { min_days: 2, allow_short_notice: false } } }, plainAdmin.id);
-    const after = await evaluateCoachLeaveNotice(coachEmp, "annual", "2026-10-24", now);
+    const after = await evaluateCoachLeaveNotice(coachEmp, "annual", "2026-10-24", "2026-10-24", now);
     expect(after?.evaluation).toEqual({ ok: true, shortNotice: false, noticeDays: 3 });
 
     const settings = await loadCoachLeaveSettings(branchId);
-    expect(settings.notice_rules.sick).toEqual({ min_days: 1, allow_short_notice: true });
+    expect(settings.notice_rules.sick).toEqual({ min_days: 1, allow_short_notice: true, blackout: false });
     expect(settings.backup_approver_user_id).toBe(backup.id);
 
-    const sickToday = await evaluateCoachLeaveNotice(coachEmp, "sick", "2026-10-21", now);
+    const sickToday = await evaluateCoachLeaveNotice(coachEmp, "sick", "2026-10-21", "2026-10-21", now);
     expect(sickToday?.evaluation).toEqual({ ok: true, shortNotice: true, noticeDays: 0 });
   });
 
@@ -186,5 +191,41 @@ describe.skipIf(!IS_TEST_DB)("coach leave approvers (DB)", () => {
     const rows = await listCoachLeaves(coachId);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ leave_type: "sick", start_date: "2026-10-21", is_short_notice: true, notice_days: 0 });
+  });
+
+  it("tanggal blackout: konflik per jenis cuti, cuti yang sudah ada dilaporkan, daftar mendatang, hapus", async () => {
+    const now = new Date("2026-10-21T03:00:00Z");
+    await query(
+      `INSERT INTO hris.leaves (employee_id, leave_type, start_date, end_date, total_days, reason, status)
+       VALUES ($1, 'annual', '2026-11-16', '2026-11-17', 2, 'A2 sudah disetujui', 'approved')`,
+      [coachEmp]
+    );
+    const venue = { companyId: branchId, branchId };
+    const { id, overlapping } = await createBlackout(venue, plainAdmin.id, { date_from: "2026-11-14", date_to: "2026-11-16", reason: " Hyrox Jakarta " });
+    expect(overlapping.map((o) => [o.leave_type, o.start_date, o.status])).toEqual([["annual", "2026-11-16", "approved"]]);
+    await query(
+      `INSERT INTO studio.coach_leave_blackouts (company_id, branch_id, date_from, date_to, reason) VALUES ($1, $1, '2026-10-01', '2026-10-02', 'lewat')`,
+      [branchId]
+    );
+
+    const upcoming = await listUpcomingBlackouts(branchId, now);
+    expect(upcoming.map((b) => [b.date_from, b.date_to, b.reason, b.created_by_name])).toEqual([
+      ["2026-11-14", "2026-11-16", "Hyrox Jakarta", plainAdmin.name],
+    ]);
+
+    const annual = await evaluateCoachLeaveNotice(coachEmp, "annual", "2026-11-10", "2026-11-14", now);
+    expect(annual?.blackouts.map((b) => b.id)).toEqual([id]);
+    expect((await evaluateCoachLeaveNotice(coachEmp, "annual", "2026-11-17", "2026-11-18", now))?.blackouts).toEqual([]);
+    expect((await evaluateCoachLeaveNotice(coachEmp, "sick", "2026-11-15", "2026-11-15", now))?.blackouts).toEqual([]);
+
+    // Ubah satu kolom saja: kolom lain jenis cuti itu tetap.
+    await saveCoachLeaveSettings(branchId, { notice_rules: { sick: { blackout: true } } }, plainAdmin.id);
+    expect((await loadCoachLeaveSettings(branchId)).notice_rules.sick).toEqual({ min_days: 1, allow_short_notice: true, blackout: true });
+    expect(await leaveBlackoutConflicts({ branchId, leaveType: "sick", startDate: "2026-11-15", endDate: "2026-11-15" })).toHaveLength(1);
+
+    await deleteBlackout(branchId, id);
+    expect(await leaveBlackoutConflicts({ branchId, leaveType: "annual", startDate: "2026-11-14", endDate: "2026-11-16" })).toEqual([]);
+    await expect(deleteBlackout(branchId, id)).rejects.toMatchObject({ status: 404 });
+    await expect(deleteBlackout(randomUUID(), upcoming[0].id)).rejects.toMatchObject({ status: 404 });
   });
 });

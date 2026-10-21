@@ -4,6 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Check, Loader2, Users, X } from "lucide-react";
 import { COVER_STATUS_LABEL, type CoverStatus, type SubstituteCandidate } from "@/lib/studio/coach-cover";
 import {
+  type BlackoutPeriod,
+  blackoutConflicts,
+  describeBlackouts,
   evaluateLeaveNotice,
   type ImpactedSession,
   NOTICE_LEAVE_TYPES,
@@ -28,6 +31,8 @@ interface LeaveRow {
   status: string;
   rejection_reason: string | null;
   is_short_notice: boolean;
+  blackout_exception_requested: boolean;
+  blackout_override_reason: string | null;
 }
 
 /** Baris pengganti per sesi (subset CoverRow dari API). */
@@ -49,6 +54,7 @@ interface CoverItem {
 interface LeaveData {
   today: string;
   rules: NoticeRules;
+  blackouts: BlackoutPeriod[];
   leaves: LeaveRow[];
   covers: Record<string, CoverItem[]>;
   incoming: CoverItem[];
@@ -66,7 +72,7 @@ const STATUS: Record<string, { label: string; className: string }> = {
   cancelled: { label: "Dibatalkan", className: "text-nh-beige/50" },
 };
 
-const EMPTY_FORM = { leave_type: "annual" as LeaveType, start: "", end: "", reason: "" };
+const EMPTY_FORM = { leave_type: "annual" as LeaveType, start: "", end: "", reason: "", exception: false };
 const MIN_REASON = 10;
 // nh-dark-input: penawar aturan global input terang di globals.css.
 const inputClass = "nh-dark-input w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition [color-scheme:dark]";
@@ -127,7 +133,8 @@ export function CoachLeaveTab() {
   const notice = form.start ? evaluateLeaveNotice(rule, form.start, data.today) : null;
   const currentImpact = impact && impact.key === rangeKey ? impact : null;
   const reasonOk = form.reason.trim().length >= MIN_REASON;
-  const canSubmit = Boolean(rangeKey) && reasonOk && notice?.ok === true && !submitting;
+  const blackouts = rangeKey ? blackoutConflicts(rule, data.blackouts, form.start, form.end) : [];
+  const canSubmit = Boolean(rangeKey) && reasonOk && notice?.ok === true && (blackouts.length === 0 || form.exception) && !submitting;
 
   function setStart(start: string) {
     setForm((f) => ({ ...f, start, end: !f.end || f.end < start ? start : f.end }));
@@ -140,10 +147,16 @@ export function CoachLeaveTab() {
       const r = await requestJson<{ message?: string; data?: { is_short_notice?: boolean } }>("/api/hris/leaves", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leave_type: form.leave_type, start_date: form.start, end_date: form.end, reason: form.reason.trim() }),
+        body: JSON.stringify({
+          leave_type: form.leave_type,
+          start_date: form.start,
+          end_date: form.end,
+          reason: form.reason.trim(),
+          ...(blackouts.length > 0 ? { blackout_exception: form.exception } : {}),
+        }),
       });
       setMsg(
-        r.data?.is_short_notice && r.message
+        (r.data?.is_short_notice || blackouts.length > 0) && r.message
           ? { tone: "warn", text: r.message }
           : { tone: "ok", text: "Pengajuan terkirim — menunggu persetujuan." }
       );
@@ -180,6 +193,18 @@ export function CoachLeaveTab() {
       <section className="rounded-3xl border border-white/10 bg-white/5 p-4">
         <h2 className="font-display text-base font-semibold">Ajukan cuti</h2>
         <p className="mt-1 text-xs text-nh-beige/60">Ajukan jauh hari sesuai SOP. Kelas dan sesi Personal Training di tanggal cuti perlu pengganti sebelum cuti disetujui.</p>
+        {data.blackouts.length > 0 && (
+          <div className="mt-3 rounded-2xl bg-black/20 px-3 py-2 text-xs">
+            <p className="font-semibold text-nh-beige/80">Tanggal blackout (tidak bisa cuti)</p>
+            <ul className="mt-1 space-y-0.5 text-nh-beige/70">
+              {data.blackouts.map((b) => (
+                <li key={b.id}>
+                  {rangeLabel(b.date_from, b.date_to)} · {b.reason}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="mt-4 space-y-3">
           <label className="block">
@@ -230,6 +255,28 @@ export function CoachLeaveTab() {
             </p>
           )}
 
+          {blackouts.length > 0 && (
+            <div className="rounded-2xl border border-red-300/40 bg-red-400/10 p-3 text-xs">
+              <p className="flex items-start gap-1.5 font-semibold text-red-200">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                <span>Tanggal blackout: {describeBlackouts(blackouts)}</span>
+              </p>
+              <p className="mt-1 text-nh-beige/70">
+                {LEAVE_TYPE_LABELS[form.leave_type]} tidak bisa diambil di tanggal ini. Pilih tanggal lain, atau minta pengecualian dan jelaskan alasannya
+                di bawah — keputusan ada di Program Director.
+              </p>
+              <label className="mt-2 flex items-start gap-2 text-sm text-nh-beige">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-4 accent-[#daff59]"
+                  checked={form.exception}
+                  onChange={(e) => setForm((f) => ({ ...f, exception: e.target.checked }))}
+                />
+                Minta pengecualian ke Program Director
+              </label>
+            </div>
+          )}
+
           {rangeKey && <ImpactList impact={currentImpact} />}
 
           <label className="block">
@@ -278,10 +325,16 @@ export function CoachLeaveTab() {
                         {l.is_short_notice && (
                           <span className="ml-2 rounded-full bg-amber-300/20 px-2 py-0.5 align-middle text-[10px] font-semibold text-amber-200">Mendadak</span>
                         )}
+                        {l.blackout_exception_requested && (
+                          <span className="ml-2 rounded-full bg-red-400/20 px-2 py-0.5 align-middle text-[10px] font-semibold text-red-200">Blackout</span>
+                        )}
                       </p>
                       <p className="text-xs text-nh-beige/60">
                         {rangeLabel(l.start_date, l.end_date)} · {Number(l.total_days)} hari kerja
                       </p>
+                      {l.blackout_override_reason && (
+                        <p className="mt-1 text-xs text-nh-beige/70">Pengecualian blackout: {l.blackout_override_reason}</p>
+                      )}
                       {l.status === "rejected" && l.rejection_reason && (
                         <p className="mt-1 text-xs text-red-200">Alasan ditolak: {l.rejection_reason}</p>
                       )}
