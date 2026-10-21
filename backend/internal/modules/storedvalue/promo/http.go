@@ -45,6 +45,7 @@ func Routes(k *kit.Kit, svc *Service) []module.Route {
 		route("PATCH /api/promo/campaigns/{id}/codes", h.syncCodes),
 		route("GET /api/promo/campaigns/{id}/redemptions", h.listRedemptions),
 		route("GET /api/promo/catalog", h.catalog),
+		{Pattern: "GET /api/promo/gym-packages", Handler: kit.API(h.gymPackages)},
 		route("PATCH /api/promo/codes/{id}", h.updateCode),
 		route("DELETE /api/promo/codes/{id}", h.deleteCode),
 		route("GET /api/promo/offers", h.listOffers),

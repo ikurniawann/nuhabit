@@ -59,6 +59,8 @@ type MemberHistory interface {
 type Ports struct {
 	Catalog POSCatalog
 	Members MemberHistory
+	// GymPackages lists the gym packages a campaign may target; nil lists none.
+	GymPackages GymPackages
 }
 
 // Service is the promo service.

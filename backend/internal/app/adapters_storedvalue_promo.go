@@ -16,7 +16,7 @@ import (
 // of lib/promo/campaigns-server.ts, offer-rules-server.ts and
 // promo-server.ts.
 func storedValuePromoPorts(d module.Deps) promo.Ports {
-	return promo.Ports{Catalog: promoCatalog{}, Members: promoMembers{}}
+	return promo.Ports{Catalog: promoCatalog{}, Members: promoMembers{}, GymPackages: newPromoGymPackages(d)}
 }
 
 type promoCatalog struct{}

@@ -4407,6 +4407,11 @@
   {
     "module": "stored-value",
     "method": "GET",
+    "path": "/api/promo/gym-packages"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
     "path": "/api/promo/offers"
   },
   {

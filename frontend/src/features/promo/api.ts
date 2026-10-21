@@ -64,6 +64,17 @@ export const updateCampaign = (
     "Gagal memperbarui campaign"
   );
 
+/** Paket kelas gym yang bisa dijadikan target campaign (lewat modul promo, bukan menu gym). */
+export interface GymPackageOption {
+  id: string;
+  name: string;
+  kind: "credits" | "pass";
+  status: "active" | "archived";
+}
+
+export const fetchGymPackages = () =>
+  getJson<GymPackageOption[]>("/api/promo/gym-packages", "Gagal memuat paket gym");
+
 export const fetchCodes = (campaignId: string) =>
   getJson<PromoCode[]>(
     `/api/promo/campaigns/${campaignId}/codes`,
