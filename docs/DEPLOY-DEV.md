@@ -144,3 +144,11 @@ epic dicatat di sini.
     diuji di `nuhabit_test`.
   - Catatan: membuka halaman Ticketing membuat data awal otomatis (mis. `ticket_channels` atas nama user yang
     membuka) — jangan jalankan audit otomatis yang membuka semua halaman terhadap DB `nuhabit`.
+- 2026-10-22 20.15 WIB — **Revisi client: "slots left" di jadwal Member App** dari commit `6efaad0e`.
+  - Backup: `~/backups/nuhabitdev/nuhabit-20261022-200510-pre-slots-left.sql.gz` (dump lengkap, jumlah baris cocok).
+    Tanpa migrasi baru.
+  - Rollback: image `nuhabitdev:pre-slots-left` (= EPIC-068).
+  - Smoke test (hanya baca): `/member` 200; API jadwal member 401 tanpa sesi; chunk Member App yang dilayani live
+    memuat label baru ("Last slot!", "Only N slots left", "Full · Join waitlist", kalimat ajakan); API backoffice
+    (sesi, aturan booking, payroll, pemantauan task) 200; log bersih. Tidak login sebagai member di live (satu-satunya
+    member adalah data asli owner) — tampilan diverifikasi E2E di `nuhabit_test`.
