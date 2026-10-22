@@ -3,7 +3,14 @@ import { MAX_SUBSTITUTE_RESPONSE_HOURS } from "@/lib/studio/coach-cover";
 import { MAX_MEMBER_NOTICE_MIN_HOURS } from "@/lib/studio/session-change";
 import { MAX_BLACKOUT_DAYS, MAX_NOTICE_DAYS, NOTICE_LEAVE_TYPES } from "@/lib/studio/coach-leave";
 import { FLAG_NOTE_MAX, FLAG_SEVERITIES } from "@/lib/studio/member-flags";
-import { COMPLAINT_CATEGORIES, COMPLAINT_STATUSES, MAX_SLA_HOURS } from "@/lib/studio/complaints";
+import {
+  COMPLAINT_CATEGORIES,
+  COMPLAINT_KINDS,
+  COMPLAINT_STATUSES,
+  MAX_SLA_HOURS,
+  MEMBER_REPORT_MAX_LENGTH,
+  MEMBER_REPORT_MIN_LENGTH,
+} from "@/lib/studio/complaints";
 import { SOP_BODY_MAX, SOP_TITLE_MAX } from "@/lib/studio/sop";
 import { MAX_PT_MEMBER_RESCHEDULE } from "@/lib/studio/pt-reschedule";
 import { CS_PRIORITIES } from "@/lib/crm/cs-rules";
@@ -437,3 +444,19 @@ export const sopInputSchema = z.object({
   change_note: z.string().trim().max(300).nullable().optional(),
 });
 export const sopActiveSchema = z.object({ is_active: z.boolean() });
+
+// ── Laporan & masukan dari Member App (EPIC-067 T-067-B4) — pesan galat berbahasa Inggris ──
+export const memberReportSchema = z.object({
+  kind: z.enum(COMPLAINT_KINDS),
+  category: z.enum(COMPLAINT_CATEGORIES),
+  message: z
+    .string()
+    .trim()
+    .min(MEMBER_REPORT_MIN_LENGTH, `Please write at least ${MEMBER_REPORT_MIN_LENGTH} characters`)
+    .max(MEMBER_REPORT_MAX_LENGTH, `Please keep it under ${MEMBER_REPORT_MAX_LENGTH} characters`),
+  session_id: z.string().uuid().nullable().optional(),
+});
+export const memberReportConfirmSchema = z.object({
+  resolved: z.boolean(),
+  comment: z.string().trim().max(500).nullable().optional(),
+});

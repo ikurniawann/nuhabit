@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  memberReportPriority,
+  memberStatusLabel,
+  newMemberReportMessage,
   actionLabel,
   canTransition,
   categoryFromCs,
@@ -139,5 +142,33 @@ describe("eskalasi (B3)", () => {
     expect(msg).toContain("PIC: belum ada");
     expect(msg).toContain("https://x/dashboard/studio/complaints");
     expect(msg).not.toContain("Coach:");
+  });
+});
+
+describe("laporan dari Member App (B4)", () => {
+  it("status untuk member: dua status tutup jadi Closed", () => {
+    expect(memberStatusLabel("received")).toBe("Received");
+    expect(memberStatusLabel("in_progress")).toBe("In progress");
+    expect(memberStatusLabel("resolved")).toBe("Resolved — please confirm");
+    expect(memberStatusLabel("confirmed")).toBe("Closed");
+    expect(memberStatusLabel("cancelled")).toBe("Closed");
+  });
+
+  it("prioritas: masukan selalu rendah, keluhan cedera tinggi", () => {
+    expect(memberReportPriority("feedback", "injury")).toBe("low");
+    expect(memberReportPriority("complaint", "injury")).toBe("high");
+    expect(memberReportPriority("complaint", "facility")).toBe("normal");
+  });
+
+  it("WA staf: judul sesuai jenis, isi dipotong, baris kosong dibuang", () => {
+    const base = { code: "KEL-2610-0009", category: "injury" as const, member: "Maya", session: "Hyrox 22/10 07:00", coach: "Coach Pras", url: "https://x/c" };
+    const injury = newMemberReportMessage({ ...base, kind: "complaint", message: "Lutut  sakit\nsetelah sled push" });
+    expect(injury).toContain("🚑 *Laporan cedera dari Member App*");
+    expect(injury).toContain('"Lutut sakit setelah sled push"');
+    expect(injury).toContain("Coach: Coach Pras");
+    const fb = newMemberReportMessage({ ...base, kind: "feedback", category: "coach", session: null, coach: null, message: "x".repeat(400) });
+    expect(fb).toContain("💬 *Masukan baru dari Member App*");
+    expect(fb).not.toContain("Sesi:");
+    expect(fb).toContain(`${"x".repeat(297)}…`);
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LogOut } from "lucide-react";
+import { LogOut, MessageSquareText } from "lucide-react";
 import { useMember } from "../member-app";
 import { firstName, memberFetch } from "../lib";
 import { Eyebrow, PageTitle, PillButton } from "../ui";
@@ -9,7 +9,7 @@ import { ProgressSection } from "./progress-section";
 
 /** Tab Progress: tier, XP, streak, leaderboard, pengaturan pengingat, keluar. */
 export function ProfileTab() {
-  const { profile, logout } = useMember();
+  const { profile, logout, go } = useMember();
 
   return (
     <div className="space-y-8">
@@ -24,6 +24,13 @@ export function ProfileTab() {
       <section className="border-t border-white/15">
         <Eyebrow className="pb-2 pt-6">Settings</Eyebrow>
         <ReminderToggle />
+      </section>
+
+      <section className="border-t border-white/15 pt-6">
+        <Eyebrow className="pb-2">Help</Eyebrow>
+        <PillButton variant="light" className="w-full" onClick={() => go("feedback")}>
+          <MessageSquareText className="size-4" /> Send feedback / Report an issue
+        </PillButton>
       </section>
 
       <PillButton variant="ghost" className="w-full" onClick={logout}>

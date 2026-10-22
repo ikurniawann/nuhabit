@@ -247,3 +247,78 @@ export function complaintEscalationMessage(input: {
     .filter((l): l is string => l !== null)
     .join("\n");
 }
+
+// ── Laporan & masukan dari Member App (T-067-B4) ───────────────────────────
+
+/** 'complaint' = keluhan (batas waktu & eskalasi); 'feedback' = masukan/pujian, tanpa batas waktu. */
+export const COMPLAINT_KINDS = ["complaint", "feedback"] as const;
+export type ComplaintKind = (typeof COMPLAINT_KINDS)[number];
+
+export const COMPLAINT_KIND_LABEL: Record<ComplaintKind, string> = { complaint: "Keluhan", feedback: "Masukan" };
+
+/** Label kategori di Member App (bahasa Inggris). */
+export const MEMBER_CATEGORY_LABEL: Record<ComplaintCategory, string> = {
+  coach: "Coach",
+  class: "Class",
+  facility: "Facility",
+  injury: "Injury",
+  billing: "Billing & passes",
+  other: "Something else",
+};
+
+/** Status yang dilihat member — dua status tutup digabung jadi "Closed". */
+export function memberStatusLabel(status: ComplaintStatus): string {
+  switch (status) {
+    case "received":
+      return "Received";
+    case "in_progress":
+      return "In progress";
+    case "resolved":
+      return "Resolved — please confirm";
+    default:
+      return "Closed";
+  }
+}
+
+/** Batas laporan per member per 24 jam (cegah spam dari Member App). */
+export const MEMBER_REPORT_DAILY_LIMIT = 5;
+export const MEMBER_REPORT_MIN_LENGTH = 10;
+export const MEMBER_REPORT_MAX_LENGTH = 2000;
+
+/** Masukan selalu prioritas rendah; keluhan memakai prioritas default kategori (cedera tinggi). */
+export function memberReportPriority(kind: ComplaintKind, category: ComplaintCategory): ComplaintPriority {
+  return kind === "feedback" ? "low" : defaultComplaintPriority(category);
+}
+
+/** WA ke staf saat laporan baru masuk dari Member App (cedera → Head Coach/Ops; lainnya → PIC default). */
+export function newMemberReportMessage(input: {
+  code: string;
+  kind: ComplaintKind;
+  category: ComplaintCategory;
+  member: string | null;
+  session: string | null;
+  coach: string | null;
+  message: string;
+  url: string;
+}): string {
+  const head =
+    input.category === "injury" && input.kind === "complaint"
+      ? "🚑 *Laporan cedera dari Member App*"
+      : input.kind === "feedback"
+        ? "💬 *Masukan baru dari Member App*"
+        : "📝 *Keluhan baru dari Member App*";
+  const text = input.message.trim().replace(/\s+/g, " ");
+  return [
+    head,
+    ``,
+    `${input.code} · ${COMPLAINT_CATEGORY_LABEL[input.category]}`,
+    input.member ? `Member: ${input.member}` : null,
+    input.session ? `Sesi: ${input.session}` : null,
+    input.coach ? `Coach: ${input.coach}` : null,
+    `"${text.length > 300 ? `${text.slice(0, 297)}…` : text}"`,
+    ``,
+    `Tangani di: ${input.url}`,
+  ]
+    .filter((l): l is string => l !== null)
+    .join("\n");
+}

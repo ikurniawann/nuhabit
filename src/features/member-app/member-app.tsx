@@ -8,13 +8,14 @@ import { MemberApiError, memberFetch, type MemberProfile, type MyBooking, type M
 import { CoachesTab } from "./tabs/coaches-tab";
 import { HomeTab } from "./tabs/home-tab";
 import { NewsTab } from "./tabs/news-tab";
+import { FeedbackTab } from "./tabs/feedback-tab";
 import { PassesTab } from "./tabs/passes-tab";
 import { ProfileTab } from "./tabs/profile-tab";
 import { PtTab } from "./tabs/pt-tab";
 import { ScheduleTab } from "./tabs/schedule-tab";
 import { CenterSpinner, MarqueeWordmark, PillButton } from "./ui";
 
-export type MemberTab = "home" | "schedule" | "pt" | "passes" | "profile" | "coaches" | "news";
+export type MemberTab = "home" | "schedule" | "pt" | "passes" | "profile" | "coaches" | "news" | "feedback";
 
 interface MemberData {
   profile: MemberProfile;
@@ -140,6 +141,7 @@ export function MemberApp() {
             {tab === "profile" && <ProfileTab />}
             {tab === "coaches" && <CoachesTab />}
             {tab === "news" && <NewsTab />}
+            {tab === "feedback" && <FeedbackTab />}
           </main>
         </div>
         <BottomNav tab={tab} onChange={go} />
@@ -190,6 +192,7 @@ const MENU: { key: MemberTab; label: string }[] = [
   { key: "profile", label: "Progress" },
   { key: "coaches", label: "Coaches" },
   { key: "news", label: "News" },
+  { key: "feedback", label: "Feedback" },
 ];
 
 /** Menu layar penuh (hamburger) — daftar besar uppercase seperti navigasi referensi. */

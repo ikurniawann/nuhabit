@@ -11,6 +11,7 @@ import {
   complaintCode,
   complaintDeadlines,
   complaintEscalationMessage,
+  type ComplaintKind,
   type ComplaintPriority,
   type ComplaintSettings,
   type ComplaintSlaRules,
@@ -84,6 +85,8 @@ export async function listComplaintAssignees(branchId: string) {
 
 export interface ComplaintInput {
   source: ComplaintSource;
+  /** Default 'complaint'. Masukan ('feedback') tanpa batas waktu → tidak dieskalasi (T-067-B4). */
+  kind?: ComplaintKind;
   category: ComplaintCategory;
   priority?: ComplaintPriority;
   title?: string | null;
@@ -99,6 +102,7 @@ export interface ComplaintInput {
 export interface ComplaintRow {
   id: string;
   code: string;
+  kind: ComplaintKind;
   source: ComplaintSource;
   category: ComplaintCategory;
   priority: ComplaintPriority;
@@ -127,7 +131,7 @@ export interface ComplaintRow {
 }
 
 const COMPLAINT_SELECT = `
-  SELECT k.id, k.code, k.source, k.category, k.priority, k.status, k.title, k.description,
+  SELECT k.id, k.code, k.kind, k.source, k.category, k.priority, k.status, k.title, k.description,
          k.customer_id, c.name AS member_name, k.contact_name, k.contact_phone,
          k.coach_id, COALESCE(co.display_name, co.full_name) AS coach_name,
          k.session_id,
@@ -162,15 +166,17 @@ async function sessionCoach(branchId: string, sessionId: string): Promise<string
 
 export async function createComplaint(
   venue: { companyId: string; branchId: string },
-  userId: string,
+  /** null = dibuat member dari Member App. */
+  userId: string | null,
   input: ComplaintInput,
   now = new Date()
 ): Promise<{ id: string; code: string }> {
   await assertInVenue(venue.branchId, input);
+  const kind: ComplaintKind = input.kind ?? "complaint";
   const coachId = input.coach_id ?? (input.session_id ? await sessionCoach(venue.branchId, input.session_id) : null);
   const priority = input.priority ?? defaultComplaintPriority(input.category);
   const settings = await loadComplaintSettings(venue.branchId);
-  const { respondBy, resolveBy } = complaintDeadlines(input.category, now, settings.sla_rules);
+  const deadlines = kind === "complaint" ? complaintDeadlines(input.category, now, settings.sla_rules) : null;
   const defaultAssignee = settings.default_assignees[input.category] ?? null;
   const phone = input.contact_phone ? (normalizeMemberPhone(input.contact_phone) ?? input.contact_phone.trim()) : null;
   const title = complaintTitle(input.title, input.description, input.category);
@@ -185,18 +191,19 @@ export async function createComplaint(
     );
     const code = complaintCode(now, seqRows[0].n);
     const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO studio.complaints (company_id, branch_id, code, source, category, priority, title, description,
+      `INSERT INTO studio.complaints (company_id, branch_id, code, kind, source, category, priority, title, description,
          customer_id, contact_name, contact_phone, coach_id, session_id, wa_conversation_id, respond_by, resolve_by, created_by, assignee_user_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING id`,
       [
-        venue.companyId, venue.branchId, code, input.source, input.category, priority, title, input.description?.trim() || null,
+        venue.companyId, venue.branchId, code, kind, input.source, input.category, priority, title, input.description?.trim() || null,
         input.customer_id ?? null, input.contact_name?.trim() || null, phone, coachId, input.session_id ?? null,
-        input.wa_conversation_id ?? null, respondBy.toISOString(), resolveBy.toISOString(), userId, defaultAssignee,
+        input.wa_conversation_id ?? null, deadlines?.respondBy.toISOString() ?? null, deadlines?.resolveBy.toISOString() ?? null,
+        userId, defaultAssignee,
       ]
     );
     await client.query(
-      `INSERT INTO studio.complaint_events (complaint_id, kind, to_status, actor_user_id) VALUES ($1, 'created', 'received', $2)`,
-      [rows[0].id, userId]
+      `INSERT INTO studio.complaint_events (complaint_id, kind, to_status, body, actor_user_id) VALUES ($1, 'created', 'received', $2, $3)`,
+      [rows[0].id, userId ? null : "Dikirim member lewat Member App", userId]
     );
     if (defaultAssignee) {
       await client.query(
@@ -256,6 +263,7 @@ export async function findOpenWaComplaint(conversationId: string): Promise<{ id:
 
 export interface ComplaintFilters {
   status?: ComplaintStatus | "open";
+  kind?: ComplaintKind;
   category?: ComplaintCategory;
   q?: string;
   assigneeUserId?: string;
@@ -269,6 +277,10 @@ export async function listComplaints(branchId: string, f: ComplaintFilters = {})
   else if (f.status) {
     params.push(f.status);
     where.push(`k.status = $${params.length}`);
+  }
+  if (f.kind) {
+    params.push(f.kind);
+    where.push(`k.kind = $${params.length}`);
   }
   if (f.category) {
     params.push(f.category);

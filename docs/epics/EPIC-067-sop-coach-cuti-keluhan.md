@@ -132,7 +132,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
   respons & selesai per kategori, catatan internal, riwayat status.
 - [x] T-067-B3 **(Tahap 2)** Eskalasi aktif: saat batas waktu terlewat, kirim WA ke Head Coach / Ops (pakai jalur
   notifikasi owner yang ada); juga perbaiki SLA watcher WA inbox agar mengirim alert, bukan hanya menandai.
-- [ ] T-067-B4 **(Tahap 3)** Form "Send feedback / Report an issue" di Member App (bahasa Inggris), opsional terkait
+- [x] T-067-B4 **(Tahap 3)** Form "Send feedback / Report an issue" di Member App (bahasa Inggris), opsional terkait
   sesi yang pernah diikuti → masuk sebagai tiket.
 - [ ] T-067-B5 **(Tahap 3)** Laporan keluhan: per kategori, per coach, waktu penyelesaian rata-rata; masuk ke KPI coach.
 
@@ -642,4 +642,36 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
       alasan → admin ke Coach Rara 11:00 → member melihat "Moved by studio · free cancel". Ledger tetap 1 `redeem`,
       riwayat 3 baris, 1 kabar pending (yang lama dilewati). Console hanya 404 gambar media fixture lama;
     - `tsc` tetap 508, eslint tanpa error baru. Kegagalan `table-order` (ARK Coin) sudah ada sebelumnya.
+  - Belum di-deploy.
+- 2026-10-22 — **T-067-B4 selesai** (Send feedback / Report an issue di Member App).
+  - Migrasi `20261023110000_studio_complaint_member_feedback.sql`: `studio.complaints.kind` (`complaint` | `feedback`)
+    + indeks tiket Member App per member.
+  - Keputusan desain:
+    - **Halaman "Help & feedback"** (bahasa Inggris), dibuka dari tab Progress ("Send feedback / Report an issue") dan
+      menu "Feedback". Dua jenis:
+      - *Report an issue* → tiket keluhan biasa (batas waktu & eskalasi per kategori);
+      - *Send feedback* → `kind = feedback`, prioritas rendah, tanpa batas waktu, jadi tidak pernah dieskalasi dan
+        nanti tidak dihitung di laporan keluhan B5.
+    - **Kategori** sama dengan tiket (label Inggris di Member App). **Sesi opsional** hanya dari sesi yang sudah
+      diikuti member 30 hari terakhir; coach tiket diambil dari sesi.
+    - **Kabar ke staf:**
+      - cedera → langsung WA ke penerima Notifikasi WA "eskalasiKomplain" (Head Coach/Ops), kapan pun;
+      - keluhan lain → WA ke PIC default kategori, hanya di jam layak;
+      - masukan → tanpa WA.
+    - **Batas 5 laporan per member per 24 jam** (429) untuk mencegah spam.
+    - **Member hanya melihat tiket Member App miliknya**, dengan status ringkas (Received / In progress / Resolved —
+      please confirm / Closed). Catatan internal & catatan penyelesaian staf tidak pernah ditampilkan.
+    - **Konfirmasi member** menutup alur B2: "Yes, all good" → Dikonfirmasi member; "Not yet" + komentar → dibuka
+      lagi (Ditangani), PIC dikabari WA. Riwayat di backoffice menampilkan aktor "Member".
+    - Backoffice: badge "Masukan" + filter jenis di Keluhan Pelanggan.
+  - Bukti:
+    - 3 unit test (status member, prioritas, pesan WA) + 5 test integrasi DB (sesi yang bisa ditautkan, cedera →
+      Head Coach/Ops, masukan tanpa batas waktu, PIC default, daftar hanya milik member, batas 24 jam, konfirmasi
+      buka lagi/tutup, bukan pemilik 404) lulus di `nuhabit_test`;
+    - suite studio/API/HRIS/KPI/CRM/WA: 1022 lulus; 3 gagal `table-order` (ARK Coin) sudah ada sebelumnya;
+    - E2E headless (member & admin uji; fixture dihapus): laporan cedera tertaut sesi + masukan coach → admin melihat
+      tiket Member App, menandai selesai → member "Not yet" dengan komentar → tiket kembali Ditangani dengan riwayat
+      "Member: belum selesai — …"; tanpa error console. Select/textarea memakai `nh-dark-input` supaya terbaca di
+      latar gelap;
+    - `tsc` tetap 508, eslint tanpa error baru.
   - Belum di-deploy.

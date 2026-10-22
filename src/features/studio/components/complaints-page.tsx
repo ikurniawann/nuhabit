@@ -18,6 +18,9 @@ import {
   type ComplaintCategory,
   type ComplaintSettings,
   complaintSlaState,
+  COMPLAINT_KIND_LABEL,
+  COMPLAINT_KINDS,
+  type ComplaintKind,
   type ComplaintSource,
   type ComplaintStatus,
   MAX_SLA_HOURS,
@@ -38,6 +41,7 @@ import { EmptyState, Field, NativeSelect, Pill, StudioPageHeader } from "./ui-bi
 interface ComplaintItem {
   id: string;
   code: string;
+  kind: ComplaintKind;
   source: ComplaintSource;
   category: ComplaintCategory;
   priority: CsPriority;
@@ -90,6 +94,7 @@ export function StudioComplaintsPage() {
   const [items, setItems] = useState<ComplaintItem[] | null>(null);
   const [status, setStatus] = useState<string>("open");
   const [category, setCategory] = useState<string>("");
+  const [kind, setKind] = useState<string>("");
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -109,11 +114,12 @@ export function StudioComplaintsPage() {
     if (mine) params.set("assignee", "me");
     if (status) params.set("status", status);
     if (category) params.set("category", category);
+    if (kind) params.set("kind", kind);
     if (q.trim()) params.set("q", q.trim());
     return apiGet<{ data: ComplaintItem[] }>(`/api/studio/complaints?${params}`)
       .then((r) => setItems(r.data))
       .catch((e) => toast.error(e instanceof Error ? e.message : "Gagal memuat keluhan"));
-  }, [status, category, q, mine]);
+  }, [status, category, kind, q, mine]);
 
   const changed = useCallback(async () => {
     setRev((r) => r + 1);
@@ -171,6 +177,14 @@ export function StudioComplaintsPage() {
               </option>
             ))}
           </NativeSelect>
+          <NativeSelect className="max-w-40" value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Jenis">
+            <option value="">Keluhan & masukan</option>
+            {COMPLAINT_KINDS.map((k) => (
+              <option key={k} value={k}>
+                {COMPLAINT_KIND_LABEL[k]}
+              </option>
+            ))}
+          </NativeSelect>
           <Input className="max-w-xs" placeholder="Cari kode, judul, atau nama" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cari keluhan" />
           <label className="flex items-center gap-2 rounded-lg border border-border px-3 text-sm text-foreground">
             <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} /> Ditugaskan ke saya
@@ -201,6 +215,7 @@ export function StudioComplaintsPage() {
                           <Pill tone={STATUS_TONE[k.status]}>{COMPLAINT_STATUS_LABEL[k.status]}</Pill>
                           <Pill tone={PRIORITY_TONE[k.priority]}>{PRIORITY_LABELS[k.priority]}</Pill>
                           <Pill>{COMPLAINT_CATEGORY_LABEL[k.category]}</Pill>
+                          {k.kind === "feedback" && <Pill tone="brand">Masukan</Pill>}
                           {sla !== "ok" && <Pill tone="danger">{SLA_BADGE[sla]}</Pill>}
                           {(k.respond_escalated_at || k.resolve_escalated_at) && sla !== "ok" && <Pill tone="danger">Dieskalasi</Pill>}
                         </div>
@@ -259,6 +274,7 @@ function ComplaintDetailPanel({ id, rev, staff, onChanged }: { id: string | null
         <Pill tone={STATUS_TONE[d.status]}>{COMPLAINT_STATUS_LABEL[d.status]}</Pill>
         <Pill tone={PRIORITY_TONE[d.priority]}>{PRIORITY_LABELS[d.priority]}</Pill>
         <Pill>{COMPLAINT_CATEGORY_LABEL[d.category]}</Pill>
+        {d.kind === "feedback" && <Pill tone="brand">Masukan · tanpa batas waktu</Pill>}
         {d.resolve_escalated_at ? (
           <Pill tone="danger">Dieskalasi: lewat batas selesai</Pill>
         ) : d.respond_escalated_at ? (
@@ -301,8 +317,8 @@ function ComplaintDetailPanel({ id, rev, staff, onChanged }: { id: string | null
                       : (e.body ?? e.kind)}
             </span>
             {" · "}
-            {e.actor_name ?? "Sistem"} · {waktu(e.created_at)}
-            {(e.kind === "note" || e.kind === "status" || e.kind === "escalated") && e.body && (
+            {e.actor_name ?? (d.source === "member_app" && (e.kind === "created" || e.kind === "status") ? "Member" : "Sistem")} · {waktu(e.created_at)}
+            {(e.kind === "created" || e.kind === "note" || e.kind === "status" || e.kind === "escalated") && e.body && (
               <span className="mt-0.5 block whitespace-pre-wrap rounded-md bg-secondary/50 px-2 py-1 text-foreground">{e.body}</span>
             )}
           </li>
