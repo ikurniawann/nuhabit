@@ -152,3 +152,12 @@ epic dicatat di sini.
     memuat label baru ("Last slot!", "Only N slots left", "Full · Join waitlist", kalimat ajakan); API backoffice
     (sesi, aturan booking, payroll, pemantauan task) 200; log bersih. Tidak login sebagai member di live (satu-satunya
     member adalah data asli owner) — tampilan diverifikasi E2E di `nuhabit_test`.
+- 2026-10-22 20.45 WIB — **Revisi client: "Add to Google Calendar" di Member App** dari commit `eb3d3813`.
+  - Backup: `~/backups/nuhabitdev/nuhabit-20261022-203719-pre-gcal.sql.gz` (dump lengkap, jumlah baris cocok).
+    Tanpa migrasi baru.
+  - Rollback: image `nuhabitdev:pre-gcal` (= "slots left").
+  - Smoke test (hanya baca): `/member` 200; API booking member 401 tanpa sesi; chunk Member App yang dilayani live
+    memuat tombol baru (link `calendar.google.com/calendar/render`, `ctz`, keterangan event); API backoffice (sesi,
+    program, payroll, pemantauan task) 200; log bersih. Tidak login sebagai member di live — tombol dan isi event
+    diverifikasi E2E di `nuhabit_test`.
+  - Catatan: lokasi event memakai setting alamat & kota perusahaan; selama kosong hanya tampil "NüHabit Hyrox Studio".
