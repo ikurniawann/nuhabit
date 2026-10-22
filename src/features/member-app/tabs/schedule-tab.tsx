@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Loader2, Plus } from "lucide-react";
 import { useMember } from "../member-app";
 import { addDaysIso, type ClassSlot, dateLabel, friendlyDay, jam, memberFetch, type ScheduleRules, wibToday } from "../lib";
 import { Avatar, CenterSpinner, Empty, Eyebrow, Notice, PageTitle, PillButton, Sheet, Tag } from "../ui";
+import { AddToGoogleCalendar } from "../add-to-calendar";
 import { filledPercent, type SlotTone, slotTone, slotsLeftLabel, slotsLeftPitch } from "../slots";
 import { cancelNote, hoursUntil } from "./booking-row";
 
@@ -234,6 +235,8 @@ function SlotSheet({
 }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  // Baru saja dibooking (bukan waitlist) → tawarkan Add to Google Calendar.
+  const [justBooked, setJustBooked] = useState(false);
   const full = s.spots_left <= 0;
 
   async function act(kind: "book" | "cancel") {
@@ -245,6 +248,7 @@ function SlotSheet({
           ? await memberFetch<{ message: string }>("/api/member-portal/studio/bookings", { method: "POST", body: { session_id: s.id } })
           : await memberFetch<{ message: string }>(`/api/member-portal/studio/bookings/${s.my_booking_id}/cancel`, { method: "POST", body: {} });
       setMsg({ tone: "ok", text: kind === "book" && !full ? `You're locked in. See you ${seeYou(s.session_date)} at ${jam(s.start_time)}.` : res.message });
+      setJustBooked(kind === "book" && !full);
       await onChanged();
     } catch (e) {
       setMsg({ tone: "error", text: e instanceof Error ? e.message : "Something went wrong" });
@@ -291,9 +295,17 @@ function SlotSheet({
         <div className="space-y-3">
           {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
           {msg?.tone === "ok" ? (
-            <PillButton variant="ghost" className="w-full" onClick={onClose}>Close</PillButton>
+            <>
+              {justBooked && (
+                <AddToGoogleCalendar programName={s.program_name} kind="class" date={s.session_date} startTime={s.start_time} endTime={s.end_time} coachName={s.coach_name} />
+              )}
+              <PillButton variant="ghost" className="w-full" onClick={onClose}>Close</PillButton>
+            </>
           ) : s.my_status ? (
             <>
+              {s.my_status === "booked" && (
+                <AddToGoogleCalendar programName={s.program_name} kind="class" date={s.session_date} startTime={s.start_time} endTime={s.end_time} coachName={s.coach_name} />
+              )}
               <div className={`border-l-2 px-4 py-3 text-sm ${late && s.my_status === "booked" ? "border-nh-ochre bg-nh-ochre/10 text-nh-lemon" : "border-white/30 bg-white/[0.04] text-nh-beige/80"}`}>
                 {cancelNote(s.my_status, s.session_date, s.start_time, rules.cancel_window_hours, Boolean(s.my_free_cancel))}
               </div>

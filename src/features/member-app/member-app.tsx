@@ -9,6 +9,7 @@ import { CoachesTab } from "./tabs/coaches-tab";
 import { HomeTab } from "./tabs/home-tab";
 import { NewsTab } from "./tabs/news-tab";
 import { FeedbackTab } from "./tabs/feedback-tab";
+import { DEFAULT_VENUE, type VenueInfo } from "./calendar";
 import { HealthTab } from "./tabs/health-tab";
 import { PassesTab } from "./tabs/passes-tab";
 import { ProfileTab } from "./tabs/profile-tab";
@@ -26,6 +27,8 @@ interface MemberData {
   cancelWindowHours: number;
   /** Maks reschedule Personal Training per booking oleh member (0 = lewat studio saja). */
   ptRescheduleMax: number;
+  /** Nama & alamat venue untuk "Add to Google Calendar". */
+  venue: VenueInfo;
   /** Muat ulang pass & booking (setelah booking/batal/beli). */
   refresh: () => Promise<void>;
   go: (tab: MemberTab) => void;
@@ -50,6 +53,7 @@ export function MemberApp() {
   const [bookings, setBookings] = useState<MyBooking[] | null>(null);
   const [cancelWindowHours, setCancelWindowHours] = useState(12);
   const [ptRescheduleMax, setPtRescheduleMax] = useState(0);
+  const [venue, setVenue] = useState<VenueInfo>(DEFAULT_VENUE);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const loadProfile = useCallback(async () => {
@@ -65,7 +69,7 @@ export function MemberApp() {
   const refresh = useCallback(async () => {
     const [p, b] = await Promise.allSettled([
       memberFetch<{ data: MyPass[] }>("/api/member-portal/studio/passes"),
-      memberFetch<{ data: MyBooking[]; rules?: { cancel_window_hours: number; pt_member_reschedule_max?: number } }>("/api/member-portal/studio/bookings"),
+      memberFetch<{ data: MyBooking[]; rules?: { cancel_window_hours: number; pt_member_reschedule_max?: number }; venue?: VenueInfo }>("/api/member-portal/studio/bookings"),
     ]);
     setPasses(p.status === "fulfilled" ? p.value.data : []);
     setBookings(b.status === "fulfilled" ? b.value.data : []);
@@ -73,6 +77,7 @@ export function MemberApp() {
       setCancelWindowHours(b.value.rules.cancel_window_hours);
       setPtRescheduleMax(b.value.rules.pt_member_reschedule_max ?? 0);
     }
+    if (b.status === "fulfilled" && b.value.venue) setVenue(b.value.venue);
   }, []);
 
   useEffect(() => {
@@ -113,7 +118,7 @@ export function MemberApp() {
     );
 
   return (
-    <Ctx.Provider value={{ profile: auth.profile, passes, bookings, cancelWindowHours, ptRescheduleMax, refresh, go, logout }}>
+    <Ctx.Provider value={{ profile: auth.profile, passes, bookings, cancelWindowHours, ptRescheduleMax, venue, refresh, go, logout }}>
       <div className="min-h-dvh bg-black text-nh-beige">
         <PreviewBanner onExit={logout} />
         <div className="mx-auto max-w-lg">

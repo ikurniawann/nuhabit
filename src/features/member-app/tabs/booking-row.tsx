@@ -5,6 +5,7 @@ import { CalendarClock, Loader2 } from "lucide-react";
 import { useMember } from "../member-app";
 import { addDaysIso, dateLabel, dayShort, friendlyDay, jam, memberFetch, type MyBooking, wibToday } from "../lib";
 import { Notice, PillButton, Sheet, Tag } from "../ui";
+import { AddToGoogleCalendar } from "../add-to-calendar";
 
 /** Jam tersisa sampai sesi mulai (WIB). */
 export function hoursUntil(date: string, time: string): number {
@@ -95,6 +96,16 @@ export function BookingRow({ booking: b }: { booking: MyBooking }) {
           </div>
         ) : (
           <div className="mt-5 space-y-4">
+            {b.status === "booked" && (
+              <AddToGoogleCalendar
+                programName={b.program_name}
+                kind={b.program_kind === "pt" ? "pt" : "class"}
+                date={b.session_date}
+                startTime={b.start_time}
+                endTime={b.end_time}
+                coachName={b.coach_name}
+              />
+            )}
             <div className={`border-l-2 px-4 py-3 text-sm ${late ? "border-nh-ochre bg-nh-ochre/10 text-nh-lemon" : "border-white/30 bg-white/[0.04] text-nh-beige/80"}`}>
               {cancelNote(b.status, b.session_date, b.start_time, cancelWindowHours, b.free_cancel, b.studio_rescheduled)}
             </div>

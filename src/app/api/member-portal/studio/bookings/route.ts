@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateBody } from "@/lib/api/auth";
 import { query } from "@/lib/db";
 import { createBooking, loadSettings } from "@/lib/studio/booking-server";
-import { requireMemberStudio } from "@/lib/studio/member-server";
+import { memberVenueInfo, requireMemberStudio } from "@/lib/studio/member-server";
 import { memberBookSchema } from "@/lib/studio/schemas";
 import { studioRoute } from "@/lib/studio/server";
 import { applyBookingBenefits } from "@/lib/studio/loyalty";
@@ -35,7 +35,12 @@ export async function GET() {
       [customerId, actor.branchId]
     );
     const settings = applyBookingBenefits(await loadSettings(actor.branchId), await memberBenefits(customerId));
-    return NextResponse.json({ success: true, data: rows, rules: { cancel_window_hours: settings.cancel_window_hours, pt_member_reschedule_max: settings.pt_member_reschedule_max } });
+    return NextResponse.json({
+      success: true,
+      data: rows,
+      rules: { cancel_window_hours: settings.cancel_window_hours, pt_member_reschedule_max: settings.pt_member_reschedule_max },
+      venue: await memberVenueInfo(),
+    });
   });
 }
 

@@ -5,11 +5,19 @@ import { ArrowLeft, Check, ChevronRight, Loader2 } from "lucide-react";
 import { useMember } from "../member-app";
 import { addDaysIso, dateLabel, dayShort, friendlyDay, jam, memberFetch, type PtCatalogEntry, wibToday } from "../lib";
 import { Avatar, CenterSpinner, Empty, Eyebrow, Notice, PageTitle, PillButton, SectionTitle, Sheet, SideLabel, Tag } from "../ui";
+import { AddToGoogleCalendar } from "../add-to-calendar";
 import { BookingRow } from "./booking-row";
 
 type Coach = PtCatalogEntry["coaches"][number];
 
 const coachName = (c: Coach) => c.display_name || c.full_name;
+
+/** "07:30" + 60 → "08:30" (jam selesai sesi untuk Add to Google Calendar). */
+function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = Math.min(h * 60 + m + minutes, 23 * 60 + 59);
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
 
 /** Booking Personal Training: program → coach → tanggal → jam → konfirmasi. */
 export function PtTab() {
@@ -242,9 +250,19 @@ export function PtTab() {
             </div>
             {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
             {msg?.tone === "ok" ? (
-              <PillButton className="w-full" onClick={() => { setTime(null); setMsg(null); setCoach(null); }}>
-                <Check className="size-4" /> Done
-              </PillButton>
+              <>
+                <AddToGoogleCalendar
+                  programName={program.name}
+                  kind="pt"
+                  date={date}
+                  startTime={time}
+                  endTime={addMinutes(time, program.duration_minutes)}
+                  coachName={coachName(coach)}
+                />
+                <PillButton className="w-full" onClick={() => { setTime(null); setMsg(null); setCoach(null); }}>
+                  <Check className="size-4" /> Done
+                </PillButton>
+              </>
             ) : ptLeft === 0 ? (
               <>
                 <div className="border-l-2 border-white/30 bg-white/[0.04] px-4 py-3 text-sm text-nh-beige/80">You&apos;re out of Personal Training credits.</div>
