@@ -61,7 +61,7 @@ export function StudioTemplatesPage() {
   const noMaster = programs.length === 0;
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Template Mingguan"
         subtitle={`Pola jadwal kelas berulang tiap minggu. ${activeCount} slot aktif per minggu — dipakai saat generate Jadwal Kelas.`}

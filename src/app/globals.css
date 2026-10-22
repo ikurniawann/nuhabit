@@ -2953,3 +2953,13 @@ input.nh-line-input.nh-line-input::placeholder {
   color: rgba(243, 236, 226, 0.3) !important;
   -webkit-text-fill-color: rgba(243, 236, 226, 0.3) !important;
 }
+
+/* Mobile (revisi client 2026-10-22): item grid di area konten boleh menyusut
+   di bawah lebar isinya. Tanpa ini, tabel/kolom lebar di dalam kartu grid
+   mendorong kartu melebihi layar HP (konten terpotong di kanan); dengan ini
+   tabel menggulung di pembungkus overflow-x-auto-nya sendiri. */
+@layer base {
+  main .grid > * {
+    min-width: 0;
+  }
+}

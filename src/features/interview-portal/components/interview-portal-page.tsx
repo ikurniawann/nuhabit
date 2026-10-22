@@ -416,7 +416,7 @@ export function InterviewPortalPage({ token }: { token: string }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-pink-50 px-4 py-6">
       <div className="mx-auto w-full max-w-2xl space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-base font-semibold">Interview Online dengan AI</h1>
             <p className="text-xs text-muted-foreground">

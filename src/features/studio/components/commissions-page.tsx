@@ -91,7 +91,7 @@ export function StudioCommissionsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Komisi Coach"
         subtitle="Insentif di luar payroll: pool dari revenue kelas & Personal Training yang diakui, dibagi per coach sesuai persentase peran."

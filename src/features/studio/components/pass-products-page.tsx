@@ -53,7 +53,7 @@ export function StudioPassProductsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Paket Member"
         subtitle="Katalog pass: jumlah kredit kelas & Personal Training, akses facility, masa berlaku, harga, dan pembagian nilai untuk pengakuan revenue."

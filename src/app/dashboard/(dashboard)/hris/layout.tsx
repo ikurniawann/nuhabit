@@ -6,7 +6,8 @@ export default function HRISLayout({ children }: { children: ReactNode }) {
   // Simplified layout - navigation handled by main sidebar
   // No top horizontal menu, cleaner interface
   return (
-    <div className="p-6">
+    // Padding hanya di desktop: di HP <main> sudah memberi jarak tepi (hindari gutter dobel).
+    <div className="lg:p-6">
       {children}
     </div>
   );

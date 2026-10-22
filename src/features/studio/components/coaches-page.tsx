@@ -50,7 +50,7 @@ export function StudioCoachesPage() {
   const inactive = rows?.filter((r) => !r.is_active) ?? [];
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Coach"
         subtitle="Profil coach yang tampil di Member App, level (Head Coach / Coach), dan tautan ke data karyawan untuk gaji tetap."

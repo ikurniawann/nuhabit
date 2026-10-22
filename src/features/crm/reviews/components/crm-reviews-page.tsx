@@ -216,7 +216,8 @@ export function CrmReviewsPage() {
         {integration && !integration.configured && !showConnect && (
           <div className="flex flex-wrap items-start gap-2.5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-            <span className="min-w-0 flex-1">
+            {/* basis: di HP teks tetap lebar dan tombol turun ke baris berikutnya. */}
+            <span className="min-w-0 flex-1 basis-56">
               <strong className="font-semibold">Integrasi Google belum terhubung.</strong> Ulasan
               belum bisa ditarik dan balasan belum bisa dikirim.
             </span>

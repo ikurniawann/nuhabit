@@ -31,6 +31,8 @@ export type WaNotifTone = "dark" | "light";
 const TONES = {
   dark: {
     base: "text-white",
+    // Jendela desktop /arkiv-os butuh padding sendiri; di dashboard halaman sudah memberi jarak.
+    pad: "p-5",
     card: "rounded-3xl border border-white/14 bg-slate-950/55 p-4",
     chip: "inline-flex items-center gap-1.5 rounded-full border border-white/14 bg-slate-950/55 px-3 py-1 text-xs",
     chipRemove: "text-white/45 transition hover:text-rose-300",
@@ -49,6 +51,7 @@ const TONES = {
   },
   light: {
     base: "text-gray-900",
+    pad: "",
     card: "rounded-3xl border border-gray-200 bg-white p-4 shadow-sm",
     chip: "inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-gray-50 px-3 py-1 text-xs text-gray-700",
     chipRemove: "text-gray-400 transition hover:text-rose-600",
@@ -227,7 +230,7 @@ export function WaNotifSettingsPanel({ tone = "dark" }: { tone?: WaNotifTone } =
   };
 
   return (
-    <div className={`space-y-4 p-5 ${ui.base}`}>
+    <div className={`space-y-4 ${ui.pad} ${ui.base}`}>
       {/* saklar utama */}
       <div className={`flex items-center gap-3 ${ui.card}`}>
         <div className="min-w-0 flex-1">

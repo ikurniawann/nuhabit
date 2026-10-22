@@ -160,7 +160,7 @@ export function EssPinjamanPage() {
     <div className="space-y-6">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
-      <div className="flex items-center justify-between border-b border-gray-200/70 pb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200/70 pb-4">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
             <BanknotesIcon className="h-6 w-6 text-pink-600" /> Pinjaman

@@ -165,7 +165,7 @@ export function ReservationDetailDialog({ id, onClose, onChanged }: {
                   );
                   return (
                     <div key={room.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm">
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 basis-40">
                         <p className="font-medium">{room.room_type_name}</p>
                         <p className="text-xs text-muted-foreground">
                           {rupiah(room.nightly_rate)} × {room.nights} malam

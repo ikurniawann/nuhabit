@@ -38,7 +38,8 @@ export function FormPageHeader({
         className
       )}
     >
-      <div className="flex min-w-0 items-start gap-3">
+      {/* HP: tombol Kembali di atas judul supaya judul tidak terjepit. */}
+      <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:gap-3">
         {onBack ? (
           <Button
             type="button"

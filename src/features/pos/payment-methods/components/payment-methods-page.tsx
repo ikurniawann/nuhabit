@@ -130,7 +130,8 @@ export function PaymentMethodsPage() {
           </p>
         ) : (
           <div className="overflow-x-auto px-4 pb-4">
-            <table className="w-full text-sm">
+            {/* min-w: di HP tabel menggulung di sini, bukan menyusutkan input sampai tak terbaca. */}
+            <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <TableRow className="border-b border-gray-200/70 bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground hover:bg-muted/40">
                   <th className="px-4 py-3 text-left font-semibold">Aktif</th>

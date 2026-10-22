@@ -164,14 +164,14 @@ export function StudioAttendancePage() {
   const cancelled = roster?.filter((r) => r.status === "cancelled") ?? [];
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader title="Check-in & Booking" subtitle="Scan kode pass atau nomor HP member, kelola peserta per kelas, lalu selesaikan kelas untuk mencatat kehadiran." />
 
       <form onSubmit={scan} className="mb-6 rounded-xl bg-nh-forest p-4 text-nh-beige shadow-sm sm:p-5">
         <label htmlFor="scan" className="mb-2 flex items-center gap-2 text-sm font-semibold">
           <QrCode className="size-4 text-nh-lime" /> Scan / ketik kode pass (NH-…) atau nomor HP
         </label>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <input
             id="scan"
             ref={scanRef}
@@ -294,7 +294,7 @@ export function StudioAttendancePage() {
                   <ul className="divide-y divide-border">
                     {active.map((r) => (
                       <li key={r.id} className="flex flex-wrap items-center gap-3 py-3">
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 basis-40">
                           <p className="truncate font-medium text-foreground">{r.member_name ?? "—"}</p>
                           <p className="truncate text-xs text-muted-foreground">
                             {r.member_phone} · {r.pass_code ?? "tanpa pass"}

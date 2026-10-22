@@ -278,7 +278,7 @@ function CreateReservationDialog({ onClose, onCreated }: { onClose: () => void; 
                   return (
                     <div key={t.id} className={cn("rounded-lg border p-3", pick.qty > 0 && "border-primary bg-primary/5")}>
                       <div className="flex flex-wrap items-center gap-3">
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 basis-40">
                           <p className="font-medium">{t.name} <span className="text-xs text-muted-foreground">({t.code})</span></p>
                           <p className="text-xs text-muted-foreground">
                             Sisa {t.available} dari {t.rooms_total} unit · maks {t.capacity_adults} dewasa

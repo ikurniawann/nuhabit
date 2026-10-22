@@ -58,7 +58,7 @@ export function StudioNewsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="News Hyrox"
         subtitle="Berita, event, dan tips latihan yang tampil di beranda Member App. Draft tidak terlihat member."

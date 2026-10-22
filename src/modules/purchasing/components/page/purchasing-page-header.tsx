@@ -40,7 +40,8 @@ export function PurchasingFormHeader({
 }) {
   return (
     <div className="flex flex-col gap-4 border-b border-gray-200/70 pb-4 lg:flex-row lg:items-start lg:justify-between">
-      <div className="flex items-start gap-3">
+      {/* HP: tombol Kembali di atas judul supaya judul tidak terjepit. */}
+      <div className="flex flex-col items-start gap-2 sm:flex-row sm:gap-3">
         <Link href={backHref}>
           <Button variant="ghost" size="sm" className="h-9 gap-2 text-pink-700">
             <ArrowLeftIcon className="h-4 w-4" />

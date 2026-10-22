@@ -32,7 +32,7 @@ export function StudioAvailabilityPage() {
   }, []);
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Ketersediaan Coach"
         subtitle="Jam mingguan coach menerima Personal Training, program Personal Training yang bisa dilatih, dan cuti. Slot booking dihitung dari sini dikurangi jadwal kelas coach."

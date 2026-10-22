@@ -103,7 +103,7 @@ export function StudioCoachLeavePage() {
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Cuti & Pengganti Coach"
         subtitle="Program Director menyetujui cuti coach, menunjuk pengganti, dan membatalkan kelas. Atur approver cadangan dan minimal pemberitahuan cuti sesuai SOP coach."

@@ -44,7 +44,7 @@ export function PipelinesSection() {
               <li key={p.id} className="px-5 py-3 text-sm">
                 <div className="flex flex-wrap items-center gap-3">
                   <Switch checked={p.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: p.id, values: { is_active: Boolean(v) } })} />
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 basis-40">
                     <p className="font-medium text-gray-900">
                       {p.name}
                       {p.is_default ? <Badge className="ml-2 border-0 bg-pink-100 font-normal text-pink-700">default</Badge> : null}

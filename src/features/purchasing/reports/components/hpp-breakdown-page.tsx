@@ -34,7 +34,7 @@ export function HPPBreakdownPage() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mt-4 mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Breakdown HPP</h1>
           <p className="text-sm text-gray-500">Harga pokok produksi per produk</p>

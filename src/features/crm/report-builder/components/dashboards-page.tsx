@@ -119,7 +119,7 @@ function DashboardDetailView({ id, onDelete }: { id: string; onDelete: (d: Dashb
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200/80 bg-white px-4 py-3">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-40">
           <p className="font-semibold text-gray-900">
             {detail.dashboard.name}
             {detail.dashboard.is_default ? <Badge className="ml-2 border-0 bg-pink-100 font-normal text-pink-700">Overview</Badge> : null}

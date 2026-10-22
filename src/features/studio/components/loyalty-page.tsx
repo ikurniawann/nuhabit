@@ -83,7 +83,7 @@ export function StudioLoyaltyPage() {
   const totalMembers = data.tiers.reduce((s, t) => s + t.members, 0);
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Program Loyalitas"
         subtitle="NüHabit Progress — XP dari konsistensi latihan, tier seumur hidup dengan benefit booking, dan leaderboard."

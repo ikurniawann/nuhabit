@@ -114,7 +114,7 @@ export function StudioAutomationPage() {
   const set = <K extends keyof JobSettings>(k: K, v: JobSettings[K]) => setForm((f) => (f ? { ...f, [k]: v } : f));
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Otomasi & Pengingat"
         subtitle="Pekerjaan rutin yang dijalankan sistem setiap hari, dan pengingat WhatsApp untuk member."

@@ -75,7 +75,7 @@ export function StudioSchedulePage() {
   const seats = active.reduce((sum, r) => sum + r.capacity, 0);
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Jadwal Kelas"
         subtitle="Jadwal nyata per tanggal. Ganti coach, ubah kuota, atau batalkan per sesi tanpa mengubah template."

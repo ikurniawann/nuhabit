@@ -179,7 +179,7 @@ export function AccountDetailPage({ accountId }: { accountId: string }) {
               <ul className="divide-y divide-gray-200/60 rounded-xl border border-gray-200/80 bg-white">
                 {contacts.map((c) => (
                   <li key={c.id} className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-sm">
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 basis-40">
                       <span className="font-medium text-gray-900">{c.name}</span>
                       {c.is_primary ? <Badge className="ml-1.5 border-0 bg-pink-100 font-normal text-pink-700">utama</Badge> : null}
                       {c.title ? <span className="ml-1.5 text-xs text-gray-500">{c.title}</span> : null}

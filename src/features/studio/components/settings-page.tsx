@@ -45,7 +45,7 @@ export function StudioSettingsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader title="Aturan Booking" subtitle="Berlaku untuk booking dari front desk maupun Member App. Perubahan langsung berlaku untuk booking berikutnya." />
       <div className="grid max-w-3xl gap-4">
         <section className="grid gap-4 rounded-xl border border-border bg-card p-5 shadow-sm sm:grid-cols-2">

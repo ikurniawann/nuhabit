@@ -67,7 +67,7 @@ export function ReportSchedulesPage() {
             {schedules.map((s) => (
               <li key={s.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
                 <Switch checked={s.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: s.id, values: { is_active: Boolean(v) } })} />
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-40">
                   <p className="font-medium text-gray-900">{s.name} <span className="text-xs font-normal text-gray-400">· {s.report_name}</span></p>
                   <p className="text-xs text-gray-500">
                     {describeSchedule(s)} · {SCHEDULE_CHANNEL_LABELS[s.channel]} · {s.recipients.length} penerima

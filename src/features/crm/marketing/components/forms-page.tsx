@@ -64,7 +64,7 @@ export function PublicFormsPage() {
               return (
                 <li key={f.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
                   <Switch checked={f.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: f.id, values: { is_active: Boolean(v) } })} />
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 basis-40">
                     <p className="font-medium text-gray-900">{f.name}</p>
                     <p className="text-xs text-gray-500">
                       {f.title} · {(f.fields ?? DEFAULT_FORM_FIELDS).length} field · terakhir {dateTime(f.last_submission_at)}
@@ -136,7 +136,7 @@ function SubmissionsView({ form }: { form: FormRow }) {
         <ul className="divide-y divide-gray-200/60 text-sm">
           {rows.map((s) => (
             <li key={s.id} className="flex flex-wrap items-center gap-2 py-2.5">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 basis-40">
                 <p className="font-medium text-gray-900">{s.org_name ?? s.pic_name ?? "—"}</p>
                 <p className="text-xs text-gray-500">
                   {dateTime(s.created_at)}

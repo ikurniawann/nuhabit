@@ -99,7 +99,7 @@ export function ApprovalRulesPage() {
               <li key={r.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
                 <Switch checked={r.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: r.id, values: { is_active: Boolean(v) } })} />
                 <Badge className="border-0 bg-gray-900 font-semibold text-white">Tingkat {r.level}</Badge>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-40">
                   <p className="font-medium text-gray-900">{r.name}</p>
                   <p className="text-xs text-gray-500">
                     Diskon &gt; {Number(r.min_discount_percent)}% → {r.approver_user_id ? `user ${r.approver_name ?? ""}` : `role ${ROLES.find((x) => x.value === r.approver_role)?.label ?? r.approver_role}`}

@@ -259,7 +259,7 @@ export function AnnouncementsPage() {
     return (
       <div className="mx-auto max-w-3xl space-y-5 pb-16">
         <ToastContainer toasts={toasts} removeToast={removeToast} />
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold text-gray-900">
             {isNew ? "Pengumuman Baru" : "Edit Pengumuman"}
           </h1>
@@ -451,7 +451,7 @@ export function AnnouncementsPage() {
   return (
     <div className="space-y-6 pb-12">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
             <MegaphoneIcon className="h-6 w-6 text-pink-600" /> Pengumuman

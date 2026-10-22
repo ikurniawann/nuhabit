@@ -206,7 +206,7 @@ function FileCard({ item, inlineUrl, downloadUrl, onPreview }: { item: DataroomI
       ) : null}
       <div className="flex flex-wrap items-center gap-3 p-4">
         <ItemIcon kind="file" mime={item.mime} name={item.name} className="h-10 w-10" />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-40">
           <p className="truncate font-medium">{item.name}</p>
           <p className="text-xs text-muted-foreground">{formatBytes(item.size_bytes)} · {tanggal(item.updated_at)}</p>
         </div>

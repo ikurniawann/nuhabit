@@ -19,7 +19,7 @@ export function StudioPtPage() {
   const [tab, setTab] = useState<"book" | "list">("book");
   const [listKey, setListKey] = useState(0);
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Personal Training"
         subtitle="Booking sesi privat 1 coach 1 member dari jam kosong coach, dan pantau jadwal Personal Training."

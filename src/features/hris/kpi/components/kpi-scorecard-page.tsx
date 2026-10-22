@@ -160,7 +160,7 @@ export function KpiScorecardPage() {
             operasional + rubrik atasan. Skala 0–100.
           </p>
         </div>
-        <div className="flex items-end gap-2">
+        <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1">
             <Label>Bulan</Label>
             <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>

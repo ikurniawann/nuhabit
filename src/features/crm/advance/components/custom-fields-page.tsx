@@ -98,7 +98,7 @@ export function CustomFieldsPage() {
               <li key={f.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
                 <Switch checked={f.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: f.id, values: { is_active: Boolean(v) } })} />
                 <Badge className="border-0 bg-gray-900 font-semibold text-white">{OBJECT_LABELS[f.object]}</Badge>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-40">
                   <p className="font-medium text-gray-900">{f.label} <span className="font-mono text-xs text-gray-400">{f.key}</span></p>
                   <p className="text-xs text-gray-500">
                     {TYPE_LABELS[f.field_type]}{f.is_required ? " · wajib" : ""}{f.options?.length ? ` · ${f.options.join(" / ")}` : ""}{f.show_in_list ? " · tampil di daftar" : ""}

@@ -340,7 +340,7 @@ export function FinanceInvoicesPage() {
                 key={invoice.id}
                 className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200/80 bg-white p-3.5"
               >
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-40">
                   <button
                     type="button"
                     onClick={() => setDetailInvoiceId(invoice.id)}

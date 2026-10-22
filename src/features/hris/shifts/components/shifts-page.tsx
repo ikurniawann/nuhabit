@@ -129,7 +129,7 @@ export function ShiftsPage() {
     <div className="space-y-5">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
-      <div className="flex items-center justify-between border-b border-gray-200/70 pb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200/70 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Shift Kerja</h1>
           <p className="text-sm text-gray-500">

@@ -44,7 +44,7 @@ export function StudioProgramsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Program Kelas"
         subtitle="Jenis kelas grup dan personal training beserta durasi dan kuota default."

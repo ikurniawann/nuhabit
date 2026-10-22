@@ -19,7 +19,7 @@ export default function QCDetailPage({ params }: { params: { id: string } }) {
           ]}
         />
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Detail QC</h1>
             <p className="text-sm text-gray-500">ID: {params.id}</p>

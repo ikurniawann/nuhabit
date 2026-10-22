@@ -664,7 +664,7 @@ export function ClassicCashierPage() {
     <div className="fixed inset-0 z-30 flex flex-col overflow-hidden bg-slate-900 text-slate-100 select-none">
       <PosOfflineRegistrar />
       {/* ===== Header ===== */}
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-slate-700 bg-slate-950 px-4 [@media(min-height:761px)]:h-14">
+      <header className="flex h-12 shrink-0 items-center gap-3 overflow-x-auto border-b border-slate-700 bg-slate-950 px-4 [@media(min-height:761px)]:h-14">
         <div className="flex items-baseline gap-2">
           <span className="text-lg font-black tracking-wide text-amber-400">POS Classic</span>
           <span className="text-xs uppercase tracking-widest text-slate-400">{brandName()}</span>
@@ -746,9 +746,10 @@ export function ClassicCashierPage() {
       ) : null}
 
       {/* ===== Body ===== */}
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(320px,34%)_1fr]">
+      {/* HP: tiket & produk menumpuk dan halaman menggulung; mulai md tetap dua kolom kasir. */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto md:grid-cols-[minmax(320px,34%)_1fr] md:overflow-visible">
         {/* ----- Tiket order ----- */}
-        <section className="flex min-h-0 flex-col border-r border-slate-700 bg-white text-slate-900">
+        <section className="flex min-h-[70dvh] flex-col border-slate-700 bg-white text-slate-900 md:min-h-0 md:border-r">
           <div className="grid grid-cols-3 gap-1 p-2">
             {CLASSIC_ORDER_TYPES.map((t) => (
               <button
@@ -898,7 +899,7 @@ export function ClassicCashierPage() {
 
         {/* ----- Katalog + kontrol ----- */}
         {/* min-w-0: baris kategori yg bisa di-scroll tidak boleh melebarkan kolom grid. */}
-        <section className="flex min-h-0 min-w-0 flex-col">
+        <section className="flex min-h-[85dvh] min-w-0 flex-col md:min-h-0">
           <div className="flex shrink-0 items-center gap-2 p-2">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />

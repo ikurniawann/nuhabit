@@ -146,7 +146,7 @@ export function StudioCalendarPage() {
   const scheduleHref = `/dashboard/studio/schedule?week=${startOfWeek(view === "month" ? (anchor.slice(0, 7) === today.slice(0, 7) ? today : `${anchor.slice(0, 7)}-01`) : anchor)}`;
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Kalender Kelas"
         subtitle="Pantau jadwal kelas per hari, minggu, atau bulan. Warna menandai program; kelas batal dicoret."

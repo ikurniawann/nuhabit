@@ -67,7 +67,7 @@ export function StudioMemberFlagsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Member Perhatian Khusus"
         subtitle="Penanda umum (pemula, VIP, pernah komplain) dikelola di sini dan terlihat oleh coach. Penanda medis dicatat coach di Coach Portal; detailnya hanya terlihat oleh coach yang mengajar member tersebut."

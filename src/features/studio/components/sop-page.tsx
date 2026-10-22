@@ -66,7 +66,7 @@ export function StudioSopPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="SOP Coach"
         subtitle="Dokumen SOP berversi. Setiap versi baru wajib dibaca dan dikonfirmasi coach di Coach Portal — laporan di bawah menunjukkan siapa yang belum."

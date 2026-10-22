@@ -287,7 +287,7 @@ export function HolidaysPage() {
             dan perhitungan hari cuti
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-full border border-gray-200 px-1">
             <Button
               variant="ghost"

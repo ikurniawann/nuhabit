@@ -105,7 +105,7 @@ export default function RawMaterialsNewPage() {
           ]}
         />
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Tambah Bahan Baku</h1>
             <p className="text-sm text-gray-500">Formulir bahan baku baru</p>

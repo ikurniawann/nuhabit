@@ -134,7 +134,7 @@ export function StudioComplaintsPage() {
   }, [load]);
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Keluhan Pelanggan"
         subtitle="Setiap keluhan dicatat sebagai tiket — dari WhatsApp, front desk, atau Member App — lalu ditangani PIC sampai selesai dan dikonfirmasi member, dalam batas waktu per kategori."
@@ -176,8 +176,8 @@ export function StudioComplaintsPage() {
           />
         )}
 
-        <div className="flex flex-wrap gap-2">
-          <NativeSelect className="max-w-48" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <NativeSelect className="sm:max-w-48" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
             <option value="open">Belum ditutup</option>
             <option value="">Semua status</option>
             {COMPLAINT_STATUSES.map((s) => (
@@ -186,7 +186,7 @@ export function StudioComplaintsPage() {
               </option>
             ))}
           </NativeSelect>
-          <NativeSelect className="max-w-48" value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Kategori">
+          <NativeSelect className="sm:max-w-48" value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Kategori">
             <option value="">Semua kategori</option>
             {COMPLAINT_CATEGORIES.map((c) => (
               <option key={c} value={c}>
@@ -194,7 +194,7 @@ export function StudioComplaintsPage() {
               </option>
             ))}
           </NativeSelect>
-          <NativeSelect className="max-w-40" value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Jenis">
+          <NativeSelect className="sm:max-w-48" value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Jenis">
             <option value="">Keluhan & masukan</option>
             {COMPLAINT_KINDS.map((k) => (
               <option key={k} value={k}>
@@ -202,8 +202,8 @@ export function StudioComplaintsPage() {
               </option>
             ))}
           </NativeSelect>
-          <Input className="max-w-xs" placeholder="Cari kode, judul, atau nama" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cari keluhan" />
-          <label className="flex items-center gap-2 rounded-lg border border-border px-3 text-sm text-foreground">
+          <Input className="col-span-2 sm:max-w-xs" placeholder="Cari kode, judul, atau nama" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cari keluhan" />
+          <label className="flex min-h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm text-foreground">
             <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} /> Ditugaskan ke saya
           </label>
         </div>

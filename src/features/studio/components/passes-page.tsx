@@ -106,7 +106,7 @@ export function StudioPassesPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="lg:p-6">
       <StudioPageHeader
         title="Member Pass"
         subtitle="Pass milik member, sisa kredit, masa berlaku, dan utang pass yang belum di-redeem."
