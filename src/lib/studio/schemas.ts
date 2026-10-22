@@ -14,6 +14,7 @@ import {
 import { SOP_BODY_MAX, SOP_TITLE_MAX } from "@/lib/studio/sop";
 import { MAX_PT_MEMBER_RESCHEDULE } from "@/lib/studio/pt-reschedule";
 import { PARQ_DETAILS_MAX } from "@/lib/studio/parq";
+import { SESSION_NOTE_MAX } from "@/lib/studio/session-notes";
 import { CS_PRIORITIES } from "@/lib/crm/cs-rules";
 
 /**
@@ -472,4 +473,11 @@ export const flagReviewSchema = z.object({
   keep: z.boolean(),
   severity: z.enum(FLAG_SEVERITIES).optional(),
   note: z.string().trim().max(FLAG_NOTE_MAX).nullable().optional(),
+});
+
+// ── Catatan coach setelah sesi (EPIC-067 T-067-C4) ─────────────────────────
+export const sessionNoteSchema = z.object({
+  customer_id: z.string().uuid(),
+  body: z.string().trim().min(3, "Catatan minimal 3 karakter").max(SESSION_NOTE_MAX),
+  carry_forward: z.boolean().default(true),
 });

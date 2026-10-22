@@ -63,7 +63,8 @@ export function sortFlags<T extends Pick<MemberFlag, "severity" | "category" | "
     (a, b) =>
       SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
       Number(b.category === "medical") - Number(a.category === "medical") ||
-      b.created_at.localeCompare(a.created_at)
+      // pg mengembalikan timestamptz sebagai Date — jangan localeCompare.
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 }
 

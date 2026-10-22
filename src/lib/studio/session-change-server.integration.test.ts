@@ -31,10 +31,14 @@ let sessionAt = { date: "", time: "" };
 let laterSessionId = "";
 const bookings: Record<string, string> = {};
 
-/** Sesi N jam dari sekarang (WIB). */
+/**
+ * Sesi di tanggal N jam dari sekarang (WIB), selalu pukul 10.00 — jam tetap
+ * supaya jam selesai (+1 jam) tidak melewati tengah malam (constraint
+ * end_time > start_time). Untuk N ≥ 30 sesi tetap ≥ 16 jam ke depan.
+ */
 function wibAt(hoursFromNow: number) {
   const d = new Date(Date.now() + hoursFromNow * 3_600_000 + 7 * 3_600_000);
-  return { date: d.toISOString().slice(0, 10), time: d.toISOString().slice(11, 16) };
+  return { date: d.toISOString().slice(0, 10), time: "10:00" };
 }
 
 describe.skipIf(!IS_TEST_DB)("kabar perubahan jadwal ke member (DB)", () => {

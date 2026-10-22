@@ -138,7 +138,7 @@ export function RosterMemberFlags({ customerId, flags, onChanged }: { customerId
       )}
       {!adding ? (
         <button type="button" onClick={open} className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-nh-beige/60 hover:text-nh-lime">
-          <Plus className="size-3" /> Catatan
+          <Plus className="size-3" /> Penanda
         </button>
       ) : (
         <div className="mt-1.5 space-y-1.5 rounded-xl bg-nh-forest/60 p-2">

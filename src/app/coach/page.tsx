@@ -10,6 +10,7 @@ import { CoachLeaveTab } from "@/features/studio/components/coach-leave-tab";
 import { RosterMemberFlags, type RosterFlag } from "@/features/studio/components/coach-member-flags";
 import { CoachSopBanner, CoachSopSheet, useCoachSop } from "@/features/studio/components/coach-sop";
 import { CoachPtReschedule } from "@/features/studio/components/coach-pt-reschedule";
+import { RosterSessionNotes, type RosterNote } from "@/features/studio/components/coach-session-notes";
 
 interface Me {
   id: string;
@@ -45,6 +46,7 @@ interface RosterRow {
   member_name: string;
   checked_in_at: string | null;
   flags: RosterFlag[];
+  notes: RosterNote[];
 }
 
 interface CommissionData {
@@ -243,12 +245,15 @@ function SessionCard({
   onChanged: () => void;
 }) {
   const [roster, setRoster] = useState<RosterRow[] | null>(null);
+  const [canWriteNotes, setCanWriteNotes] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
   const loadRoster = useCallback(async () => {
     try {
-      setRoster((await getJson<{ data: RosterRow[] }>(`/api/coach/sessions/${s.id}/roster`)).data);
+      const r = await getJson<{ data: RosterRow[]; can_write_notes?: boolean }>(`/api/coach/sessions/${s.id}/roster`);
+      setRoster(r.data);
+      setCanWriteNotes(Boolean(r.can_write_notes));
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Gagal memuat peserta");
       setRoster([]);
@@ -342,6 +347,7 @@ function SessionCard({
                         onChanged(); // jumlah "PAR-Q perlu ditinjau" di kartu ikut diperbarui
                       }}
                     />
+                    <RosterSessionNotes sessionId={s.id} customerId={r.customer_id} notes={r.notes ?? []} canWrite={canWriteNotes} onChanged={loadRoster} />
                   </li>
                 );
               })}

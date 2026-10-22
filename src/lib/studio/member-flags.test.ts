@@ -32,6 +32,14 @@ describe("sortFlags", () => {
     ]);
     expect(sorted.map((x) => x.id)).toEqual(["cedera", "hamil", "komplain", "pemula", "vip"]);
   });
+
+  it("created_at berupa Date (dari pg) tidak membuat urutan crash", () => {
+    const rows = [
+      { id: "lama", severity: "attention" as const, category: "medical" as const, created_at: new Date("2026-10-01T00:00:00Z") as unknown as string },
+      { id: "baru", severity: "attention" as const, category: "medical" as const, created_at: new Date("2026-10-20T00:00:00Z") as unknown as string },
+    ];
+    expect(sortFlags(rows).map((x) => x.id)).toEqual(["baru", "lama"]);
+  });
 });
 
 describe("akses penanda medis", () => {

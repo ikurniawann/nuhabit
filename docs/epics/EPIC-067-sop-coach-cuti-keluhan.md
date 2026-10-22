@@ -146,7 +146,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
   pembatasan di level query/API, bukan hanya disembunyikan di UI.
 - [x] T-067-C3 **(Tahap 3)** Integrasi waiver & PAR-Q [EPIC-064](./EPIC-064-calon-member-waiver-trial.md): jawaban
   "ya" pada pertanyaan kesehatan otomatis membuat penanda kondisi medis untuk ditinjau.
-- [ ] T-067-C4 **(Tahap 3)** Catatan coach setelah sesi per member (mis. "hindari lunges") yang terbawa ke sesi
+- [x] T-067-C4 **(Tahap 3)** Catatan coach setelah sesi per member (mis. "hindari lunges") yang terbawa ke sesi
   berikutnya dan terlihat oleh coach lain.
 
 ### D. Dokumen SOP
@@ -739,3 +739,32 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
       console. Bug yang ditemukan & diperbaiki: badge kartu tidak ikut diperbarui setelah tinjauan.
     - `tsc` tetap 508, eslint tanpa error baru.
   - Belum di-deploy.
+- 2026-10-22 — **T-067-C4 selesai** (catatan coach setelah sesi). **Semua task EPIC-067 selesai**; Tahap 3 (A2, A7,
+  B4, B5, C3, C4) belum di-deploy. Status tetap `on-progress` sampai deploy ke DEV, lalu `ready-for-qa` untuk
+  memeriksa Acceptance Criteria.
+  - Migrasi `20261023140000_studio_member_session_notes.sql`: tabel `studio.member_session_notes` (member, sesi, coach,
+    isi, `carry_forward`, dilepas, dihapus).
+  - Keputusan desain:
+    - **Menulis:** coach menulis "Catatan sesi" per member di roster sesi miliknya, pada hari sesi s/d 7 hari
+      sesudahnya (bukan untuk sesi mendatang), hanya untuk member yang ada di sesi itu.
+    - **Dibawa ke sesi berikutnya** (default dicentang) → tampil di atas, ditandai pin, di roster coach **mana pun**
+      yang mengajar member itu sampai dilepas ("Tidak perlu dibawa lagi"). Melepas boleh oleh coach yang
+      sedang/akan/baru mengajar member; menghapus hanya penulisnya.
+    - **Riwayat:** catatan yang tidak dibawa tampil sebagai riwayat singkat (3 terbaru, 60 hari).
+    - **Hanya di Coach Portal** dan untuk roster sesi mendatang/hari ini/7 hari terakhir (bisa berisi info
+      kesehatan → keputusan client no. 9); tidak ada jalur backoffice.
+    - Tombol penanda di roster diganti nama "+ Penanda" supaya tidak tertukar dengan "Catatan sesi".
+  - Perbaikan yang ikut:
+    - `sortFlags` (C1) membandingkan `created_at` dengan `localeCompare`, padahal pg mengembalikan `Date` → crash bila
+      dua penanda bertingkat & berkategori sama. Diganti perbandingan waktu + tes regresi.
+    - Fixture tes A6 (`session-change-server`) memakai jam sekarang + 30 jam; antara 17.00–18.00 WIB jam selesai
+      melewati tengah malam (`end_time > start_time`). Jam sesi uji kini tetap 10.00.
+  - Bukti:
+    - 2 unit test + 4 test integrasi DB (jendela tulis 7 hari, sesi orang lain 404, member di luar sesi 400, terbawa
+      ke coach lain, lepas oleh coach pengajar / tolak coach tanpa hubungan, hapus hanya penulis) lulus di
+      `nuhabit_test`;
+    - suite studio/API/HRIS/KPI/CRM/WA: 1040 lulus; hanya 3 gagal `table-order` lama;
+    - E2E (coach uji; fixture dihapus): Pras menulis catatan dibawa + catatan biasa di sesi kemarin → Rara melihat
+      keduanya di roster sesi besok (dibawa di atas), tidak bisa menulis untuk sesi yang belum berjalan, melepas
+      catatan, dan tidak bisa menghapus catatan Pras; tanpa error console;
+    - `tsc` tetap 508, eslint tanpa error baru.
