@@ -1,6 +1,6 @@
 # EPIC-068: Task Departemen — progress management & pemantauan per departemen
 
-status: on-progress
+status: ready-for-qa
 environment: dev
 retries: 0
 
@@ -34,7 +34,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md).
 - [x] T-068-2 Status `in_progress`, persen progres, catatan progres (`hris.department_task_updates`).
 - [x] T-068-3 Tab **Pemantauan**: ringkasan, per departemen & penanggung jawab, task terlambat, menunggu review.
 - [x] T-068-4 Task rutin dijadwalkan sejak tanggal dibuat.
-- [ ] T-068-5 Deploy ke DEV.
+- [x] T-068-5 Deploy ke DEV.
 
 ## Acceptance Criteria
 
@@ -67,3 +67,18 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md).
       diperbaiki: jadwal sebelum tanggal dibuat, daftar tidak memuat ulang, tabel PJ terpotong di kartu sempit;
     - `tsc` tetap 508, eslint tanpa error baru.
   - Belum di-deploy.
+- 2026-10-22 19.55 WIB — **Di-deploy ke DEV (https://nuhabitdev.reddie.id)** dari commit `354f0bbf` → status
+  `ready-for-qa`.
+  - Backup sebelum migrasi: `~/backups/nuhabitdev/nuhabit-20261022-194145-pre-epic068.sql.gz` (dump lengkap; jumlah
+    baris departemen/karyawan/task/menu/sesi cocok).
+  - Migrasi: 1 delta (`20261023150000_hris_dept_task_progress`), satu-satunya yang pending. Menu aktif & terlihat,
+    hak akses 6 role, tabel & kolom baru ada.
+  - Image: `nuhabitdev:local` baru (`d3f7bb1a5469`); rollback `nuhabitdev:pre-epic068`. Container dengan 6 env yang
+    sama, healthy.
+  - Smoke test (hanya baca, super admin): daftar task & pemantauan 200 (live belum punya task: 0 departemen
+    bertask), bulan tidak valid 400; menu Task Departemen di sidebar; tab Pemantauan di desktop & 390px tanpa
+    overflow/error; regresi payroll, cuti coach, cuti HRIS 200; log bersih; tidak ada jadwal yang tertulis di live.
+  - Perlu di live: Head Division / HRD membuat task (Tambah Task); atasan di data karyawan menentukan siapa yang
+    boleh membuat & mereview task.
+  - Rollback: jalankan ulang container dengan `nuhabitdev:pre-epic068` (migrasi hanya menambah kolom/tabel dan
+    menghidupkan menu; image lama tetap jalan). Restore dump di atas bila perlu.
