@@ -111,6 +111,54 @@ export async function collectLeaveDiscipline(
 }
 
 // ============================================================
+// coach_complaint_rate — keluhan tertaut coach / 100 peserta hadir di sesi
+// coach itu (EPIC-067 T-067-B5). Keluhan = studio.complaints kind 'complaint'
+// yang tidak dibatalkan, dibuat dalam periode (WIB); masukan tidak dihitung.
+// Hanya karyawan yang tertaut profil coach & punya peserta di periode itu.
+// ============================================================
+export async function collectCoachComplaintRate(
+  pool: Pool,
+  startIso: string,
+  endIso: string
+): Promise<CollectorMap> {
+  const { rows } = await pool.query(
+    `WITH att AS (
+       SELECT s.coach_id, COUNT(*)::int AS attendees
+       FROM studio.bookings b JOIN studio.class_sessions s ON s.id = b.session_id
+       WHERE b.status = 'attended' AND s.session_date BETWEEN $1::date AND $2::date AND s.coach_id IS NOT NULL
+       GROUP BY s.coach_id
+     ), kel AS (
+       SELECT coach_id, COUNT(*)::int AS complaints,
+              COUNT(*) FILTER (WHERE category = 'coach')::int AS about_coach
+       FROM studio.complaints
+       WHERE kind = 'complaint' AND status <> 'cancelled' AND coach_id IS NOT NULL
+         AND (created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $1::date AND $2::date
+       GROUP BY coach_id
+     )
+     SELECT c.employee_id, SUM(att.attendees)::int AS attendees,
+            COALESCE(SUM(kel.complaints), 0)::int AS complaints,
+            COALESCE(SUM(kel.about_coach), 0)::int AS about_coach
+     FROM studio.coaches c
+     JOIN att ON att.coach_id = c.id
+     LEFT JOIN kel ON kel.coach_id = c.id
+     WHERE c.employee_id IS NOT NULL
+     GROUP BY c.employee_id`,
+    [startIso, endIso]
+  );
+  const result: CollectorMap = new Map();
+  for (const row of rows) {
+    const ratio = safeRatio(row.complaints, row.attendees);
+    if (ratio === null) continue;
+    result.set(row.employee_id, {
+      actual: ratio * 100,
+      sampleSize: row.attendees,
+      sourceDetail: { complaints: row.complaints, about_coach: row.about_coach, attendees: row.attendees },
+    });
+  }
+  return result;
+}
+
+// ============================================================
 // att_late_ratio — Σ menit telat / Σ menit kerja terjadwal
 // ============================================================
 export async function collectAttLateRatio(

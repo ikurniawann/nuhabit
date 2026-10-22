@@ -30,6 +30,7 @@ import {
 } from "@/lib/studio/complaints";
 import type { MemberOption } from "../types";
 import { EmptyState, Field, NativeSelect, Pill, StudioPageHeader } from "./ui-bits";
+import { ComplaintsReport } from "./complaints-report";
 
 /**
  * Keluhan Pelanggan (EPIC-067 T-067-B1/B2): tiket resmi dari WA inbox, front
@@ -102,6 +103,7 @@ export function StudioComplaintsPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [rev, setRev] = useState(0);
+  const [view, setView] = useState<"tickets" | "report">("tickets");
 
   useEffect(() => {
     apiGet<{ data: { assignees: Staff[] } }>("/api/studio/complaints/settings")
@@ -147,7 +149,22 @@ export function StudioComplaintsPage() {
           </>
         }
       />
-      <div className="grid gap-4">
+      <div className="mb-4 inline-flex rounded-lg border border-border bg-card p-0.5">
+        {(["tickets", "report"] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={view === v}
+            onClick={() => setView(v)}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${view === v ? "bg-nh-forest text-nh-lime" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            {v === "tickets" ? "Tiket" : "Laporan"}
+          </button>
+        ))}
+      </div>
+      {/* Laporan (T-067-B5); daftar tiket tetap ter-mount supaya filter & pilihan tidak hilang saat kembali. */}
+      {view === "report" && <ComplaintsReport />}
+      <div className={view === "report" ? "hidden" : "grid gap-4"}>
         {showSettings && <ComplaintSettingsPanel staff={staff} onSaved={() => setShowSettings(false)} />}
         {creating && (
           <CreateComplaint

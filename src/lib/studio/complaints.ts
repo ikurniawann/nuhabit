@@ -322,3 +322,25 @@ export function newMemberReportMessage(input: {
     .filter((l): l is string => l !== null)
     .join("\n");
 }
+
+// ── Laporan keluhan (T-067-B5) ─────────────────────────────────────────────
+
+export const MAX_REPORT_RANGE_DAYS = 366;
+
+/** Rentang laporan: default awal bulan ini s/d hari ini (WIB); rentang tidak valid → null. */
+export function reportRange(from: string | null, to: string | null, today: string): { from: string; to: string } | null {
+  const iso = /^\d{4}-\d{2}-\d{2}$/;
+  const f = from && iso.test(from) ? from : `${today.slice(0, 8)}01`;
+  const t = to && iso.test(to) ? to : today;
+  if (t < f) return null;
+  if ((Date.parse(`${t}T00:00:00Z`) - Date.parse(`${f}T00:00:00Z`)) / 86_400_000 >= MAX_REPORT_RANGE_DAYS) return null;
+  return { from: f, to: t };
+}
+
+/** "45 mnt", "5,5 jam", "2,1 hari" — waktu rata-rata di laporan. */
+export function formatDurationHours(hours: number | null): string {
+  if (hours === null || !Number.isFinite(hours)) return "—";
+  if (hours < 1) return `${Math.max(1, Math.round(hours * 60))} mnt`;
+  if (hours < 48) return `${hours.toLocaleString("id-ID", { maximumFractionDigits: 1 })} jam`;
+  return `${(hours / 24).toLocaleString("id-ID", { maximumFractionDigits: 1 })} hari`;
+}

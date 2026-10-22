@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatDurationHours,
+  reportRange,
   memberReportPriority,
   memberStatusLabel,
   newMemberReportMessage,
@@ -172,3 +174,21 @@ describe("laporan dari Member App (B4)", () => {
     expect(fb).toContain(`${"x".repeat(297)}…`);
   });
 });
+
+describe("laporan keluhan (B5)", () => {
+  it("rentang default: awal bulan ini s/d hari ini; tidak valid → null", () => {
+    expect(reportRange(null, null, "2026-10-22")).toEqual({ from: "2026-10-01", to: "2026-10-22" });
+    expect(reportRange("2026-09-01", "2026-09-30", "2026-10-22")).toEqual({ from: "2026-09-01", to: "2026-09-30" });
+    expect(reportRange("2026-10-10", "2026-10-01", "2026-10-22")).toBeNull();
+    expect(reportRange("2025-01-01", "2026-10-22", "2026-10-22")).toBeNull();
+    expect(reportRange("x", "2026-10-05", "2026-10-22")).toEqual({ from: "2026-10-01", to: "2026-10-05" });
+  });
+
+  it("durasi: menit, jam, hari", () => {
+    expect(formatDurationHours(null)).toBe("—");
+    expect(formatDurationHours(0.25)).toBe("15 mnt");
+    expect(formatDurationHours(5.5)).toBe("5,5 jam");
+    expect(formatDurationHours(60)).toBe("2,5 hari");
+  });
+});
+

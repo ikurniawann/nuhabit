@@ -134,7 +134,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
   notifikasi owner yang ada); juga perbaiki SLA watcher WA inbox agar mengirim alert, bukan hanya menandai.
 - [x] T-067-B4 **(Tahap 3)** Form "Send feedback / Report an issue" di Member App (bahasa Inggris), opsional terkait
   sesi yang pernah diikuti → masuk sebagai tiket.
-- [ ] T-067-B5 **(Tahap 3)** Laporan keluhan: per kategori, per coach, waktu penyelesaian rata-rata; masuk ke KPI coach.
+- [x] T-067-B5 **(Tahap 3)** Laporan keluhan: per kategori, per coach, waktu penyelesaian rata-rata; masuk ke KPI coach.
 
 ### C. Member perhatian khusus
 
@@ -673,5 +673,34 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
       tiket Member App, menandai selesai → member "Not yet" dengan komentar → tiket kembali Ditangani dengan riwayat
       "Member: belum selesai — …"; tanpa error console. Select/textarea memakai `nh-dark-input` supaya terbaca di
       latar gelap;
+    - `tsc` tetap 508, eslint tanpa error baru.
+  - Belum di-deploy.
+- 2026-10-22 — **T-067-B5 selesai** (laporan keluhan + KPI coach).
+  - Migrasi `20261023120000_kpi_coach_complaint_rate.sql`: indikator KPI otomatis `coach_complaint_rate` ("Keluhan per
+    100 Peserta (Coach)", makin rendah makin baik, target default 1) + bobot 15 di scorecard role `employee`.
+  - Keputusan desain:
+    - **Laporan** = tab "Laporan" di Keluhan Pelanggan, rentang tanggal bebas (default bulan berjalan, maks 366 hari),
+      berdasarkan tanggal tiket dibuat. Isinya:
+      - ringkasan (jumlah, terbuka, dieskalasi, respons & selesai rata-rata, % tepat waktu, masukan, batal);
+      - per kategori dan per sumber;
+      - per coach: keluhan, tentang coach, cedera, peserta hadir, **keluhan per 100 peserta**, selesai rata-rata,
+        masukan.
+    - Hanya keluhan (`kind = complaint`) yang tidak dibatalkan; masukan dihitung terpisah. "% tepat waktu" dihitung
+      dari tiket yang batasnya sudah lewat atau sudah ditangani, jadi tiket baru tidak menurunkan angka.
+    - **KPI coach** memakai rumus yang sama dengan kolom "per 100 peserta" supaya laporan dan scorecard selalu
+      cocok: keluhan yang tertaut ke coach (langsung atau lewat sesi) ÷ peserta hadir di sesi coach × 100, per
+      bulan, lewat profil coach yang tertaut karyawan.
+    - Karyawan bukan coach / coach tanpa peserta di bulan itu tidak punya data, jadi indikator dikeluarkan dan bobot
+      dibagi ulang (aturan `composeScore`). Skor staf lain tidak berubah. Bobot & target bisa diubah di menu KPI
+      (role atau departemen).
+  - Bukti:
+    - 2 unit test (rentang laporan, format durasi) + 3 test integrasi DB (ringkasan & ketepatan waktu, per coach,
+      kolektor KPI) lulus di `nuhabit_test`;
+    - suite studio/API/HRIS/KPI/CRM/WA dijalankan 3× berturut-turut: 1027 lulus, hanya 3 gagal `table-order` lama;
+    - dua tes keluhan lama yang flaky saat paralel distabilkan: kode tiket cukup naik (tidak harus +1), dan tiket
+      uji terbuka di tes laporan ditandai sudah dieskalasi supaya watcher eskalasi global tidak memprosesnya;
+    - E2E (admin uji; fixture dihapus): tab Laporan menampilkan ringkasan, kategori, coach (rasio > 1 merah),
+      sumber, tanpa error console. Snapshot KPI lewat `POST /api/hris/kpi/snapshot` menghasilkan `coach_complaint_rate`
+      untuk 2 coach uji (2,5 → pencapaian 40%; 8 → 12,5%) dan indikator masuk breakdown scorecard;
     - `tsc` tetap 508, eslint tanpa error baru.
   - Belum di-deploy.

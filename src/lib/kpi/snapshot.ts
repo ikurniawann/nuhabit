@@ -14,6 +14,7 @@ import {
 } from "./collectors";
 import {
   collectAttLateRatio,
+  collectCoachComplaintRate,
   collectLeaveDiscipline,
   collectLeaveSla,
   collectPayrollTimeliness,
@@ -42,6 +43,7 @@ const EMPLOYEE_COLLECTOR_CODES = [
   "leave_request_discipline",
   "att_late_ratio",
   "task_completion",
+  "coach_complaint_rate",
 ] as const;
 
 /** Indikator level-organisasi: satu nilai dibagikan ke pemegang indikator */
@@ -169,6 +171,7 @@ export async function runKpiSnapshot(input: {
     vendorPayOntime,
     vendorPaySla,
     payrollTimeliness,
+    coachComplaintRate,
   ] = await Promise.all([
     collectAttOntime(pool, employees, start, end),
     collectPosCashVariance(pool, start, end),
@@ -182,6 +185,7 @@ export async function runKpiSnapshot(input: {
     collectVendorPayOntime(pool, start, end),
     collectVendorPaySla(pool, start, end),
     collectPayrollTimeliness(pool, periodYear, periodMonth),
+    collectCoachComplaintRate(pool, start, end),
   ]);
   // team_ontime diturunkan dari hasil att_ontime (tanpa query tambahan)
   const teamOntime = collectTeamOntime(employees, attOntime);
@@ -196,6 +200,7 @@ export async function runKpiSnapshot(input: {
     leave_request_discipline: leaveDiscipline,
     att_late_ratio: attLateRatio,
     task_completion: taskCompletion,
+    coach_complaint_rate: coachComplaintRate,
   };
   const orgCollected: Record<(typeof ORG_COLLECTOR_CODES)[number], CollectorValue | null> = {
     leave_sla: leaveSla,
@@ -423,6 +428,7 @@ export async function runKpiSnapshot(input: {
       pos_sales_shift: posSalesShift.size,
       leave_request_discipline: leaveDiscipline.size,
       att_late_ratio: attLateRatio.size,
+      coach_complaint_rate: coachComplaintRate.size,
       leave_sla: leaveSla ? 1 : 0,
       vendor_pay_ontime: vendorPayOntime ? 1 : 0,
       vendor_pay_sla: vendorPaySla ? 1 : 0,

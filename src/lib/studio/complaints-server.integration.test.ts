@@ -74,7 +74,8 @@ describe.skipIf(!IS_TEST_DB)("tiket keluhan (DB)", () => {
   it("front desk: sesi menentukan coach, batas waktu cedera, kode berurutan, riwayat 'dibuat'", async () => {
     const a = await createComplaint(venue, userId, { source: "front_desk", category: "injury", description: "Bahu kiri cedera saat sled push", customer_id: customerId, session_id: sessionId }, now);
     const b = await createComplaint(venue, userId, { source: "front_desk", category: "facility", title: "AC ruang 2 mati", contact_name: "Tamu walk-in" }, now);
-    expect(Number(b.code.slice(-4))).toBe(Number(a.code.slice(-4)) + 1);
+    // Berurutan naik (tes lain yang berjalan paralel bisa menyelipkan nomor di antaranya).
+    expect(Number(b.code.slice(-4))).toBeGreaterThan(Number(a.code.slice(-4)));
     expect(a.code).toMatch(/^KEL-2610-\d{4}$/);
 
     const detail = (await getComplaint(branchId, a.id))!;
