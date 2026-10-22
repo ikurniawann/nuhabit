@@ -170,7 +170,7 @@ export function EssKpiPage() {
         const today = new Date().toISOString().slice(0, 10);
         setTodayTasks(
           res.data.occurrences.filter(
-            (o) => o.occurrence_date === today && o.status === "pending"
+            (o) => o.occurrence_date === today && (o.status === "pending" || o.status === "in_progress")
           ).length
         );
       })

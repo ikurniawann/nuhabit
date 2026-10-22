@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query, queryOne } from "@/lib/db";
-import { getWorkforceActor } from "@/lib/hris/workforce-auth";
-import { ensureOccurrences, type TaskRecurrence } from "@/lib/hris/dept-tasks";
+import { deptTaskActor as actorProfile, ensureOccurrences, type TaskRecurrence } from "@/lib/hris/dept-tasks";
 
 /**
  * Task Departemen (owner 2026-08-30, konsep MBO/task compliance).
@@ -16,31 +15,6 @@ import { ensureOccurrences, type TaskRecurrence } from "@/lib/hris/dept-tasks";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 const RECURRENCES: TaskRecurrence[] = ["once", "daily", "weekly", "monthly"];
-
-async function actorProfile() {
-  const actor = await getWorkforceActor();
-  if (!actor) return null;
-  if (!actor.employeeId) {
-    return { ...actor, departmentId: null as string | null, fullName: null as string | null, hasSubordinates: false };
-  }
-  const me = await queryOne<{
-    department_id: string | null;
-    full_name: string;
-    subordinates: number;
-  }>(
-    `SELECT e.department_id, e.full_name,
-            (SELECT count(*) FROM hris.employees s
-             WHERE s.reporting_to = e.id AND s.is_active)::int AS subordinates
-     FROM hris.employees e WHERE e.id = $1`,
-    [actor.employeeId]
-  );
-  return {
-    ...actor,
-    departmentId: me?.department_id ?? null,
-    fullName: me?.full_name ?? null,
-    hasSubordinates: (me?.subordinates ?? 0) > 0,
-  };
-}
 
 function monthRange(month: string): { start: string; end: string } {
   const [y, m] = month.split("-").map(Number);
@@ -92,8 +66,14 @@ export async function GET(req: NextRequest) {
       ),
       query(
         `SELECT o.id, o.task_id, o.occurrence_date::text, o.status,
-                o.done_at, o.done_by_name, o.review_notes, o.reviewed_by_name
+                o.done_at, o.done_by_name, o.review_notes, o.reviewed_by_name,
+                o.progress_percent, o.started_at,
+                lu.note AS last_note, lu.author_name AS last_note_by, lu.created_at AS last_note_at
          FROM hris.department_task_occurrences o
+         LEFT JOIN LATERAL (
+           SELECT note, author_name, created_at FROM hris.department_task_updates
+           WHERE occurrence_id = o.id AND note IS NOT NULL ORDER BY created_at DESC LIMIT 1
+         ) lu ON true
          JOIN hris.department_tasks t ON t.id = o.task_id
          WHERE t.department_id = $1
            AND o.occurrence_date BETWEEN $2 AND $3

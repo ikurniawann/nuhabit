@@ -45,4 +45,16 @@ describe("occurrenceDatesFor", () => {
       occurrenceDatesFor({ ...base, recurrence: "daily" }, "2026-09-05", "2026-09-01")
     ).toEqual([]);
   });
+
+  it("task rutin tidak dijadwalkan sebelum tanggal dibuat; sekali jalan tetap di tanggal jatuh temponya", () => {
+    expect(
+      occurrenceDatesFor({ ...base, recurrence: "daily", created_date: "2026-09-04" }, "2026-09-01", "2026-09-05")
+    ).toEqual(["2026-09-04", "2026-09-05"]);
+    expect(
+      occurrenceDatesFor({ ...base, recurrence: "daily", created_date: "2026-08-20" }, "2026-09-01", "2026-09-02")
+    ).toEqual(["2026-09-01", "2026-09-02"]);
+    expect(
+      occurrenceDatesFor({ ...base, recurrence: "once", due_date: "2026-09-02", created_date: "2026-09-04" }, "2026-09-01", "2026-09-30")
+    ).toEqual(["2026-09-02"]);
+  });
 });

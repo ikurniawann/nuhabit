@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ClipboardCheck, Loader2, Plus, XCircle } from "lucide-react";
+import { Activity, CheckCircle2, ClipboardCheck, ListChecks, Loader2, Plus, XCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ToastContainer, useToast } from "@/components/ui/toast";
 import { apiGet, apiPatch, apiPost } from "@/lib/api-client";
+import { DeptTasksMonitor } from "./dept-tasks-monitor";
 
 /**
  * Task Departemen (owner 2026-08-30) — konsep MBO / task compliance:
@@ -41,10 +42,15 @@ interface OccurrenceRow {
   id: string;
   task_id: string;
   occurrence_date: string;
-  status: "pending" | "done" | "approved" | "rejected";
+  status: "pending" | "in_progress" | "done" | "approved" | "rejected";
   done_by_name: string | null;
   review_notes: string | null;
   reviewed_by_name: string | null;
+  /** Progres manual 0–99 untuk task tanpa sub-task (EPIC-068). */
+  progress_percent: number | null;
+  last_note: string | null;
+  last_note_by: string | null;
+  last_note_at: string | null;
 }
 interface SubtaskRow {
   id: string;
@@ -83,6 +89,7 @@ const RECURRENCE_LABEL: Record<TaskRow["recurrence"], string> = {
 };
 const STATUS_META: Record<OccurrenceRow["status"], { label: string; cls: string }> = {
   pending: { label: "Belum", cls: "bg-gray-100 text-gray-600" },
+  in_progress: { label: "Sedang dikerjakan", cls: "bg-amber-100 text-amber-800" },
   done: { label: "Selesai — tunggu review Head", cls: "bg-blue-100 text-blue-700" },
   approved: { label: "Disetujui", cls: "bg-green-100 text-green-700" },
   rejected: { label: "Ditolak", cls: "bg-red-100 text-red-700" },
@@ -149,6 +156,11 @@ export function DeptTasksPage() {
   const [fSubtasks, setFSubtasks] = useState<{ title: string }[]>([]);
   const [fSaving, setFSaving] = useState(false);
   const [expandedOcc, setExpandedOcc] = useState<string | null>(null);
+  const [view, setView] = useState<"list" | "monitor">("list");
+  // Form "Update progres" (EPIC-068) — satu kemunculan terbuka pada satu waktu.
+  const [progressOcc, setProgressOcc] = useState<string | null>(null);
+  const [pPercent, setPPercent] = useState("");
+  const [pNote, setPNote] = useState("");
 
   const load = useCallback(() => {
     const params = new URLSearchParams({ month });
@@ -204,6 +216,26 @@ export function DeptTasksPage() {
         { action, notes }
       );
       showToast(res.message ?? "Tersimpan");
+      load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Gagal", "error");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function saveProgress(occId: string, withPercent: boolean) {
+    setBusyId(occId);
+    try {
+      const res = await apiPatch<{ message: string }>(`/api/hris/dept-tasks/occurrences/${occId}`, {
+        action: "progress",
+        note: pNote.trim() || null,
+        progress_percent: withPercent && pPercent !== "" ? Number(pPercent) : null,
+      });
+      showToast(res.message ?? "Tersimpan");
+      setProgressOcc(null);
+      setPPercent("");
+      setPNote("");
       load();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Gagal", "error");
@@ -292,7 +324,7 @@ export function DeptTasksPage() {
             &quot;Penyelesaian Tugas Departemen&quot;.
           </p>
         </div>
-        <div className="flex items-end gap-2">
+        <div className="flex flex-wrap items-end gap-2">
           {data?.is_hr && (data?.departments?.length ?? 0) > 0 ? (
             <div className="w-52">
               <Combobox
@@ -320,6 +352,33 @@ export function DeptTasksPage() {
         </div>
       </div>
 
+      <div className="inline-flex rounded-lg border bg-white p-0.5">
+        {([
+          { key: "list", label: "Daftar Task", icon: ListChecks },
+          { key: "monitor", label: "Pemantauan", icon: Activity },
+        ] as const).map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            aria-pressed={view === t.key}
+            onClick={() => {
+              setView(t.key);
+              // Kembali ke daftar: muat ulang supaya status terbaru (mis. baru ditandai selesai) tampil.
+              if (t.key === "list" && view !== "list") load();
+            }}
+            className={`flex items-center gap-1.5 rounded-md px-4 py-1.5 text-sm font-medium transition ${
+              view === t.key ? "bg-primary text-primary-foreground" : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            <t.icon className="h-4 w-4" /> {t.label}
+          </button>
+        ))}
+      </div>
+
+      {view === "monitor" ? (
+        <DeptTasksMonitor month={month} departmentId={deptFilter || null} />
+      ) : (
+      <>
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: "Jatuh tempo bulan ini", value: ringkas.due },
@@ -422,9 +481,10 @@ export function DeptTasksPage() {
                     <div className="divide-y border-t bg-muted/10">
                       {(occByTask.get(groupTask.id) ?? []).map((occ) => {
               const meta = STATUS_META[occ.status];
-              const lewatTempo = occ.status === "pending" && occ.occurrence_date < todayIso;
+              const lewatTempo =
+                (occ.status === "pending" || occ.status === "in_progress") && occ.occurrence_date < todayIso;
               const bolehTandai =
-                occ.status === "pending" || occ.status === "rejected";
+                occ.status === "pending" || occ.status === "in_progress" || occ.status === "rejected";
               const subs = subtasksByTask.get(occ.task_id) ?? [];
               const progress = subs.reduce(
                 (sum, st) =>
@@ -447,6 +507,11 @@ export function DeptTasksPage() {
                         ? ` · alasan: ${occ.review_notes}`
                         : ""}
                     </p>
+                    {occ.last_note ? (
+                      <p className="text-xs text-gray-600" title={occ.last_note}>
+                        <span className="text-gray-400">Catatan {occ.last_note_by ?? ""}:</span> {occ.last_note}
+                      </p>
+                    ) : null}
                   </div>
                   {subs.length > 0 ? (
                     <button
@@ -457,11 +522,27 @@ export function DeptTasksPage() {
                     >
                       {Math.round(progress)}%
                     </button>
+                  ) : occ.status === "in_progress" && occ.progress_percent != null ? (
+                    <span className="text-xs font-semibold tabular-nums text-amber-700">{occ.progress_percent}%</span>
                   ) : null}
                   <Badge className={meta.cls}>
                     {lewatTempo ? "Lewat tempo" : meta.label}
                   </Badge>
                   <div className="flex gap-1.5">
+                    {bolehTandai ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={busyId === occ.id}
+                        onClick={() => {
+                          setProgressOcc(progressOcc === occ.id ? null : occ.id);
+                          setPPercent(occ.progress_percent != null ? String(occ.progress_percent) : "");
+                          setPNote("");
+                        }}
+                      >
+                        Update progres
+                      </Button>
+                    ) : null}
                     {bolehTandai && subs.length === 0 ? (
                       <Button
                         size="sm"
@@ -504,6 +585,43 @@ export function DeptTasksPage() {
                       </>
                     ) : null}
                   </div>
+                  {progressOcc === occ.id ? (
+                    <div className="grid w-full gap-2 rounded-lg bg-amber-50/60 p-3 sm:grid-cols-[8rem_minmax(0,1fr)_auto] sm:items-end">
+                      {subs.length === 0 ? (
+                        <label className="text-xs font-medium text-gray-600">
+                          Progres (%)
+                          <Input
+                            type="number"
+                            min={0}
+                            max={99}
+                            value={pPercent}
+                            onChange={(e) => setPPercent(e.target.value)}
+                            placeholder="0–99"
+                            className="mt-1 h-9"
+                          />
+                        </label>
+                      ) : (
+                        <p className="text-xs text-gray-500">Progres dari ceklis sub-task</p>
+                      )}
+                      <label className="text-xs font-medium text-gray-600">
+                        Catatan progres
+                        <Input
+                          value={pNote}
+                          maxLength={500}
+                          onChange={(e) => setPNote(e.target.value)}
+                          placeholder="mis. 2 dari 3 lokasi sudah dicek"
+                          className="mt-1 h-9"
+                        />
+                      </label>
+                      <Button
+                        size="sm"
+                        disabled={busyId === occ.id || (pNote.trim() === "" && (subs.length > 0 || pPercent === ""))}
+                        onClick={() => saveProgress(occ.id, subs.length === 0)}
+                      >
+                        Simpan
+                      </Button>
+                    </div>
+                  ) : null}
                   {terbuka && subs.length > 0 ? (
                     <div className="grid w-full grid-cols-1 gap-2 rounded-lg bg-muted/40 p-3 sm:grid-cols-2 lg:grid-cols-3">
                       {subs.map((st) => {
@@ -572,6 +690,9 @@ export function DeptTasksPage() {
             );
           })}
         </div>
+      )}
+
+      </>
       )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>

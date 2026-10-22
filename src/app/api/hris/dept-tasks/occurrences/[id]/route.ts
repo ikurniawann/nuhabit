@@ -14,15 +14,23 @@ import { getWorkforceActor } from "@/lib/hris/workforce-auth";
  *                      rejected boleh ditandai 'done' ulang.
  *   action 'check_subtask' — ceklis/batal ceklis satu sub-task berbobot;
  *                      saat total bobot tercentang mencapai 100%, status
- *                      otomatis 'done' (menunggu review).
+ *                      otomatis 'done' (menunggu review); sebagian →
+ *                      'in_progress' (EPIC-068).
+ *   action 'progress' — penanggung jawab mencatat progres (EPIC-068):
+ *                      status 'in_progress', catatan, dan persen 0–99
+ *                      (persen hanya untuk task tanpa sub-task; task
+ *                      bersub-task memakai bobot ceklis).
  * Status ini bahan indikator KPI task_completion (approved ÷ jatuh tempo).
  */
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface PatchBody {
-  action?: "done" | "approve" | "reject" | "check_subtask";
+  action?: "done" | "approve" | "reject" | "check_subtask" | "progress";
+  progress_percent?: number | null;
   notes?: string | null;
+  /** Catatan progres (action 'progress'). */
+  note?: string | null;
   subtask_id?: string;
   checked?: boolean;
 }
@@ -41,7 +49,7 @@ export async function PATCH(
     }
     const body = (await req.json()) as PatchBody;
     const action = body.action;
-    if (!["done", "approve", "reject", "check_subtask"].includes(String(action))) {
+    if (!["done", "approve", "reject", "check_subtask", "progress"].includes(String(action))) {
       return NextResponse.json({ error: "Aksi tidak dikenal" }, { status: 400 });
     }
 
@@ -142,13 +150,14 @@ export async function PATCH(
       const complete = Number(agg?.total ?? 0) > 0 && progress >= Number(agg?.total) - 0.01;
       await queryOne(
         `UPDATE hris.department_task_occurrences
-         SET status = CASE WHEN $2::boolean THEN 'done' ELSE 'pending' END,
+         SET status = CASE WHEN $2::boolean THEN 'done' WHEN $5::numeric > 0 THEN 'in_progress' ELSE 'pending' END,
+             started_at = CASE WHEN $5::numeric > 0 THEN COALESCE(started_at, now()) ELSE started_at END,
              done_at = CASE WHEN $2::boolean THEN now() END,
              done_by = CASE WHEN $2::boolean THEN $3::uuid END,
              done_by_name = CASE WHEN $2::boolean THEN $4 END,
              updated_at = now()
          WHERE id = $1 RETURNING id`,
-        [id, complete, actor.employeeId, myName]
+        [id, complete, actor.employeeId, myName, progress]
       );
       return NextResponse.json({
         message: complete
@@ -156,6 +165,52 @@ export async function PATCH(
           : `Progres ${Math.round(progress)}%`,
         data: { progress, complete },
       });
+    }
+
+    if (action === "progress") {
+      const gate = await workerGate();
+      if (gate) return gate;
+      if (occ.status === "done") {
+        return NextResponse.json({ error: "Task sudah ditandai selesai — menunggu review" }, { status: 400 });
+      }
+      const note = String(body.note ?? body.notes ?? "").trim().slice(0, 500) || null;
+      const hasSubtasks = await queryOne<{ n: number }>(
+        `SELECT count(*)::int AS n FROM hris.department_task_subtasks WHERE task_id = $1`,
+        [occ.task_id]
+      );
+      let percent: number | null = null;
+      if (body.progress_percent !== undefined && body.progress_percent !== null) {
+        if ((hasSubtasks?.n ?? 0) > 0) {
+          return NextResponse.json(
+            { error: "Task ini memakai sub-task — progres dihitung dari ceklis sub-task" },
+            { status: 400 }
+          );
+        }
+        const p = Number(body.progress_percent);
+        if (!Number.isInteger(p) || p < 0 || p > 99) {
+          return NextResponse.json(
+            { error: "Progres 0–99% (untuk 100% pakai Tandai Selesai)" },
+            { status: 400 }
+          );
+        }
+        percent = p;
+      }
+      if (note === null && percent === null) {
+        return NextResponse.json({ error: "Isi catatan atau persen progres" }, { status: 400 });
+      }
+      await queryOne(
+        `UPDATE hris.department_task_occurrences
+         SET status = 'in_progress', started_at = COALESCE(started_at, now()),
+             progress_percent = COALESCE($2::smallint, progress_percent), updated_at = now()
+         WHERE id = $1 RETURNING id`,
+        [id, percent]
+      );
+      await queryOne(
+        `INSERT INTO hris.department_task_updates (occurrence_id, note, progress_percent, author_employee_id, author_name)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [id, note, percent, actor.employeeId, myName]
+      );
+      return NextResponse.json({ message: "Progres dicatat — status Sedang dikerjakan" });
     }
 
     if (action === "done") {
