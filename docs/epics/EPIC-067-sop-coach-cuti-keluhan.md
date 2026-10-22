@@ -120,7 +120,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
   bisa diatur). Ketiganya aktif bersamaan sesuai keputusan client no. 3.
 - [x] T-067-A2 **(Tahap 3)** Tanggal blackout cuti (rentang tanggal + alasan) diatur Program Director dan menolak
   pengajuan; pengecualian per pengajuan hanya oleh Program Director dengan alasan.
-- [ ] T-067-A7 **(Tahap 3)** Reschedule sesi Personal Training (coach/admin/member) tanpa batal-lalu-booking; kredit tetap,
+- [x] T-067-A7 **(Tahap 3)** Reschedule sesi Personal Training (coach/admin/member) tanpa batal-lalu-booking; kredit tetap,
   WA ke pihak lain.
 
 ### B. Keluhan pelanggan
@@ -612,4 +612,34 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
       → minta pengecualian → PD tidak bisa setujui tanpa alasan (UI & API 400) → setujui dengan alasan → coach melihat
       alasan; tanpa error console;
     - `tsc` tetap 508 (baseline), eslint tanpa error baru.
+  - Belum di-deploy.
+- 2026-10-22 — **T-067-A7 selesai** (reschedule sesi Personal Training tanpa batal-lalu-booking).
+  - Migrasi `20261023100000_studio_pt_reschedule.sql`:
+    - tabel `studio.pt_reschedules` (riwayat dari → ke, siapa, alasan);
+    - `class_sessions.studio_rescheduled_at`;
+    - `member_notifications.kind` + `session_rescheduled`, `class_sessions.change_kind` + `rescheduled`.
+  - Keputusan desain:
+    - **Sesi dipindah di tempat** (tanggal/jam, dan coach bila oleh admin). Booking, kredit pass, check-in, dan komisi
+      tetap menempel ke sesi yang sama, jadi kredit tidak berubah dan tidak ada ledger batal/booking baru.
+    - **Member** (Member App): hanya ke jam kosong coach yang sama, paling lambat batas batal sebelum jadwal lama,
+      maksimal N kali per booking (Aturan Booking `pt_member_reschedule_max`, default 2; 0 = hanya lewat studio).
+      Coach dikabari WA.
+    - **Coach** (Coach Portal, tombol "Pindah jadwal"): ke jam kosongnya sendiri selama sesi belum mulai. Member dikabari
+      WA (dengan alasan bila diisi).
+    - **Admin** (Personal Training → Jadwal → "Jadwal ulang"): boleh ganti coach. WA ke member, coach lama ("slot Anda
+      kosong"), dan coach baru. Dialog menampilkan riwayat jadwal ulang.
+    - Slot dicek dengan aturan booking baru: jam ketersediaan, cuti/time-off, bentrok jadwal coach (sesi itu sendiri
+      tidak dihitung), bentrok jadwal member, dan masa berlaku pass.
+    - Dipindah coach/admin → member boleh **batal tanpa penalti** sampai sesi mulai (sama dengan coach diganti di A6).
+    - WA member lewat antrean A6 (jam tenang, tanda Terlambat, laporan "Kabar perubahan jadwal" dengan label
+      Reschedule). Kabar reschedule lama yang belum terkirim dilewati supaya member hanya menerima jadwal terbaru.
+      Pengingat H-1 dibuka lagi untuk jadwal baru.
+  - Bukti:
+    - 7 unit test (`checkReschedule`, batal gratis, pesan member/coach) + 4 test integrasi DB (member, kuota,
+      bentrok, masa pass, coach lain 404, coach memindah → antrean WA member, admin ganti coach → WA keluar/masuk,
+      riwayat, batal telat tetap kredit kembali) lulus di `nuhabit_test`;
+    - E2E headless (member, coach, admin uji; fixture dihapus): member 07:00 → 09:00 → coach ke besoknya 10:00 dengan
+      alasan → admin ke Coach Rara 11:00 → member melihat "Moved by studio · free cancel". Ledger tetap 1 `redeem`,
+      riwayat 3 baris, 1 kabar pending (yang lama dilewati). Console hanya 404 gambar media fixture lama;
+    - `tsc` tetap 508, eslint tanpa error baru. Kegagalan `table-order` (ARK Coin) sudah ada sebelumnya.
   - Belum di-deploy.

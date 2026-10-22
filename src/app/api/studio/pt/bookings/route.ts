@@ -13,7 +13,8 @@ export async function GET() {
       `SELECT s.id AS session_id, s.session_date::text AS session_date, to_char(s.start_time,'HH24:MI') AS start_time,
               to_char(s.end_time,'HH24:MI') AS end_time, s.status AS session_status, p.name AS program_name,
               c.full_name AS coach_name, b.id AS booking_id, b.status AS booking_status, b.source,
-              cu.name AS member_name, cu.phone AS member_phone, mp.pass_code
+              cu.name AS member_name, cu.phone AS member_phone, mp.pass_code, s.program_id, s.coach_id,
+              (SELECT COUNT(*) FROM studio.pt_reschedules r WHERE r.booking_id = b.id)::int AS reschedule_count
        FROM studio.class_sessions s
        JOIN studio.programs p ON p.id = s.program_id
        LEFT JOIN studio.coaches c ON c.id = s.coach_id

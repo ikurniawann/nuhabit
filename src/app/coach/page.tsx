@@ -9,6 +9,7 @@ import { formatDayLabel, rupiah } from "@/features/studio/types";
 import { CoachLeaveTab } from "@/features/studio/components/coach-leave-tab";
 import { RosterMemberFlags, type RosterFlag } from "@/features/studio/components/coach-member-flags";
 import { CoachSopBanner, CoachSopSheet, useCoachSop } from "@/features/studio/components/coach-sop";
+import { CoachPtReschedule } from "@/features/studio/components/coach-pt-reschedule";
 
 interface Me {
   id: string;
@@ -29,6 +30,10 @@ interface Session {
   booked_count: number;
   attended_count: number;
   waitlist_count: number;
+  /** Booking Personal Training aktif — bisa dipindah (T-067-A7). */
+  pt_booking_id: string | null;
+  pt_member_name: string | null;
+  upcoming: boolean;
 }
 
 interface RosterRow {
@@ -152,6 +157,7 @@ function ScheduleTab() {
   const [sessions, setSessions] = useState<Session[] | null>(null);
   const [today, setToday] = useState("");
   const [open, setOpen] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -182,6 +188,11 @@ function ScheduleTab() {
 
   return (
     <div className="space-y-6">
+      {notice && (
+        <button type="button" onClick={() => setNotice(null)} className="w-full rounded-2xl bg-nh-lime/15 px-4 py-3 text-left text-sm text-nh-lime">
+          {notice}
+        </button>
+      )}
       {days.map(([date, list]) => (
         <section key={date}>
           <h2 className={`mb-2 font-display text-sm font-semibold uppercase tracking-wide ${date === today ? "text-nh-lime" : "text-nh-beige/60"}`}>
@@ -194,6 +205,12 @@ function ScheduleTab() {
                 key={s.id}
                 session={s}
                 canMark={date <= today && s.status !== "completed"}
+                today={today}
+                onRescheduled={(m) => {
+                  setNotice(m);
+                  setOpen(null);
+                  void load();
+                }}
                 expanded={open === s.id}
                 onToggle={() => setOpen(open === s.id ? null : s.id)}
                 onChanged={load}
@@ -206,7 +223,23 @@ function ScheduleTab() {
   );
 }
 
-function SessionCard({ session: s, canMark, expanded, onToggle, onChanged }: { session: Session; canMark: boolean; expanded: boolean; onToggle: () => void; onChanged: () => void }) {
+function SessionCard({
+  session: s,
+  canMark,
+  today,
+  onRescheduled,
+  expanded,
+  onToggle,
+  onChanged,
+}: {
+  session: Session;
+  canMark: boolean;
+  today: string;
+  onRescheduled: (message: string) => void;
+  expanded: boolean;
+  onToggle: () => void;
+  onChanged: () => void;
+}) {
   const [roster, setRoster] = useState<RosterRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -253,6 +286,7 @@ function SessionCard({ session: s, canMark, expanded, onToggle, onChanged }: { s
           <p className="truncate font-semibold">{s.program_name}</p>
           <p className="text-xs text-nh-beige/60">
             {kindLabel(s.program_kind)}
+            {isPt && s.pt_member_name ? ` · ${s.pt_member_name}` : ""}
             {s.status === "completed" ? " · selesai" : ""}
           </p>
         </div>
@@ -303,6 +337,15 @@ function SessionCard({ session: s, canMark, expanded, onToggle, onChanged }: { s
           )}
           {waitlist.length > 0 && <p className="mt-3 text-xs text-nh-beige/60">Waitlist: {waitlist.map((w) => w.member_name).join(", ")}</p>}
           {!canMark && s.status !== "completed" && <p className="mt-3 text-xs text-nh-beige/50">Kehadiran bisa ditandai pada hari sesi.</p>}
+          {isPt && s.pt_booking_id && s.status === "scheduled" && s.upcoming && (
+            <CoachPtReschedule
+              bookingId={s.pt_booking_id}
+              sessionDate={s.session_date}
+              startTime={s.start_time}
+              today={today}
+              onDone={onRescheduled}
+            />
+          )}
           {msg && <p className="mt-3 text-xs text-red-300">{msg}</p>}
         </div>
       )}

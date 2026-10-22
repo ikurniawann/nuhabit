@@ -18,6 +18,7 @@ import { PASS_SELECT, PASS_USAGE_JOIN, type PassRow } from "@/lib/studio/pass-se
 import { applyBookingBenefits } from "@/lib/studio/loyalty";
 import { assertCanBook, awardSessionXp, memberBenefits } from "@/lib/studio/loyalty-server";
 import { freeCancelAfterCoachChange } from "@/lib/studio/session-change";
+import { freeCancelAfterStudioReschedule } from "@/lib/studio/pt-reschedule";
 
 /**
  * Mesin booking kelas (EPIC-054). Semua mutasi berjalan dalam transaksi dengan
@@ -315,11 +316,15 @@ export async function cancelBooking(
     const cancelWindow = applyBookingBenefits(settings, await memberBenefits(b.customer_id)).cancel_window_hours;
     const timing = classifyCancel(Date.now(), sessionEpoch(session.session_date, session.start_time), cancelWindow);
     // Coach diganti setelah member booking → boleh batal tanpa penalti sampai kelas mulai (EPIC-067 T-067-A6).
-    const changed = await client.query<{ booked_at: string | null; coach_changed_at: string | null }>(
-      `SELECT b.booked_at, s.coach_changed_at FROM studio.bookings b JOIN studio.class_sessions s ON s.id = b.session_id WHERE b.id = $1`,
+    // Sesi Personal Training dipindah coach/admin setelah booking → sama (T-067-A7).
+    const changed = await client.query<{ booked_at: string | null; coach_changed_at: string | null; studio_rescheduled_at: string | null }>(
+      `SELECT b.booked_at, s.coach_changed_at, s.studio_rescheduled_at FROM studio.bookings b JOIN studio.class_sessions s ON s.id = b.session_id WHERE b.id = $1`,
       [b.id]
     );
-    const coachChanged = freeCancelAfterCoachChange(changed.rows[0]?.booked_at ?? null, changed.rows[0]?.coach_changed_at ?? null);
+    const ch = changed.rows[0];
+    const coachChanged =
+      freeCancelAfterCoachChange(ch?.booked_at ?? null, ch?.coach_changed_at ?? null) ||
+      freeCancelAfterStudioReschedule(ch?.booked_at ?? null, ch?.studio_rescheduled_at ?? null);
     const refund = timing === "in_time" || coachChanged || (actor.staff && Boolean(opts.waive));
     const status: BookingStatus = refund ? "cancelled" : "late_cancelled";
     await client.query(
@@ -327,7 +332,7 @@ export async function cancelBooking(
       [b.id, status, opts.reason ?? null]
     );
     if (refund) {
-      const note = timing === "in_time" ? "Batal tepat waktu" : coachChanged ? "Batal gratis (coach diganti)" : "Batal (dikecualikan staf)";
+      const note = timing === "in_time" ? "Batal tepat waktu" : coachChanged ? "Batal gratis (coach diganti / jadwal dipindah studio)" : "Batal (dikecualikan staf)";
       await releaseCredit(client, actor, b, note);
     }
     if (session.program_kind === "pt") {

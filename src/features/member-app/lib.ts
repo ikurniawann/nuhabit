@@ -74,8 +74,14 @@ export interface MyBooking {
   coach_name: string | null;
   pass_code: string | null;
   upcoming: boolean;
-  /** Coach diganti setelah booking → batal gratis sampai kelas mulai. */
+  /** Coach diganti / sesi dipindah studio setelah booking → batal gratis sampai kelas mulai. */
   free_cancel?: boolean;
+  /** Sesi Personal Training dipindah studio/coach setelah booking (T-067-A7). */
+  studio_rescheduled?: boolean;
+  program_id?: string;
+  coach_id?: string | null;
+  /** Berapa kali member sendiri sudah memindah booking ini. */
+  member_reschedules?: number;
 }
 
 export interface MyPass {

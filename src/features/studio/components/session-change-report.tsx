@@ -63,7 +63,9 @@ export function SessionChangeReport({ minHours }: { minHours: number }) {
                   <p className="text-xs text-muted-foreground">
                     {r.change_kind === "cancelled"
                       ? "Kelas dibatalkan"
-                      : `Coach diganti${r.original_coach_name ? `: ${r.original_coach_name} → ${r.coach_name ?? "-"}` : ` ke ${r.coach_name ?? "-"}`}`}
+                      : r.change_kind === "rescheduled"
+                        ? `Personal Training dipindah ke jadwal ini${r.coach_name ? ` · ${r.coach_name}` : ""}`
+                        : `Coach diganti${r.original_coach_name ? `: ${r.original_coach_name} → ${r.coach_name ?? "-"}` : ` ke ${r.coach_name ?? "-"}`}`}
                     {" · "}
                     {[
                       `${r.sent} terkirim`,
@@ -77,7 +79,9 @@ export function SessionChangeReport({ minHours }: { minHours: number }) {
                 </div>
                 <div className="flex gap-1.5">
                   {r.change_notice_late && <Pill tone="warning">Terlambat</Pill>}
-                  <Pill tone={r.change_kind === "cancelled" ? "danger" : "neutral"}>{r.change_kind === "cancelled" ? "Batal" : "Ganti coach"}</Pill>
+                  <Pill tone={r.change_kind === "cancelled" ? "danger" : "neutral"}>
+                    {r.change_kind === "cancelled" ? "Batal" : r.change_kind === "rescheduled" ? "Reschedule" : "Ganti coach"}
+                  </Pill>
                 </div>
               </li>
             ))}

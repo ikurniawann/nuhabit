@@ -5,6 +5,7 @@ import { MAX_BLACKOUT_DAYS, MAX_NOTICE_DAYS, NOTICE_LEAVE_TYPES } from "@/lib/st
 import { FLAG_NOTE_MAX, FLAG_SEVERITIES } from "@/lib/studio/member-flags";
 import { COMPLAINT_CATEGORIES, COMPLAINT_STATUSES, MAX_SLA_HOURS } from "@/lib/studio/complaints";
 import { SOP_BODY_MAX, SOP_TITLE_MAX } from "@/lib/studio/sop";
+import { MAX_PT_MEMBER_RESCHEDULE } from "@/lib/studio/pt-reschedule";
 import { CS_PRIORITIES } from "@/lib/crm/cs-rules";
 
 /**
@@ -204,6 +205,7 @@ export const settingsPatchSchema = z
     checkin_open_minutes: z.number().int().min(0).max(240),
     waitlist_enabled: z.boolean(),
     max_active_bookings: z.number().int().min(0).max(50),
+    pt_member_reschedule_max: z.number().int().min(0).max(MAX_PT_MEMBER_RESCHEDULE),
   })
   .partial();
 
@@ -233,6 +235,16 @@ export const ptBookingSchema = z.object({
 });
 
 export const memberPtBookingSchema = ptBookingSchema.omit({ customer_id: true, notes: true });
+
+// ── Reschedule Personal Training (EPIC-067 T-067-A7) ──────────────────────
+export const ptRescheduleSchema = z.object({
+  date,
+  start_time: time,
+  coach_id: z.string().uuid().nullable().optional(),
+  reason: optText(300),
+});
+export const memberPtRescheduleSchema = ptRescheduleSchema.pick({ date: true, start_time: true });
+export const coachPtRescheduleSchema = ptRescheduleSchema.omit({ coach_id: true });
 
 // ── Komisi coach (EPIC-056) ────────────────────────────────────────────────
 export const commissionSettingsSchema = z

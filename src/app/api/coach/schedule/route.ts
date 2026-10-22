@@ -17,7 +17,14 @@ export async function GET(request: NextRequest) {
       `SELECT s.id, s.session_date::text AS session_date, to_char(s.start_time,'HH24:MI') AS start_time,
               to_char(s.end_time,'HH24:MI') AS end_time, s.status, s.capacity, p.name AS program_name, p.kind AS program_kind,
               COALESCE(bk.booked, 0)::int AS booked_count, COALESCE(bk.attended, 0)::int AS attended_count,
-              COALESCE(bk.waitlist, 0)::int AS waitlist_count
+              COALESCE(bk.waitlist, 0)::int AS waitlist_count,
+              (s.session_date + s.start_time) > (now() AT TIME ZONE 'Asia/Jakarta') AS upcoming,
+              -- Booking Personal Training yang masih aktif → bisa dipindah dari Coach Portal (T-067-A7).
+              CASE WHEN p.kind = 'pt' AND s.origin = 'pt_booking' THEN
+                (SELECT b.id FROM studio.bookings b WHERE b.session_id = s.id AND b.status = 'booked' LIMIT 1) END AS pt_booking_id,
+              CASE WHEN p.kind = 'pt' THEN
+                (SELECT cu.name FROM studio.bookings b JOIN pos.pos_customers cu ON cu.id = b.customer_id
+                 WHERE b.session_id = s.id AND b.status IN ('booked','attended') LIMIT 1) END AS pt_member_name
        FROM studio.class_sessions s
        JOIN studio.programs p ON p.id = s.program_id
        LEFT JOIN LATERAL (

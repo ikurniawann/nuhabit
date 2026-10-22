@@ -64,6 +64,12 @@ export function StudioSettingsPage() {
           <Field label="Maks booking aktif per member" hint="0 = tanpa batas. Tidak berlaku untuk booking oleh staf.">
             <Input type="number" min={0} max={50} value={form.max_active_bookings} onChange={(e) => set("max_active_bookings", num(e.target.value))} />
           </Field>
+          <Field
+            label="Maks reschedule Personal Training oleh member"
+            hint="Per booking, dari Member App, paling lambat batas batal sebelum sesi. 0 = hanya lewat studio/coach."
+          >
+            <Input type="number" min={0} max={10} value={form.pt_member_reschedule_max} onChange={(e) => set("pt_member_reschedule_max", num(e.target.value))} />
+          </Field>
           <div className="flex items-center justify-between self-end rounded-lg border border-border px-3 py-2.5">
             <span className="text-sm text-foreground">Waitlist saat kelas penuh</span>
             <Switch checked={form.waitlist_enabled} onCheckedChange={(v) => set("waitlist_enabled", v)} aria-label="Waitlist saat kelas penuh" />

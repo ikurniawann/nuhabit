@@ -31,6 +31,8 @@ export interface StudioSettings {
   waitlist_enabled: boolean;
   /** Maks booking aktif mendatang per member (0 = tanpa batas). */
   max_active_bookings: number;
+  /** Maks reschedule Personal Training oleh member per booking (0 = hanya lewat studio) — EPIC-067 T-067-A7. */
+  pt_member_reschedule_max: number;
 }
 
 export const DEFAULT_SETTINGS: StudioSettings = {
@@ -40,6 +42,7 @@ export const DEFAULT_SETTINGS: StudioSettings = {
   checkin_open_minutes: 60,
   waitlist_enabled: true,
   max_active_bookings: 0,
+  pt_member_reschedule_max: 2,
 };
 
 export const VENUE_UTC_OFFSET = "+07:00";

@@ -263,4 +263,8 @@ export interface PtSessionRow {
   member_name: string | null;
   member_phone: string | null;
   pass_code: string | null;
+  program_id: string;
+  coach_id: string | null;
+  /** Berapa kali booking ini sudah dipindah (T-067-A7). */
+  reschedule_count: number;
 }

@@ -23,7 +23,7 @@ import { sendWhatsAppText } from "@/lib/whatsapp";
 
 const memberAppUrl = () => `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/member`;
 
-const CHANGE_KINDS = ["session_coach_changed", "session_cancelled"] as const;
+const CHANGE_KINDS = ["session_coach_changed", "session_cancelled", "session_rescheduled"] as const;
 
 export type SessionChange =
   | { kind: "coach_changed"; oldCoachName: string | null }
@@ -108,6 +108,44 @@ export async function queueSessionChangeNotices(sessionId: string, change: Sessi
 }
 
 /**
+ * Sesi Personal Training dipindah coach/admin (T-067-A7): catat di sesi (laporan
+ * perubahan + tanda terlambat) dan antrekan WA ke member. Kabar reschedule
+ * sebelumnya yang belum terkirim dilewati supaya member hanya menerima jadwal terbaru.
+ */
+export async function queueRescheduleNotice(
+  input: { sessionId: string; branchId: string; customerId: string; rescheduleId: string; phone: string | null; message: string; start: Date },
+  now = new Date()
+): Promise<{ queued: boolean; late: boolean }> {
+  const settings = await loadCoachLeaveSettings(input.branchId);
+  const late = isChangeNoticeLate(input.start, now, settings.member_notice_min_hours);
+  await query(
+    `UPDATE studio.class_sessions SET changed_at = now(), change_kind = 'rescheduled', change_notice_late = $2 WHERE id = $1`,
+    [input.sessionId, late]
+  );
+  await query(
+    `UPDATE studio.member_notifications SET status = 'skipped', error = 'Digantikan jadwal terbaru'
+     WHERE session_id = $1 AND kind = 'session_rescheduled' AND status = 'pending'`,
+    [input.sessionId]
+  );
+  const phone = input.phone ? normalizeMemberPhone(input.phone) : null;
+  const row = await queryOne<{ id: string }>(
+    `INSERT INTO studio.member_notifications (branch_id, customer_id, kind, dedup_key, phone, message, status, error, session_id)
+     VALUES ($1, $2, 'session_rescheduled', $3, $4, $5, $6, $7, $8) ON CONFLICT (dedup_key) DO NOTHING RETURNING id`,
+    [
+      input.branchId,
+      input.customerId,
+      `pt_reschedule:${input.rescheduleId}`,
+      phone,
+      input.message,
+      phone ? "pending" : "skipped",
+      phone ? null : "Nomor HP tidak valid",
+      input.sessionId,
+    ]
+  );
+  return { queued: Boolean(row), late };
+}
+
+/**
  * Kirim kabar perubahan yang masih pending dan boleh dikirim sekarang (jam
  * layak, atau kelas terlalu dekat untuk menunggu pagi). Kelas yang sudah
  * lewat → skipped. sessionId membatasi ke satu sesi (dipanggil sesudah queue).
@@ -182,7 +220,7 @@ export async function listSessionChanges(branchId: string): Promise<SessionChang
      LEFT JOIN studio.coaches c ON c.id = s.coach_id
      LEFT JOIN studio.coaches oc ON oc.id = s.original_coach_id
      LEFT JOIN studio.member_notifications n ON n.session_id = s.id
-       AND n.kind = CASE s.change_kind WHEN 'coach_changed' THEN 'session_coach_changed' ELSE 'session_cancelled' END
+       AND n.kind = CASE s.change_kind WHEN 'coach_changed' THEN 'session_coach_changed' WHEN 'rescheduled' THEN 'session_rescheduled' ELSE 'session_cancelled' END
      WHERE s.branch_id = $1 AND s.changed_at IS NOT NULL
        AND s.session_date >= (now() AT TIME ZONE 'Asia/Jakarta')::date - 14
      GROUP BY s.id, p.name, c.display_name, c.full_name, oc.display_name, oc.full_name

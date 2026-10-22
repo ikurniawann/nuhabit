@@ -6,7 +6,7 @@
 
 import { englishDate, firstName, inSendWindow, QUIET_END_HOUR, wibNow } from "@/lib/studio/jobs";
 
-export type SessionChangeKind = "coach_changed" | "cancelled";
+export type SessionChangeKind = "coach_changed" | "cancelled" | "rescheduled";
 
 export const DEFAULT_MEMBER_NOTICE_MIN_HOURS = 12;
 export const MAX_MEMBER_NOTICE_MIN_HOURS = 72;

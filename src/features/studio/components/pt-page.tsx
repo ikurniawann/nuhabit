@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Search, UserRound, XCircle } from "lucide-react";
+import { CalendarClock, Loader2, Search, UserRound, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { addDays, COACH_LEVEL_LABEL } from "@/lib/studio/schedule";
 import type { ApiMessage, MemberOption, PtCoach, PtProgram, PtSessionRow } from "../types";
 import { formatDayLabel, initials, todayIso } from "../types";
 import { EmptyState, LinkButton, Pill, StudioPageHeader } from "./ui-bits";
+import { PtRescheduleDialog } from "./pt-reschedule-dialog";
 
 type SlotResult = { coach: PtCoach; slots: string[] };
 
@@ -293,6 +294,7 @@ const STATUS_TONE: Record<string, "positive" | "warning" | "danger" | "neutral" 
 function PtSessionList() {
   const [rows, setRows] = useState<PtSessionRow[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [moving, setMoving] = useState<PtSessionRow | null>(null);
   const today = todayIso();
 
   const load = useCallback(async () => {
@@ -362,11 +364,15 @@ function PtSessionList() {
                 </td>
                 <td className="px-4 py-3">
                   <Pill tone={STATUS_TONE[status] ?? "neutral"}>{BOOKING_STATUS_LABEL[status as keyof typeof BOOKING_STATUS_LABEL] ?? status}</Pill>
+                  {r.reschedule_count > 0 && <div className="mt-1 text-xs text-muted-foreground">Dipindah {r.reschedule_count}×</div>}
                 </td>
                 <td className="px-4 py-3 text-right">
                   {r.session_status === "scheduled" && r.booking_status === "booked" && (
                     <div className="flex justify-end gap-1">
                       <LinkButton href={`/dashboard/studio/attendance?date=${r.session_date}&session=${r.session_id}`} variant="outline">Check-in</LinkButton>
+                      <Button variant="ghost" size="icon" className="size-8" aria-label="Jadwal ulang" onClick={() => setMoving(r)}>
+                        <CalendarClock className="size-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" className="size-8" aria-label="Batalkan" disabled={busyId === r.booking_id} onClick={() => cancel(r)}>
                         <XCircle className="size-4 text-destructive" />
                       </Button>
@@ -378,6 +384,16 @@ function PtSessionList() {
           })}
         </tbody>
       </table>
+      {moving && (
+        <PtRescheduleDialog
+          row={moving}
+          onClose={() => setMoving(null)}
+          onDone={() => {
+            setMoving(null);
+            void load();
+          }}
+        />
+      )}
     </div>
   );
 }

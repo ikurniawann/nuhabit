@@ -18,7 +18,11 @@ export async function GET() {
               to_char(s.end_time,'HH24:MI') AS end_time, p.name AS program_name, p.kind AS program_kind,
               COALESCE(c.display_name, c.full_name) AS coach_name, mp.pass_code,
               (s.session_date + s.start_time) > (now() AT TIME ZONE 'Asia/Jakarta') AS upcoming,
-              (s.coach_changed_at IS NOT NULL AND b.booked_at < s.coach_changed_at) AS free_cancel
+              ((s.coach_changed_at IS NOT NULL AND b.booked_at < s.coach_changed_at)
+                OR (s.studio_rescheduled_at IS NOT NULL AND b.booked_at < s.studio_rescheduled_at)) AS free_cancel,
+              (s.studio_rescheduled_at IS NOT NULL AND b.booked_at < s.studio_rescheduled_at) AS studio_rescheduled,
+              s.program_id, s.coach_id,
+              (SELECT COUNT(*) FROM studio.pt_reschedules r WHERE r.booking_id = b.id AND r.actor_kind = 'member')::int AS member_reschedules
        FROM studio.bookings b
        JOIN studio.class_sessions s ON s.id = b.session_id
        JOIN studio.programs p ON p.id = s.program_id
@@ -31,7 +35,7 @@ export async function GET() {
       [customerId, actor.branchId]
     );
     const settings = applyBookingBenefits(await loadSettings(actor.branchId), await memberBenefits(customerId));
-    return NextResponse.json({ success: true, data: rows, rules: { cancel_window_hours: settings.cancel_window_hours } });
+    return NextResponse.json({ success: true, data: rows, rules: { cancel_window_hours: settings.cancel_window_hours, pt_member_reschedule_max: settings.pt_member_reschedule_max } });
   });
 }
 

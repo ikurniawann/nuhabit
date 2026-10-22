@@ -51,7 +51,8 @@ export async function loadPtCatalog(branchId: string, onlyPublic = false) {
  */
 export async function loadPtSlots(
   branchId: string,
-  opts: { programId: string; date: string; coachId?: string | null; staff: boolean }
+  /** excludeSessionId: sesi yang sedang dipindah (reschedule) tidak dihitung sebagai jadwal sibuk. */
+  opts: { programId: string; date: string; coachId?: string | null; staff: boolean; excludeSessionId?: string | null }
 ): Promise<{ coach: PtCoach; slots: string[] }[]> {
   if (!isValidDate(opts.date)) throw ApiError.badRequest("Tanggal tidak valid");
   const program = await queryOne<{ duration_minutes: number }>(
@@ -78,8 +79,9 @@ export async function loadPtSlots(
     ),
     query<{ coach_id: string; start_time: string; end_time: string }>(
       `SELECT coach_id, to_char(start_time,'HH24:MI') AS start_time, to_char(end_time,'HH24:MI') AS end_time
-       FROM studio.class_sessions WHERE coach_id = ANY($1) AND session_date = $2::date AND status <> 'cancelled'`,
-      [ids, opts.date]
+       FROM studio.class_sessions
+       WHERE coach_id = ANY($1) AND session_date = $2::date AND status <> 'cancelled' AND ($3::uuid IS NULL OR id <> $3::uuid)`,
+      [ids, opts.date, opts.excludeSessionId ?? null]
     ),
     query<{ coach_id: string; date_from: string; date_to: string }>(
       `SELECT coach_id, date_from::text AS date_from, date_to::text AS date_to FROM studio.coach_time_off
