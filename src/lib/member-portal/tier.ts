@@ -1,10 +1,11 @@
 /**
- * Tier member dari lifetime XP — satu sumber utk portal member (/me) dan
- * diskon self-order meja, supaya harga coret yang dilihat member == potongan
- * yang disimpan server.
+ * Tier member dari lifetime XP (level Progress) + diskon self-order meja.
+ * Portal member (/me) dan order meja sama-sama memakai
+ * loadMemberDiscountPercent, supaya harga coret yang dilihat member ==
+ * potongan yang disimpan server.
  */
 
-import { query } from "@/lib/db";
+import { memberMembershipDiscount } from "@/lib/studio/membership-server";
 
 export type MembershipTierRow = {
   code: string;
@@ -21,25 +22,10 @@ export function resolveTierByXp<T extends { min_lifetime_xp: number | string }>(
   return [...tiers].reverse().find((tier) => totalXp >= Number(tier.min_lifetime_xp)) ?? tiers[0] ?? null;
 }
 
-/** Persen diskon tier member (0 bila tak ada tier/schema CRM). Dibatasi 0–100. */
+/**
+ * Persen diskon F&B member (0 bila tak ada). Sejak EPIC-069 dari tier
+ * Membership (spending 12 bulan), bukan tier XP.
+ */
 export async function loadMemberDiscountPercent(customerId: string): Promise<number> {
-  try {
-    const [customers, tiers] = await Promise.all([
-      query<{ total_xp: number }>(
-        `SELECT total_xp::float AS total_xp FROM pos.pos_customers WHERE id = $1`,
-        [customerId]
-      ),
-      query<MembershipTierRow>(
-        `SELECT code, name, min_lifetime_xp::float AS min_lifetime_xp,
-                discount_percent::float AS discount_percent
-         FROM crm.crm_membership_tiers WHERE is_active ORDER BY rank`,
-        []
-      ),
-    ]);
-    if (!customers[0]) return 0;
-    const tier = resolveTierByXp(tiers, Number(customers[0].total_xp) || 0);
-    return Math.min(100, Math.max(0, Number(tier?.discount_percent) || 0));
-  } catch {
-    return 0;
-  }
+  return memberMembershipDiscount(customerId);
 }

@@ -2,6 +2,7 @@ import type { PoolClient } from "pg";
 import { ApiError } from "@/lib/api/auth";
 import { longDate } from "@/lib/studio/jobs";
 import { query, queryOne, withTransaction } from "@/lib/db";
+import { memberMembershipBenefits } from "@/lib/studio/membership-server";
 import {
   consecutiveStreakWeeks,
   isFrozen,
@@ -231,14 +232,13 @@ export async function assertCanBook(customerId: string): Promise<void> {
   }
 }
 
+/**
+ * Benefit booking member. Sejak EPIC-069 berasal dari tier Membership
+ * (spending), bukan tier XP — tier XP tinggal level Progress.
+ */
 export async function memberBenefits(customerId: string): Promise<TierBenefits> {
-  const row = await queryOne<{ status: MemberStatus; lifetime: number }>(
-    `SELECT COALESCE(mp.status, 'active') AS status, COALESCE(c.total_xp, 0)::int AS lifetime
-     FROM pos.pos_customers c LEFT JOIN crm.crm_member_profiles mp ON mp.customer_id = c.id WHERE c.id = $1`,
-    [customerId]
-  );
-  if (!row) return resolveTier([], 0, "active").benefits;
-  return resolveTier(await loadTiers(), row.lifetime, row.status).benefits;
+  const b = await memberMembershipBenefits(customerId);
+  return { early_booking_days: b.early_booking_days, cancel_window_hours: b.cancel_window_hours, waitlist_priority: b.waitlist_priority };
 }
 
 /** Ringkasan progres untuk Member App. */
@@ -328,10 +328,13 @@ export async function searchLoyaltyMembers(q: string) {
   const term = q.trim();
   return query(
     `SELECT c.id, c.name, c.phone, COALESCE(c.total_xp, 0)::int AS lifetime_xp, COALESCE(mp.xp_balance, 0)::int AS xp_balance,
-            COALESCE(mp.status, 'active') AS status, mp.status_reason, mp.status_changed_at, t.name AS tier_name
+            COALESCE(mp.status, 'active') AS status, mp.status_reason, mp.status_changed_at, t.name AS tier_name,
+            mt.name AS membership_tier_name, COALESCE(mm.spend_12m, 0)::float8 AS spend_12m, mm.valid_until::text AS membership_valid_until
      FROM pos.pos_customers c
      LEFT JOIN crm.crm_member_profiles mp ON mp.customer_id = c.id
      LEFT JOIN crm.crm_membership_tiers t ON t.id = mp.tier_id
+     LEFT JOIN studio.member_memberships mm ON mm.customer_id = c.id
+     LEFT JOIN studio.membership_tiers mt ON mt.id = mm.tier_id AND mt.is_active
      WHERE ${term ? "(c.name ILIKE $1 OR regexp_replace(COALESCE(c.phone,''), '\\D', '', 'g') LIKE $1)" : "mp.status IN ('suspended', 'banned')"}
      ORDER BY c.name LIMIT 30`,
     term ? [`%${term.replace(/^0/, "")}%`] : []

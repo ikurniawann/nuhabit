@@ -5,9 +5,10 @@ import { HeartPulse, LogOut, MessageSquareText } from "lucide-react";
 import { useMember } from "../member-app";
 import { firstName, memberFetch } from "../lib";
 import { Eyebrow, PageTitle, PillButton } from "../ui";
+import { MembershipSection } from "./membership-section";
 import { ProgressSection } from "./progress-section";
 
-/** Tab Progress: tier, XP, streak, leaderboard, pengaturan pengingat, keluar. */
+/** Tab Progress: Membership (spending), level XP, streak, leaderboard, pengaturan pengingat, keluar. */
 export function ProfileTab() {
   const { profile, logout, go } = useMember();
 
@@ -18,6 +19,8 @@ export function ProfileTab() {
         <br />
         {firstName(profile.name)}.
       </PageTitle>
+
+      <MembershipSection />
 
       <ProgressSection />
 

@@ -10,6 +10,7 @@ import { apiGet, apiPatch, apiPut } from "@/lib/api-client";
 import type { ApiMessage } from "../types";
 import { rupiah } from "../types";
 import { NativeSelect, Pill, StudioPageHeader } from "./ui-bits";
+import { MembershipTiersSection } from "./membership-tiers-section";
 import { OpenMemberAppButton } from "./open-member-app";
 
 interface Rule {
@@ -52,6 +53,9 @@ interface MemberRow {
   status: "active" | "suspended" | "banned" | string;
   status_reason: string | null;
   tier_name: string | null;
+  membership_tier_name: string | null;
+  spend_12m: number;
+  membership_valid_until: string | null;
 }
 
 const fmt = (n: number) => Number(n).toLocaleString("id-ID");
@@ -86,15 +90,17 @@ export function StudioLoyaltyPage() {
     <div className="lg:p-6">
       <StudioPageHeader
         title="Program Loyalitas"
-        subtitle="NüHabit Progress — XP dari konsistensi latihan, tier seumur hidup dengan benefit booking, dan leaderboard."
+        subtitle="Membership dari spending (tier & perks) dan NüHabit Progress — XP dari konsistensi latihan, level, reward, dan leaderboard."
       />
 
       <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Stat icon={<Zap className="size-4" />} label="XP dibagikan 30 hari" value={fmt(data.issued_30d.xp)} sub={`${fmt(data.issued_30d.members)} member mendapat XP`} />
-        <Stat icon={<Crown className="size-4" />} label="Member ber-tier" value={fmt(totalMembers)} sub={data.tiers.map((t) => `${t.name} ${t.members}`).join(" · ")} />
+        <Stat icon={<Crown className="size-4" />} label="Level Progress" value={fmt(totalMembers)} sub={data.tiers.map((t) => `${t.name} ${t.members}`).join(" · ")} />
         <Stat icon={<Trophy className="size-4" />} label="Puncak leaderboard" value={data.leaderboard[0]?.alias ?? "—"} sub={data.leaderboard[0] ? `${data.leaderboard[0].sessions} sesi bulan ini` : "Belum ada yang tampil"} />
         <Stat icon={<Lock className="size-4" />} label="ARK Coin" value={data.ark_coin_enabled ? "Aktif" : "Nonaktif"} sub="Saklar di CRM → Pengaturan (data tetap tersimpan)" />
       </div>
+
+      <MembershipTiersSection />
 
       <section className="mb-8">
         <h2 className="mb-1 font-display text-lg font-semibold text-foreground">Aturan XP</h2>
@@ -120,18 +126,17 @@ export function StudioLoyaltyPage() {
       </section>
 
       <section className="mb-8">
-        <h2 className="mb-1 font-display text-lg font-semibold text-foreground">Tier & benefit</h2>
-        <p className="mb-3 text-sm text-muted-foreground">Tier dari XP seumur hidup (tidak turun). Member diblokir/banned kehilangan benefit selama statusnya tidak aktif.</p>
+        <h2 className="mb-1 font-display text-lg font-semibold text-foreground">Level Progress (XP)</h2>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Level dari XP seumur hidup (tidak turun) — penanda konsistensi latihan di Member App & leaderboard. Sejak Membership
+          aktif, level tidak lagi memberi benefit booking atau diskon.
+        </p>
         <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-          <table className="w-full min-w-[900px] text-sm">
+          <table className="w-full min-w-[520px] text-sm">
             <thead>
               <tr className="bg-secondary/60 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <th className="px-4 py-2.5">Tier</th>
+                <th className="px-4 py-2.5">Level</th>
                 <th className="px-4 py-2.5">Mulai dari XP</th>
-                <th className="px-4 py-2.5">Booking lebih awal</th>
-                <th className="px-4 py-2.5">Batas batal</th>
-                <th className="px-4 py-2.5">Prioritas waitlist</th>
-                <th className="px-4 py-2.5">Diskon F&B</th>
                 <th className="px-4 py-2.5 text-right">Member</th>
                 <th className="px-4 py-2.5" />
               </tr>
@@ -268,14 +273,7 @@ function RuleRow({ rule, onSaved }: { rule: Rule; onSaved: () => void }) {
 }
 
 function TierRowEditor({ tier, onSaved }: { tier: TierRow; onSaved: () => void }) {
-  const init = {
-    name: tier.name,
-    min: String(tier.min_lifetime_xp),
-    early: String(tier.benefits.early_booking_days),
-    cancel: tier.benefits.cancel_window_hours === null ? "" : String(tier.benefits.cancel_window_hours),
-    priority: tier.benefits.waitlist_priority,
-    discount: String(tier.discount_percent),
-  };
+  const init = { name: tier.name, min: String(tier.min_lifetime_xp) };
   const [f, setF] = useState(init);
   const [busy, setBusy] = useState(false);
   const dirty = JSON.stringify(f) !== JSON.stringify(init);
@@ -283,14 +281,7 @@ function TierRowEditor({ tier, onSaved }: { tier: TierRow; onSaved: () => void }
   async function save() {
     setBusy(true);
     try {
-      const res = await apiPatch<ApiMessage>(`/api/studio/loyalty/tiers/${tier.id}`, {
-        name: f.name.trim(),
-        min_lifetime_xp: Number(f.min),
-        early_booking_days: Number(f.early),
-        cancel_window_hours: f.cancel === "" ? null : Number(f.cancel),
-        waitlist_priority: f.priority,
-        discount_percent: Number(f.discount),
-      });
+      const res = await apiPatch<ApiMessage>(`/api/studio/loyalty/tiers/${tier.id}`, { name: f.name.trim(), min_lifetime_xp: Number(f.min) });
       toast.success(res.message ?? "Tersimpan");
       onSaved();
     } catch (e) {
@@ -310,27 +301,6 @@ function TierRowEditor({ tier, onSaved }: { tier: TierRow; onSaved: () => void }
       </td>
       <td className="px-4 py-2.5">
         <Input className="h-8 w-24" type="number" min={0} value={f.min} onChange={(e) => setF({ ...f, min: e.target.value })} />
-      </td>
-      <td className="px-4 py-2.5">
-        <div className="flex items-center gap-1.5">
-          <Input className="h-8 w-16" type="number" min={0} max={14} value={f.early} onChange={(e) => setF({ ...f, early: e.target.value })} />
-          <span className="text-xs text-muted-foreground">hari</span>
-        </div>
-      </td>
-      <td className="px-4 py-2.5">
-        <div className="flex items-center gap-1.5">
-          <Input className="h-8 w-16" type="number" min={0} max={72} placeholder="—" value={f.cancel} onChange={(e) => setF({ ...f, cancel: e.target.value })} />
-          <span className="text-xs text-muted-foreground">jam</span>
-        </div>
-      </td>
-      <td className="px-4 py-2.5">
-        <Switch checked={f.priority} onCheckedChange={(v) => setF({ ...f, priority: v })} aria-label="Prioritas waitlist" />
-      </td>
-      <td className="px-4 py-2.5">
-        <div className="flex items-center gap-1.5">
-          <Input className="h-8 w-16" type="number" min={0} max={100} value={f.discount} onChange={(e) => setF({ ...f, discount: e.target.value })} />
-          <span className="text-xs text-muted-foreground">%</span>
-        </div>
       </td>
       <td className="px-4 py-2.5 text-right tabular-nums">{tier.members}</td>
       <td className="px-4 py-2.5 text-right">
@@ -391,11 +361,12 @@ function MemberStatusSection() {
         <Input className="pl-9" placeholder="Cari nama atau nomor HP — kosongkan untuk melihat yang diblokir/banned" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
       <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-[760px] text-sm">
           <thead>
             <tr className="bg-secondary/60 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <th className="px-4 py-2.5">Member</th>
-              <th className="px-4 py-2.5">Tier</th>
+              <th className="px-4 py-2.5">Membership</th>
+              <th className="px-4 py-2.5">Level</th>
               <th className="px-4 py-2.5 text-right">XP total</th>
               <th className="px-4 py-2.5 text-right">Saldo</th>
               <th className="px-4 py-2.5">Status</th>
@@ -405,11 +376,11 @@ function MemberStatusSection() {
           <tbody>
             {!rows ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground"><Loader2 className="mx-auto size-4 animate-spin" /></td>
+                <td colSpan={7} className="px-4 py-6 text-center text-muted-foreground"><Loader2 className="mx-auto size-4 animate-spin" /></td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">{q ? "Tidak ditemukan." : "Tidak ada member yang diblokir atau banned."}</td>
+                <td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">{q ? "Tidak ditemukan." : "Tidak ada member yang diblokir atau banned."}</td>
               </tr>
             ) : (
               rows.map((m) => (
@@ -417,6 +388,10 @@ function MemberStatusSection() {
                   <td className="px-4 py-2.5">
                     <p className="font-medium text-foreground">{m.name ?? "—"}</p>
                     <p className="text-xs text-muted-foreground">{m.phone}</p>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <p className="text-foreground">{m.membership_tier_name ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">{rupiah(m.spend_12m)} / 12 bln</p>
                   </td>
                   <td className="px-4 py-2.5">{m.tier_name ?? "Starter"}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{fmt(m.lifetime_xp)}</td>

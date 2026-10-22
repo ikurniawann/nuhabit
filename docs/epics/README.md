@@ -71,6 +71,7 @@ deploying-dev · ready-for-qa · blocked · done).
 | [EPIC-066](./EPIC-066-nuhabit-progress-loyalitas.md) | NüHabit Progress — XP konsistensi, tier Starter/Open/Pro/Elite, reward, leaderboard, CRM retensi | on-progress | 2026-10-02 |
 | [EPIC-067](./EPIC-067-sop-coach-cuti-keluhan.md) | SOP Coach — cuti terencana, keluhan & member perhatian khusus | ready-for-qa | 2026-10-21 |
 | [EPIC-068](./EPIC-068-task-departemen-pemantauan.md) | Task Departemen — progress management & pemantauan per departemen | ready-for-qa | 2026-10-22 |
+| [EPIC-069](./EPIC-069-membership-tier-spending.md) | Membership — tier loyalitas dari spending 12 bulan (ambang & perks diisi client) | ready-for-qa | 2026-10-22 |
 
 Aturan:
 - Epic + registry ini adalah sumber kebenaran status pekerjaan (canonical).

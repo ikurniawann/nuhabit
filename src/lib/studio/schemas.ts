@@ -336,6 +336,29 @@ export const loyaltyTierPatchSchema = z
     waitlist_priority: z.boolean(),
   })
   .partial();
+// ── Membership dari spending (EPIC-069) ──────────────────────────────────
+const hexColor = z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Warna harus format #RRGGBB");
+const membershipTierFields = {
+  name: z.string().trim().min(2).max(40),
+  min_spend: z.number().min(0).max(100_000_000_000),
+  display_color: hexColor.nullable(),
+  discount_percent: z.number().min(0).max(100),
+  early_booking_days: z.number().int().min(0).max(14),
+  cancel_window_hours: z.number().int().min(0).max(72).nullable(),
+  waitlist_priority: z.boolean(),
+  perks: z.array(z.string().max(120)).max(12),
+};
+export const membershipTierSchema = z.object({
+  ...membershipTierFields,
+  display_color: membershipTierFields.display_color.default(null),
+  discount_percent: membershipTierFields.discount_percent.default(0),
+  early_booking_days: membershipTierFields.early_booking_days.default(0),
+  cancel_window_hours: membershipTierFields.cancel_window_hours.default(null),
+  waitlist_priority: membershipTierFields.waitlist_priority.default(false),
+  perks: membershipTierFields.perks.default([]),
+});
+/** PATCH tanpa default — field yang tidak dikirim tidak berubah. */
+export const membershipTierPatchSchema = z.object(membershipTierFields).partial();
 export const memberStatusSchema = z.object({
   status: z.enum(["active", "suspended", "banned"]),
   reason: z.string().trim().max(300).nullable().optional(),

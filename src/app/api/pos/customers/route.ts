@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPgClient } from "@/lib/pg/create-client";
 import { getPosSession } from '@/lib/api/auth';
+import { storedMembershipDiscounts } from '@/lib/studio/membership-server';
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Unknown error';
@@ -18,34 +19,20 @@ function normalizeNfcUid(value: unknown) {
 const CUSTOMER_SELECT =
   'id, name, phone, email, membership_tier, member_type, ark_coin_balance, total_xp, visit_count, is_active, nfc_uid, is_kol';
 
-type PgClient = ReturnType<typeof createPgClient>;
 
-// Diskon per tier dibaca dari konfigurasi crm_membership_tiers (EPIC-011),
-// bukan hardcode. Gagal baca (schema crm belum ada) → tanpa diskon.
-async function getTierDiscountMap(db: PgClient): Promise<Record<string, number>> {
+// Diskon member dari tier Membership (EPIC-069, spending 12 bulan) — bukan
+// tier XP. Gagal baca → tanpa diskon (tidak boleh menggagalkan kasir).
+async function getMembershipDiscountMap(customerIds: string[]): Promise<Record<string, number>> {
   try {
-    const { data, error } = await db
-      .from('crm_membership_tiers')
-      .select('code, discount_percent')
-      .eq('is_active', true);
-    if (error || !data) return {};
-    return Object.fromEntries(
-      (data as Array<{ code: string; discount_percent: unknown }>).map((tier) => [
-        String(tier.code).toLowerCase(),
-        Number(tier.discount_percent) || 0,
-      ])
-    );
-  } catch {
+    return await storedMembershipDiscounts(customerIds);
+  } catch (error) {
+    console.warn('Membership discount lookup skipped:', error);
     return {};
   }
 }
 
-function withTierDiscount<T extends { membership_tier?: string | null }>(
-  customer: T,
-  discounts: Record<string, number>
-) {
-  const tierCode = String(customer.membership_tier ?? '').toLowerCase();
-  return { ...customer, discount_percent: discounts[tierCode] ?? 0 };
+function withTierDiscount<T extends { id: string }>(customer: T, discounts: Record<string, number>) {
+  return { ...customer, discount_percent: discounts[customer.id] ?? 0 };
 }
 
 // GET /api/pos/customers - List customers with search
@@ -86,16 +73,13 @@ export async function GET(request: NextRequest) {
       query = query.eq('membership_tier', tier);
     }
 
-    const [{ data, error }, discounts] = await Promise.all([
-      query,
-      getTierDiscountMap(db),
-    ]);
+    const { data, error } = await query;
 
     if (error) throw error;
 
-    const withDiscounts = (data ?? []).map((customer: { membership_tier?: string | null }) =>
-      withTierDiscount(customer, discounts)
-    );
+    const rows = (data ?? []) as Array<{ id: string }>;
+    const discounts = await getMembershipDiscountMap(rows.map((customer) => customer.id));
+    const withDiscounts = rows.map((customer) => withTierDiscount(customer, discounts));
 
     return NextResponse.json({ success: true, data: withDiscounts });
   } catch (error: unknown) {
@@ -253,7 +237,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const discounts = await getTierDiscountMap(db);
+    const discounts = await getMembershipDiscountMap([savedCustomer.id]);
 
     return NextResponse.json(
       {

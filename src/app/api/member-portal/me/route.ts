@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { getMemberSession } from "@/lib/member-portal/session";
-import { resolveTierByXp } from "@/lib/member-portal/tier";
+import { loadMemberDiscountPercent, resolveTierByXp } from "@/lib/member-portal/tier";
 import {
   computeProfileCompletion,
   PROFILE_FIELD_LABELS,
@@ -71,6 +71,8 @@ export async function GET() {
     const totalXp = Number(customer.total_xp) || 0;
     const currentTier = resolveTierByXp(tiers, totalXp);
     const nextTier = tiers.find((tier) => Number(tier.min_lifetime_xp) > totalXp) ?? null;
+    // Diskon F&B dari tier Membership (EPIC-069) — tier XP tidak lagi memberi diskon.
+    const discountPercent = await loadMemberDiscountPercent(customer.id);
 
     return NextResponse.json({
       success: true,
@@ -85,7 +87,7 @@ export async function GET() {
           ? {
               code: currentTier.code,
               name: currentTier.name,
-              discount_percent: Number(currentTier.discount_percent) || 0,
+              discount_percent: discountPercent,
             }
           : null,
         next_tier: nextTier
@@ -100,7 +102,7 @@ export async function GET() {
           code: tier.code,
           name: tier.name,
           min_lifetime_xp: Number(tier.min_lifetime_xp) || 0,
-          discount_percent: Number(tier.discount_percent) || 0,
+          discount_percent: 0,
         })),
         completion: {
           ...completion,

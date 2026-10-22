@@ -56,16 +56,6 @@ const HISTORY_LABEL: Record<string, string> = {
   early_renewal: "Early renewal bonus",
 };
 
-/** Daftar benefit tier dalam kalimat member. */
-export function benefitLines(t: TierInfo): string[] {
-  const out: string[] = [];
-  if (t.benefits.early_booking_days > 0) out.push(`Book classes ${t.benefits.early_booking_days} ${t.benefits.early_booking_days === 1 ? "day" : "days"} earlier`);
-  if (t.benefits.waitlist_priority) out.push("Priority on the waitlist");
-  if (t.benefits.cancel_window_hours !== null) out.push(`Free cancellation up to ${t.benefits.cancel_window_hours} hours before`);
-  if (t.discount_percent > 0) out.push(`${t.discount_percent}% off F&B`);
-  return out.length ? out : ["Access to classes & Personal Training with your pass"];
-}
-
 function ruleLabel(r: Progress["earn_rules"][number]): string {
   if (r.xp_mode === "per_amount") return `${fmt(r.xp_value)} XP / ${rupiah(r.amount_step)}`;
   return `+${fmt(r.xp_value)} XP`;
@@ -115,7 +105,7 @@ export function ProgressSection() {
     <div className="space-y-10">
       {/* Tier — blok dengan label vertikal */}
       <div className="flex border border-white/15">
-        <SideLabel tone="lime">Your tier</SideLabel>
+        <SideLabel>Your level</SideLabel>
         <div className="min-w-0 flex-1 p-5">
           <p className="flex items-center gap-2 font-display text-5xl font-bold uppercase leading-none tracking-[-0.03em] text-white">
             <Crown className="size-8 shrink-0" style={{ color: tier?.display_color ?? undefined }} strokeWidth={1.5} /> {tier?.name ?? "Starter"}
@@ -132,26 +122,18 @@ export function ProgressSection() {
           </div>
           {p.frozen ? (
             <p className="mt-5 flex items-start gap-2 border-l-2 border-nh-ochre bg-nh-ochre/10 px-3 py-2 text-sm text-nh-lemon">
-              <Lock className="mt-0.5 size-4 shrink-0" /> Your tier benefits and XP are on hold. Please contact the front desk for details.
+              <Lock className="mt-0.5 size-4 shrink-0" /> Your XP is on hold. Please contact the front desk for details.
             </p>
           ) : (
             <>
               <div className="mt-5 flex items-baseline justify-between text-[11px] font-semibold uppercase tracking-[0.1em] text-nh-beige/70">
                 <span>{tier?.name ?? "Starter"}</span>
-                <span>{p.next ? `${fmt(p.next.xp_needed)} XP to ${p.next.tier.name}` : "Top tier"}</span>
+                <span>{p.next ? `${fmt(p.next.xp_needed)} XP to ${p.next.tier.name}` : "Top level"}</span>
               </div>
               <div className="mt-2 h-1 bg-white/15">
                 <div className="h-full bg-nh-lime transition-all" style={{ width: `${pct}%` }} />
               </div>
-              {tier && (
-                <ul className="mt-5 border-t border-white/12">
-                  {benefitLines(tier).map((b) => (
-                    <li key={b} className="border-b border-white/12 py-2.5 text-xs font-semibold uppercase tracking-[0.06em] text-nh-beige/90">
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <p className="mt-4 text-xs text-nh-beige/60">Your level grows with every session you show up for. It never goes down.</p>
             </>
           )}
         </div>
@@ -240,7 +222,7 @@ export function ProgressSection() {
             ))}
           </ul>
         </Accordion>
-        <Accordion index={2} title="Tier ladder">
+        <Accordion index={2} title="Level ladder">
           <div className="space-y-px bg-white/12">
             {p.tiers.map((t) => {
               const current = tier?.id === t.id;
@@ -248,11 +230,10 @@ export function ProgressSection() {
                 <div key={t.id} className={`bg-black px-4 py-3 ${current ? "outline outline-1 outline-nh-lime" : ""}`}>
                   <div className="flex items-center justify-between">
                     <p className="font-display text-xl font-bold uppercase tracking-tight" style={{ color: p.lifetime_xp >= t.min_lifetime_xp ? t.display_color ?? undefined : undefined }}>
-                      {t.name} {current && <span className="ml-1 text-[10px] font-bold tracking-[0.12em] text-nh-lime">· Your tier</span>}
+                      {t.name} {current && <span className="ml-1 text-[10px] font-bold tracking-[0.12em] text-nh-lime">· Your level</span>}
                     </p>
                     <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-nh-beige/55">{t.min_lifetime_xp === 0 ? "Start" : `${fmt(t.min_lifetime_xp)} XP`}</span>
                   </div>
-                  <p className="mt-1 text-xs text-nh-beige/60">{benefitLines(t).join(" · ")}</p>
                 </div>
               );
             })}

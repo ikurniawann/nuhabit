@@ -168,12 +168,13 @@ async function promoteWaitlist(client: PoolClient, actor: BookingActor, session:
   let free = session.capacity - (await seatsTakenTx(client, session.id));
   if (free <= 0) return promoted;
   const { rows } = await client.query(
-    // Tier dengan prioritas waitlist (EPIC-066) didahulukan; member diblokir/banned tidak.
+    // Tier Membership dengan prioritas waitlist (EPIC-069) didahulukan; member diblokir/banned tidak.
     `SELECT b.id, b.customer_id FROM studio.bookings b
      LEFT JOIN crm.crm_member_profiles mp ON mp.customer_id = b.customer_id
-     LEFT JOIN crm.crm_membership_tiers t ON t.id = mp.tier_id
+     LEFT JOIN studio.member_memberships mm ON mm.customer_id = b.customer_id
+     LEFT JOIN studio.membership_tiers t ON t.id = mm.tier_id AND t.is_active
      WHERE b.session_id = $1 AND b.status = 'waitlisted'
-     ORDER BY CASE WHEN COALESCE((t.metadata->>'waitlist_priority')::boolean, false)
+     ORDER BY CASE WHEN COALESCE(t.waitlist_priority, false)
                     AND COALESCE(mp.status, 'active') NOT IN ('suspended', 'banned') THEN 0 ELSE 1 END,
               COALESCE(b.waitlisted_at, b.booked_at)
      FOR UPDATE OF b`,

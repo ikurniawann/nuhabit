@@ -18,6 +18,7 @@ import {
 import { expireDuePasses, normalizeMemberPhone, PASS_SELECT, PASS_USAGE_JOIN, type PassRow } from "@/lib/studio/pass-server";
 import { remainingCredits } from "@/lib/studio/pass";
 import { awardStreaks } from "@/lib/studio/loyalty-server";
+import { evaluateAllMemberships } from "@/lib/studio/membership-server";
 
 /**
  * Job harian & pengingat WhatsApp (EPIC-058). Dipanggil berkala oleh watcher
@@ -92,6 +93,8 @@ export interface DailyCloseSummary {
   orders_expired: number;
   /** Bonus streak XP yang diberikan (EPIC-066). */
   streak_bonus: number;
+  /** Member yang tier Membership-nya naik/turun (EPIC-069). */
+  membership_changes?: number;
 }
 
 /**
@@ -120,6 +123,12 @@ export async function runDailyClose(v: Venue, trigger: "auto" | "manual", userId
       [v.branchId]
     );
     summary.orders_expired = orders.length;
+    // Evaluasi ulang tier Membership (masa berlaku habis → turun). Gagal tidak menggagalkan tutup hari.
+    try {
+      summary.membership_changes = await evaluateAllMemberships(wibNow().date);
+    } catch (e) {
+      console.error("[studio-jobs] evaluasi Membership gagal:", e);
+    }
     await finishRun(runId, "success", summary as unknown as Record<string, unknown>);
     return { ran: true, summary };
   } catch (e) {
