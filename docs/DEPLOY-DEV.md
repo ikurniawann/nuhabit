@@ -126,3 +126,21 @@ docker exec nuhabit-db psql -U nuhabit -d postgres -c "DROP DATABASE IF EXISTS n
 # dev server ke database uji
 DATABASE_URL=postgresql://nuhabit:<password>@localhost:5482/nuhabit_test npx next dev -p 3470
 ```
+
+## Riwayat deploy
+
+Deploy EPIC-067 dicatat di Automation Log [EPIC-067](./epics/EPIC-067-sop-coach-cuti-keluhan.md). Deploy revisi di luar
+epic dicatat di sini.
+
+- 2026-10-22 19.20 WIB — **Revisi client** dari commit `0b231200`:
+  - `ebf1e285` hapus payroll run hanya Super Admin (API 403 untuk role lain; tombol Hapus disembunyikan);
+  - `0b231200` tampilan mobile semua halaman dashboard (audit otomatis 196 halaman di 390px: 0 halaman melebihi
+    layar; header menumpuk, padding dobel dihapus, grid tidak lagi memotong kartu).
+  - Backup: `~/backups/nuhabitdev/nuhabit-20261022-191102-pre-revisi-mobile.sql.gz` (dump lengkap, jumlah baris
+    cocok). Tanpa migrasi baru.
+  - Rollback: image `nuhabitdev:pre-revisi-mobile` (= Tahap 3 EPIC-067).
+  - Smoke test (hanya baca, super admin): API utama 200; Super Admin melihat 3 tombol Hapus payroll (tidak diklik);
+    8 halaman di 390px tanpa overflow dan tanpa error; log container bersih. Penolakan 403 untuk role `admin`
+    diuji di `nuhabit_test`.
+  - Catatan: membuka halaman Ticketing membuat data awal otomatis (mis. `ticket_channels` atas nama user yang
+    membuka) — jangan jalankan audit otomatis yang membuka semua halaman terhadap DB `nuhabit`.
