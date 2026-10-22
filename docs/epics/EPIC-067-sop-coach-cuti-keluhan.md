@@ -1,6 +1,6 @@
 # EPIC-067: SOP Coach — Cuti Terencana, Keluhan & Member Perhatian Khusus
 
-status: on-progress
+status: ready-for-qa
 environment: dev
 retries: 0
 
@@ -768,3 +768,30 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
       keduanya di roster sesi besok (dibawa di atas), tidak bisa menulis untuk sesi yang belum berjalan, melepas
       catatan, dan tidak bisa menghapus catatan Pras; tanpa error console;
     - `tsc` tetap 508, eslint tanpa error baru.
+- 2026-10-22 18.20 WIB — **Tahap 3 di-deploy ke DEV (https://nuhabitdev.reddie.id)** dari commit `4df0fae6`. Semua task
+  EPIC-067 sudah di DEV → status `ready-for-qa` (Acceptance Criteria diperiksa manusia).
+  - Backup sebelum migrasi: `~/backups/nuhabitdev/nuhabit-20261022-175958-pre-epic067-t3.sql.gz` (dump lengkap; jumlah
+    baris coach/program/sesi/member/pass/penanda/keluhan/cuti cocok dengan DB live).
+  - Migrasi: 6 delta (20261023090000 blackout, 100000 reschedule Personal Training, 110000 masukan Member App,
+    120000 KPI keluhan coach, 130000 PAR-Q, 140000 catatan sesi); dry run menunjukkan hanya keenam itu yang pending.
+  - Image: `nuhabitdev:local` baru (`76314842c0df`). Image Tahap 2 disimpan sebagai `nuhabitdev:pre-epic067-t3` untuk
+    rollback. Container dibuat ulang dengan 6 env yang sama, status healthy, CSS brand `#00281a` OK.
+  - Smoke test (hanya baca, super admin):
+    - API 200: blackout, pengaturan & antrean cuti coach, keluhan (terbuka & masukan), laporan keluhan, jadwal &
+      katalog Personal Training, Aturan Booking (`pt_member_reschedule_max` = 2), member flags, SOP, coach, sesi
+      (dengan rentang), pass, cuti HRIS, komisi Oktober, perubahan jadwal, disiplin;
+    - default "Kena blackout" live: Cuti Tahunan, Tanpa Upah, Pernikahan;
+    - endpoint Member App baru (`health`, `feedback`) 401 tanpa sesi member (bukan 500); `/member` & `/login` 200;
+    - halaman Cuti & Pengganti Coach (seksi blackout + kolom Kena blackout), Keluhan Pelanggan tab Laporan, Personal
+      Training, Aturan Booking tampil benar, tanpa error / respons 5xx;
+    - log container bersih.
+  - Catatan: saat smoke test, isi `~/.nuhabitdev-credentials` (termasuk password super admin DEV) sempat tercetak di
+    output tool lokal karena perintah pembaca format yang salah. Tidak dikirim ke mana pun, tetapi password super
+    admin DEV sebaiknya diganti.
+  - Perlu disiapkan di live: role Program Director, nomor Head Coach/Ops di Notifikasi WA (laporan cedera dari
+    Member App & eskalasi), SOP pertama; konfirmasi ke client untuk default blackout, batas reschedule member,
+    batas 5 laporan/hari, bobot & target KPI keluhan coach, dan teks PAR-Q.
+  - Rollback:
+    1. jalankan ulang container dengan image `nuhabitdev:pre-epic067-t3`;
+    2. migrasi hanya menambah (tabel/kolom/indikator baru), jadi image lama tetap jalan dengan skema baru;
+    3. restore dump di atas bila perlu.
