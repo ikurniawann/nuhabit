@@ -2,7 +2,7 @@
 // API Route: Payroll Run by ID
 // GET: Get payroll run detail with details
 // PUT: Update payroll run (process/approve/pay) — transisi status divalidasi
-// DELETE: Delete payroll run (run paid tidak bisa dihapus)
+// DELETE: Delete payroll run (hanya Super Admin; run paid tidak bisa dihapus)
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,7 +10,7 @@ import { createServerPgClient } from "@/lib/pg/create-client";
 import { withTransaction } from "@/lib/db";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
 import { IAM } from "@/lib/iam/prefixes";
-import { PAYROLL_MANAGE_ROLES } from '@/lib/payroll/roles';
+import { canDeletePayrollRun, PAYROLL_MANAGE_ROLES } from '@/lib/payroll/roles';
 import {
   allocateLoanPayment,
   isLoanDue,
@@ -366,7 +366,13 @@ async function markRunPaidAndSettleLoans(
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    await requireIamMenuPrefix(IAM.hrisCompensation);
+    const user = await requireIamMenuPrefix(IAM.hrisCompensation);
+    if (!canDeletePayrollRun(user.role)) {
+      return NextResponse.json(
+        { error: 'Hanya Super Admin yang dapat menghapus data payroll' },
+        { status: 403 }
+      );
+    }
     const db = await createServerPgClient();
     const { id } = await params;
 

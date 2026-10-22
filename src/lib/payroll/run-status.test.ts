@@ -49,3 +49,13 @@ describe("canDeleteRun / canCalculateRun", () => {
     expect(canCalculateRun("paid")).toBe(false);
   });
 });
+
+describe("hapus payroll run hanya Super Admin (revisi client 2026-10-22)", () => {
+  it("super_admin boleh; HRD, finance, admin, dan tanpa role tidak", async () => {
+    const { canDeletePayrollRun } = await import("./roles");
+    expect(canDeletePayrollRun("super_admin")).toBe(true);
+    for (const role of ["hrd", "finance_staff", "admin", "direksi", "employee", "", null, undefined]) {
+      expect(canDeletePayrollRun(role)).toBe(false);
+    }
+  });
+});

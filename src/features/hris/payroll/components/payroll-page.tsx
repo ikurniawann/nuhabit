@@ -31,6 +31,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { useToast, ToastContainer } from "@/components/ui/toast";
 import { usePayrollRuns } from "../queries";
+import { useAuth } from "@/hooks/use-auth";
+import { canDeletePayrollRun } from "@/lib/payroll/roles";
 import {
   useCreatePayrollRun,
   useCalculatePayroll,
@@ -90,6 +92,9 @@ export function PayrollPage() {
   const calculateMutation = useCalculatePayroll();
   const updateStatusMutation = useUpdatePayrollStatus();
   const deleteMutation = useDeletePayrollRun();
+  const { user } = useAuth();
+  // Hapus payroll hanya untuk Super Admin (server juga menolak role lain).
+  const canDelete = canDeletePayrollRun(user?.role);
 
   const creating = createMutation.isPending;
   const calculating = calculateMutation.isPending ? showCalcDialog ?? "calculating" : null;
@@ -318,14 +323,16 @@ export function PayrollPage() {
                               Mark Paid
                             </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDelete(run.id)}
-                            className="text-red-600 hover:text-red-700 hover:border-red-300"
-                          >
-                            Hapus
-                          </Button>
+                          {canDelete && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDelete(run.id)}
+                              className="text-red-600 hover:text-red-700 hover:border-red-300"
+                            >
+                              Hapus
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
