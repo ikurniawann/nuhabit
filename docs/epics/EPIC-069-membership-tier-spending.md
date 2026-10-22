@@ -85,3 +85,13 @@ Referensi: [EPIC-066](./EPIC-066-nuhabit-progress-loyalitas.md) (XP & tier Progr
     335 lulus (4 gagal = baseline lama ARK Coin & dev-bypass); typecheck baseline 508; E2E di `nuhabit_test` —
     Member App "Coming soon" → admin menambah Silver/Gold → Member App Silver, "Rp 2,350,000 to Gold", perks; backoffice
     390px tanpa overflow; tanpa error console. Izin create awalnya 403 (menu hanya read/update) → diperbaiki di migrasi.
+- 2026-10-22 23.50 WIB — **Deploy ke dev** (nuhabitdev.reddie.id) dari commit `da643ca7`:
+  - Backup: `~/backups/nuhabitdev/nuhabit-20261022-233838-pre-epic069.sql.gz` (dump lengkap, jumlah baris cocok).
+  - Migrasi `20261024090000_studio_membership_tiers.sql` diterapkan (dry-run 1 pending → apply ok); tier Membership
+    kosong; izin `studio.loyalty` super_admin & admin kini read/create/update/delete.
+  - Rollback: image `nuhabitdev:pre-epic069` (= Add to Google Calendar). Tabel baru tidak perlu di-drop untuk rollback.
+  - Smoke test (hanya baca): `/member` 200; API Membership member 401 tanpa sesi; chunk Member App memuat kartu
+    Membership; API backoffice (Membership 0 tier, Program Loyalitas, pencarian member, sesi, payroll, pemantauan
+    task) 200; halaman Program Loyalitas 200; log bersih. Tidak login sebagai member di live.
+  - Mulai deploy ini member tidak mendapat benefit tier (diskon F&B, booking lebih awal, prioritas waitlist) sampai
+    client mengisi tier Membership.
