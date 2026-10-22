@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         source: r.source,
         flags: flags
           .filter((f) => f.customer_id === r.customer_id)
-          .map((f) => ({ id: f.id, type_label: f.type_label, category: f.category, severity: f.severity, note: f.note, valid_until: f.valid_until, created_by_name: f.created_by_name })),
+          .map((f) => ({ id: f.id, type_label: f.type_label, category: f.category, severity: f.severity, note: f.note, valid_until: f.valid_until, created_by_name: f.created_by_name, source: f.source, needs_review: f.needs_review })),
       })),
     });
   });

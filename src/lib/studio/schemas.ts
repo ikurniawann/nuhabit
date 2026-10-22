@@ -13,6 +13,7 @@ import {
 } from "@/lib/studio/complaints";
 import { SOP_BODY_MAX, SOP_TITLE_MAX } from "@/lib/studio/sop";
 import { MAX_PT_MEMBER_RESCHEDULE } from "@/lib/studio/pt-reschedule";
+import { PARQ_DETAILS_MAX } from "@/lib/studio/parq";
 import { CS_PRIORITIES } from "@/lib/crm/cs-rules";
 
 /**
@@ -459,4 +460,16 @@ export const memberReportSchema = z.object({
 export const memberReportConfirmSchema = z.object({
   resolved: z.boolean(),
   comment: z.string().trim().max(500).nullable().optional(),
+});
+
+// ── PAR-Q (EPIC-067 T-067-C3) ──────────────────────────────────────────────
+export const parqSubmitSchema = z.object({
+  answers: z.record(z.string(), z.boolean()),
+  details: z.string().trim().max(PARQ_DETAILS_MAX, `Please keep it under ${PARQ_DETAILS_MAX} characters`).nullable().optional(),
+  confirm: z.literal(true, { message: "Please confirm your answers are true" }),
+});
+export const flagReviewSchema = z.object({
+  keep: z.boolean(),
+  severity: z.enum(FLAG_SEVERITIES).optional(),
+  note: z.string().trim().max(FLAG_NOTE_MAX).nullable().optional(),
 });

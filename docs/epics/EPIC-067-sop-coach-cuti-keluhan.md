@@ -144,7 +144,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
 - [x] T-067-C2 **(Tahap 1)** Tampilkan penanda di roster kelas dan sesi Personal Training di Coach Portal (ikon + catatan
   singkat). Detail medis hanya untuk coach yang memegang sesi aktif/mendatang dengan member tersebut, dengan
   pembatasan di level query/API, bukan hanya disembunyikan di UI.
-- [ ] T-067-C3 **(Tahap 3)** Integrasi waiver & PAR-Q [EPIC-064](./EPIC-064-calon-member-waiver-trial.md): jawaban
+- [x] T-067-C3 **(Tahap 3)** Integrasi waiver & PAR-Q [EPIC-064](./EPIC-064-calon-member-waiver-trial.md): jawaban
   "ya" pada pertanyaan kesehatan otomatis membuat penanda kondisi medis untuk ditinjau.
 - [ ] T-067-C4 **(Tahap 3)** Catatan coach setelah sesi per member (mis. "hindari lunges") yang terbawa ke sesi
   berikutnya dan terlihat oleh coach lain.
@@ -702,5 +702,40 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
     - E2E (admin uji; fixture dihapus): tab Laporan menampilkan ringkasan, kategori, coach (rasio > 1 merah),
       sumber, tanpa error console. Snapshot KPI lewat `POST /api/hris/kpi/snapshot` menghasilkan `coach_complaint_rate`
       untuk 2 coach uji (2,5 → pencapaian 40%; 8 → 12,5%) dan indikator masuk breakdown scorecard;
+    - `tsc` tetap 508, eslint tanpa error baru.
+  - Belum di-deploy.
+- 2026-10-22 — **T-067-C3 selesai** (PAR-Q di Member App → penanda medis untuk ditinjau coach).
+  - Keputusan user: kerjakan **PAR-Q saja**; waiver hukum & syarat wajib sebelum booking pertama tetap di EPIC-064
+    (masih backlog).
+  - Migrasi `20261023130000_studio_health_declarations.sql`:
+    - tabel `studio.health_declarations` (versi pertanyaan, jawaban, keterangan, riwayat);
+    - `member_flags.source` (`staff` | `coach` | `parq`; penanda lama buatan coach di-backfill `coach`),
+      `needs_review`, `reviewed_at`, `reviewed_by_coach_id`, `declaration_id`.
+  - Keputusan desain:
+    - **Pertanyaan:** 7 pertanyaan PAR-Q standar (diadaptasi) + kehamilan/baru melahirkan, bahasa Inggris, versi
+      `parq-2026-10`. Diminta lewat banner "Complete your health check" di Home (dan tautan di Progress/menu), **tidak
+      memblokir booking**. Berlaku 12 bulan atau sampai versi pertanyaan berubah.
+    - **Pemetaan "ya":**
+      - jantung, nyeri dada, pusing, penyakit kronis, obat rutin, harus diawasi tenaga medis → "Kondisi medis";
+      - tulang/sendi/otot → "Cedera";
+      - hamil → "Hamil".
+      Nyeri dada, pusing/pingsan, dan harus diawasi tenaga medis → tingkat **Kritis**; lainnya Perhatian. Catatan
+      berisi ringkasan bahasa Indonesia + keterangan member.
+    - **Penanda dari PAR-Q** bertanda "Perlu ditinjau". Coach yang mengajar member itu (aturan akses medis C2:
+      memegang sesi hari ini/mendatang) memilih **Konfirmasi** atau **Tidak relevan** di roster Coach Portal. Kartu
+      sesi menampilkan "PAR-Q member perlu ditinjau (n)". Backoffice tetap hanya melihat jumlah penanda medis.
+    - **Isi ulang:**
+      - jenis yang kini "tidak" → penanda belum ditinjau dihapus, yang sudah dikonfirmasi coach dibiarkan;
+      - isi berubah → penanda kembali "Perlu ditinjau".
+  - Bukti:
+    - 5 unit test (`planParqFlags`, `parqDue`, kelengkapan jawaban) + 5 test integrasi DB (diminta → jawaban ya →
+      penanda perlu ditinjau, hanya coach pengajar yang melihat, backoffice hanya jumlah; tinjau oleh coach lain 404;
+      isi ulang tidak/berubah) lulus di `nuhabit_test`;
+    - suite studio/API/HRIS/KPI/CRM/WA/member-portal: 1053 lulus. Gagal: 3 `table-order` lama, dan
+      `dev-bypass.test.ts` yang juga gagal di tree tanpa perubahan bila `DATABASE_URL` menunjuk host non-localhost
+      (tergantung environment);
+    - E2E (member & coach uji; fixture dihapus): banner Home → isi PAR-Q (nyeri dada + sendi, keterangan) → banner
+      hilang → coach melihat badge (2) → Konfirmasi cedera, Tidak relevan kondisi medis → badge hilang; tanpa error
+      console. Bug yang ditemukan & diperbaiki: badge kartu tidak ikut diperbarui setelah tinjauan.
     - `tsc` tetap 508, eslint tanpa error baru.
   - Belum di-deploy.

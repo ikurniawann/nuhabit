@@ -43,6 +43,10 @@ export interface MemberFlag {
   created_by_coach_id: string | null;
   created_by_name: string | null;
   created_at: string;
+  /** 'staff' | 'coach' | 'parq' (isian PAR-Q member, T-067-C3). */
+  source: "staff" | "coach" | "parq";
+  /** Penanda dari PAR-Q yang belum ditinjau coach. */
+  needs_review: boolean;
 }
 
 /** Aktif = belum dihapus dan belum lewat masa berlaku (tanggal WIB). */

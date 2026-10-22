@@ -18,6 +18,9 @@ export interface RosterFlag {
   note: string | null;
   valid_until: string | null;
   created_by_name: string | null;
+  /** 'parq' = dari isian PAR-Q member (T-067-C3). */
+  source?: "staff" | "coach" | "parq";
+  needs_review?: boolean;
 }
 
 const TONE: Record<FlagSeverity, string> = {
@@ -74,6 +77,20 @@ export function RosterMemberFlags({ customerId, flags, onChanged }: { customerId
     }
   }
 
+  async function review(id: string, keep: boolean) {
+    setErr(null);
+    try {
+      await send(`/api/coach/flags/${id}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keep }),
+      });
+      await onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal menyimpan");
+    }
+  }
+
   async function remove(id: string) {
     setErr(null);
     try {
@@ -95,12 +112,26 @@ export function RosterMemberFlags({ customerId, flags, onChanged }: { customerId
               {f.category === "medical" ? <HeartPulse className="mt-px size-3 shrink-0" /> : <AlertTriangle className="mt-px size-3 shrink-0" />}
               <span className="min-w-0 flex-1">
                 <span className="font-semibold">{f.type_label}</span>
+                {f.source === "parq" && <span className="opacity-70"> · isian member</span>}
                 {f.note ? ` · ${f.note}` : ""}
                 {f.valid_until ? <span className="opacity-60"> · s/d {f.valid_until}</span> : null}
+                {f.needs_review && (
+                  <span className="mt-1 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-white/15 px-1.5 py-px text-[10px] font-semibold">Perlu ditinjau</span>
+                    <button type="button" onClick={() => review(f.id, true)} className="font-semibold text-nh-lime underline underline-offset-2">
+                      Konfirmasi
+                    </button>
+                    <button type="button" onClick={() => review(f.id, false)} className="underline underline-offset-2 opacity-80">
+                      Tidak relevan
+                    </button>
+                  </span>
+                )}
               </span>
-              <button type="button" aria-label={`Hapus ${f.type_label}`} onClick={() => remove(f.id)} className="shrink-0 opacity-60 hover:opacity-100">
-                <X className="size-3" />
-              </button>
+              {!f.needs_review && (
+                <button type="button" aria-label={`Hapus ${f.type_label}`} onClick={() => remove(f.id)} className="shrink-0 opacity-60 hover:opacity-100">
+                  <X className="size-3" />
+                </button>
+              )}
             </li>
           ))}
         </ul>

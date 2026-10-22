@@ -34,6 +34,8 @@ interface Session {
   pt_booking_id: string | null;
   pt_member_name: string | null;
   upcoming: boolean;
+  /** Penanda PAR-Q member di sesi ini yang perlu ditinjau. */
+  flags_to_review: number;
 }
 
 interface RosterRow {
@@ -289,6 +291,9 @@ function SessionCard({
             {isPt && s.pt_member_name ? ` · ${s.pt_member_name}` : ""}
             {s.status === "completed" ? " · selesai" : ""}
           </p>
+          {s.flags_to_review > 0 && s.status !== "completed" && (
+            <p className="mt-0.5 text-[11px] font-semibold text-amber-200">PAR-Q member perlu ditinjau ({s.flags_to_review})</p>
+          )}
         </div>
         <div className="flex items-center gap-1.5 text-xs text-nh-beige/80">
           <Users className="size-3.5" />
@@ -329,7 +334,14 @@ function SessionCard({
                         <span className="text-xs text-nh-beige/60">{STATUS_LABEL[r.status] ?? r.status}</span>
                       )}
                     </div>
-                    <RosterMemberFlags customerId={r.customer_id} flags={r.flags ?? []} onChanged={loadRoster} />
+                    <RosterMemberFlags
+                      customerId={r.customer_id}
+                      flags={r.flags ?? []}
+                      onChanged={async () => {
+                        await loadRoster();
+                        onChanged(); // jumlah "PAR-Q perlu ditinjau" di kartu ikut diperbarui
+                      }}
+                    />
                   </li>
                 );
               })}

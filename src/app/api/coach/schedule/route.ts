@@ -19,6 +19,10 @@ export async function GET(request: NextRequest) {
               COALESCE(bk.booked, 0)::int AS booked_count, COALESCE(bk.attended, 0)::int AS attended_count,
               COALESCE(bk.waitlist, 0)::int AS waitlist_count,
               (s.session_date + s.start_time) > (now() AT TIME ZONE 'Asia/Jakarta') AS upcoming,
+              -- Penanda dari PAR-Q member di sesi ini yang belum ditinjau (T-067-C3).
+              (SELECT COUNT(*) FROM studio.member_flags f JOIN studio.bookings b ON b.customer_id = f.customer_id
+               WHERE b.session_id = s.id AND b.status IN ('booked','attended') AND f.branch_id = s.branch_id
+                 AND f.needs_review AND f.removed_at IS NULL)::int AS flags_to_review,
               -- Booking Personal Training yang masih aktif → bisa dipindah dari Coach Portal (T-067-A7).
               CASE WHEN p.kind = 'pt' AND s.origin = 'pt_booking' THEN
                 (SELECT b.id FROM studio.bookings b WHERE b.session_id = s.id AND b.status = 'booked' LIMIT 1) END AS pt_booking_id,

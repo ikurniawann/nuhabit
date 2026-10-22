@@ -9,6 +9,7 @@ import { CenterSpinner, Eyebrow, MarqueeWordmark, PillButton, SectionTitle, Side
 import { BookingRow } from "./booking-row";
 import { CoachSheet } from "./coaches-tab";
 import { NewsSection } from "./news-section";
+import { HealthCheckBanner } from "./health-tab";
 
 /** Beranda Member App — struktur halaman studio referensi (hero, tombol bertumpuk, blok berlabel, carousel, footer). */
 export function HomeTab() {
@@ -55,6 +56,9 @@ export function HomeTab() {
         <p className="mt-4 text-xs font-medium uppercase leading-relaxed tracking-wide text-nh-beige/70">
           {next ? "Your next session awaits. Train with purpose and consistency." : "Start with one session. Every athlete starts somewhere."}
         </p>
+        <div className="mt-5">
+          <HealthCheckBanner />
+        </div>
       </section>
 
       {/* Tombol bertumpuk */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LogOut, MessageSquareText } from "lucide-react";
+import { HeartPulse, LogOut, MessageSquareText } from "lucide-react";
 import { useMember } from "../member-app";
 import { firstName, memberFetch } from "../lib";
 import { Eyebrow, PageTitle, PillButton } from "../ui";
@@ -28,6 +28,9 @@ export function ProfileTab() {
 
       <section className="border-t border-white/15 pt-6">
         <Eyebrow className="pb-2">Help</Eyebrow>
+        <PillButton variant="ghost" className="mb-2 w-full" onClick={() => go("health")}>
+          <HeartPulse className="size-4" /> Health check (PAR-Q)
+        </PillButton>
         <PillButton variant="light" className="w-full" onClick={() => go("feedback")}>
           <MessageSquareText className="size-4" /> Send feedback / Report an issue
         </PillButton>

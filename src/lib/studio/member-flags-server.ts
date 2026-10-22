@@ -21,7 +21,8 @@ import {
 const FLAG_SELECT = `
   SELECT f.id, f.customer_id, f.type_id, t.label AS type_label, t.category, f.severity, f.note,
          f.valid_until::text AS valid_until, f.created_by_coach_id,
-         COALESCE(co.display_name, co.full_name, u.full_name) AS created_by_name, f.created_at
+         COALESCE(co.display_name, co.full_name, u.full_name) AS created_by_name, f.created_at,
+         f.source, f.needs_review
   FROM studio.member_flags f
   JOIN studio.member_flag_types t ON t.id = f.type_id
   LEFT JOIN studio.coaches co ON co.id = f.created_by_coach_id
@@ -94,9 +95,9 @@ async function insertFlag(
   const customer = await queryOne(`SELECT 1 FROM pos.pos_customers WHERE id = $1`, [customerId]);
   if (!customer) throw ApiError.notFound("Member tidak ditemukan");
   const row = await queryOne<{ id: string }>(
-    `INSERT INTO studio.member_flags (company_id, branch_id, customer_id, type_id, severity, note, valid_until, created_by, created_by_coach_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-    [venue.companyId, venue.branchId, customerId, input.type_id, input.severity, input.note?.trim() || null, input.valid_until || null, by.userId, by.coachId]
+    `INSERT INTO studio.member_flags (company_id, branch_id, customer_id, type_id, severity, note, valid_until, created_by, created_by_coach_id, source)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+    [venue.companyId, venue.branchId, customerId, input.type_id, input.severity, input.note?.trim() || null, input.valid_until || null, by.userId, by.coachId, by.coachId ? "coach" : "staff"]
   );
   return row!.id;
 }
@@ -215,3 +216,33 @@ export async function removeCoachFlag(coach: { id: string; branch_id: string }, 
   await assertCoachRelationship(coach.id, f.customer_id);
   await markRemoved(flagId, userId);
 }
+
+/**
+ * Coach meninjau penanda dari PAR-Q (T-067-C3): konfirmasi (boleh ubah tingkat
+ * & catatan) atau hapus bila tidak relevan. Hanya coach yang boleh melihat
+ * penanda itu dan mengajar member tersebut.
+ */
+export async function reviewParqFlag(
+  coach: { id: string; branch_id: string },
+  userId: string,
+  flagId: string,
+  input: { keep: boolean; severity?: FlagSeverity; note?: string | null }
+): Promise<void> {
+  const f = await loadFlagMeta(flagId);
+  if (!f || f.branch_id !== coach.branch_id || f.removed_at) throw ApiError.notFound("Penanda tidak ditemukan");
+  const visible = await coachFlagsForCustomers(coach.id, coach.branch_id, [f.customer_id]);
+  if (!visible.some((v) => v.id === flagId)) throw ApiError.notFound("Penanda tidak ditemukan");
+  await assertCoachRelationship(coach.id, f.customer_id);
+  if (!input.keep) {
+    await markRemoved(flagId, userId);
+    return;
+  }
+  await query(
+    `UPDATE studio.member_flags
+     SET needs_review = false, reviewed_at = now(), reviewed_by_coach_id = $2,
+         severity = COALESCE($3, severity), note = CASE WHEN $4::boolean THEN $5 ELSE note END, updated_at = now()
+     WHERE id = $1`,
+    [flagId, coach.id, input.severity ?? null, input.note !== undefined, input.note?.trim() || null]
+  );
+}
+
