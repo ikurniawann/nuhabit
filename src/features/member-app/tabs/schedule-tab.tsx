@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Loader2, Plus } from "lucide-react";
 import { useMember } from "../member-app";
 import { addDaysIso, type ClassSlot, dateLabel, friendlyDay, jam, memberFetch, type ScheduleRules, wibToday } from "../lib";
 import { Avatar, CenterSpinner, Empty, Eyebrow, Notice, PageTitle, PillButton, Sheet, Tag } from "../ui";
+import { filledPercent, type SlotTone, slotTone, slotsLeftLabel, slotsLeftPitch } from "../slots";
 import { cancelNote, hoursUntil } from "./booking-row";
 
 const DAY_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
@@ -163,9 +164,18 @@ export function ScheduleTab() {
   );
 }
 
+/** Warna chip sisa slot: makin sedikit makin mencolok. */
+const SLOT_CHIP: Record<SlotTone, string> = {
+  full: "bg-red-400/20 text-red-200",
+  last: "bg-nh-lime text-black",
+  low: "bg-nh-lime/90 text-black",
+  open: "bg-white/10 text-nh-beige/80",
+};
+const SLOT_BAR: Record<SlotTone, string> = { full: "bg-red-300", last: "bg-nh-lime", low: "bg-nh-lime", open: "bg-nh-beige/50" };
+
 /** Kartu sesi kotak abu-abu; kartu kedua di jam sama diberi penghubung "+" seperti referensi. */
 function SessionCard({ slot: s, onOpen, joiner }: { slot: ClassSlot; onOpen: () => void; joiner: boolean }) {
-  const full = s.spots_left <= 0;
+  const tone = slotTone(s.spots_left, s.capacity);
   const mins = minutesBetween(s.start_time, s.end_time);
   return (
     <button
@@ -181,18 +191,22 @@ function SessionCard({ slot: s, onOpen, joiner }: { slot: ClassSlot; onOpen: () 
       <p className="line-clamp-2 text-xs font-bold uppercase leading-tight tracking-[0.02em] text-white">{s.program_name}</p>
       {s.level_label && <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-nh-beige/60">{s.level_label}</p>}
       <p className="mt-0.5 text-[9px] uppercase tracking-[0.08em] text-nh-beige/60">{durationLabel(mins)}</p>
-      <div className="mt-2 flex items-center justify-between gap-1">
-        <span className="truncate text-[9px] uppercase tracking-[0.06em] text-nh-beige/50">{s.coach_name ?? "Coach TBA"}</span>
-        {s.my_status === "booked" ? (
-          <span className="shrink-0 text-[9px] font-bold uppercase text-nh-lime">Booked</span>
-        ) : s.my_status === "waitlisted" ? (
-          <span className="shrink-0 text-[9px] font-bold uppercase text-nh-lemon">Waitlist</span>
-        ) : full ? (
-          <span className="shrink-0 text-[9px] font-bold uppercase text-red-200">Full</span>
-        ) : (
-          <span className={`shrink-0 text-[9px] font-bold uppercase ${s.spots_left <= 2 ? "text-nh-lime" : "text-nh-beige/60"}`}>{s.spots_left} left</span>
-        )}
-      </div>
+      <p className="mt-1 truncate text-[9px] uppercase tracking-[0.06em] text-nh-beige/50">{s.coach_name ?? "Coach TBA"}</p>
+      {s.my_status === "booked" ? (
+        <span className="mt-2 inline-block text-[10px] font-bold uppercase tracking-[0.06em] text-nh-lime">Booked</span>
+      ) : s.my_status === "waitlisted" ? (
+        <span className="mt-2 inline-block text-[10px] font-bold uppercase tracking-[0.06em] text-nh-lemon">On waitlist</span>
+      ) : (
+        <div className="mt-2 space-y-1">
+          {/* Sisa slot — dorong booking (revisi client 2026-10-22). */}
+          <span className={`inline-block px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-[0.04em] ${SLOT_CHIP[tone]}`}>
+            {slotsLeftLabel(s.spots_left, s.capacity)}
+          </span>
+          <div className="h-0.5 w-full bg-white/10" aria-hidden>
+            <div className={`h-full ${SLOT_BAR[tone]}`} style={{ width: `${filledPercent(s.spots_left, s.capacity)}%` }} />
+          </div>
+        </div>
+      )}
     </button>
   );
 }
@@ -247,7 +261,7 @@ function SlotSheet({
         <div className="grid grid-cols-3 border border-white/15">
           <Fact label="Day" value={friendlyDay(s.session_date)} />
           <Fact label="Time" value={`${jam(s.start_time)}–${jam(s.end_time)}`} border />
-          <Fact label="Spots" value={full ? "Full" : `${s.spots_left}/${s.capacity}`} border />
+          <Fact label="Slots left" value={full ? "Full" : `${s.spots_left}/${s.capacity}`} border />
         </div>
         {s.level_label && <Tag>{s.level_label}</Tag>}
         {s.program_description && <p className="text-sm leading-relaxed text-nh-beige/85">{s.program_description}</p>}
@@ -260,9 +274,19 @@ function SlotSheet({
             </div>
           </div>
         )}
-        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-nh-beige/70">
-          {full ? `Class full · ${s.waitlist_count} on the waitlist` : s.spots_left === 1 ? "There's room for one more." : `${s.spots_left} of ${s.capacity} spots left`}
-        </p>
+        {!s.my_status && (
+          <p
+            className={`border-l-2 px-4 py-3 text-sm font-semibold ${
+              slotTone(s.spots_left, s.capacity) === "open"
+                ? "border-white/30 bg-white/[0.04] text-nh-beige/80"
+                : slotTone(s.spots_left, s.capacity) === "full"
+                  ? "border-red-300 bg-red-400/10 text-red-100"
+                  : "border-nh-lime bg-nh-lime/10 text-nh-lime"
+            }`}
+          >
+            {slotsLeftPitch(s.spots_left, s.capacity, s.waitlist_count)}
+          </p>
+        )}
 
         <div className="space-y-3">
           {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
