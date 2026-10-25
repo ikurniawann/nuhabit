@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -35,8 +34,8 @@ func InvestorPorts(d module.Deps) investor.Ports {
 		Gym:        investorGym{svc: gym},
 		Accounting: investorAccounting{svc: accounting.NewService(d.DB, AccountingPorts(d), d.Log, d.Now)},
 		Mailer: investorMail{
-			mail: &resendMailer{apiKey: strings.TrimSpace(os.Getenv("RESEND_API_KEY")), log: d.Log, client: &http.Client{Timeout: 15 * time.Second}},
-			from: strings.TrimSpace(firstNonEmptyStr(os.Getenv("INVESTOR_FROM_EMAIL"), os.Getenv("FROM_EMAIL"))),
+			mail: mailSender{svc: newMailService(d), kind: "investor"},
+			from: strings.TrimSpace(os.Getenv("INVESTOR_FROM_EMAIL")),
 		},
 	}
 }
@@ -68,14 +67,15 @@ func (a investorAccounting) MonthlyIncome(ctx context.Context, companyIDs []stri
 	return out, err
 }
 
-// investorMail sends the digest through Resend when RESEND_API_KEY and a
-// sender (INVESTOR_FROM_EMAIL or FROM_EMAIL) are set.
+// investorMail sends the digest through the mailer port; from is
+// INVESTOR_FROM_EMAIL, empty for the sender set in Settings → Integrasi →
+// Email.
 type investorMail struct {
-	mail *resendMailer
+	mail mailSender
 	from string
 }
 
-func (m investorMail) Configured() bool { return m.mail.apiKey != "" && m.from != "" }
+func (m investorMail) Configured() bool { return m.mail.svc.Configured(context.Background()) }
 
 func (m investorMail) Send(ctx context.Context, to, subject, html string) bool {
 	return m.mail.Send(ctx, to, m.from, subject, html)
