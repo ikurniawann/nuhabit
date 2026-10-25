@@ -22,6 +22,20 @@ function subscribeClock(onTick: () => void) {
 const currentMinute = () => Math.floor(Date.now() / 60_000);
 const noClock = () => null;
 
+const MY_CLASSES_PATH = "/dashboard/gym/my-classes";
+
+/** Akun coach tanpa menu dashboard lain (selain Area Karyawan); false bila gagal dibaca. */
+async function coachOnly(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/gym/my-classes/landing", { cache: "no-store" });
+    if (!res.ok) return false;
+    const json = (await res.json()) as { success?: boolean; data?: { coach_only?: boolean } };
+    return json.success === true && json.data?.coach_only === true;
+  } catch {
+    return false;
+  }
+}
+
 export default function LoginPage() {
   return (
     <Suspense>
@@ -72,12 +86,16 @@ function LoginContent() {
       let target = requestedRedirect || OS_PATH;
       if (role !== "super_admin") {
         // Deep link staf yang diizinkan (akses tetap dijaga layout dashboard):
-        // Area Karyawan & layar pesanan self-order dari link WA "Buatkan Pesanan".
+        // Area Karyawan, layar pesanan self-order dari link WA "Buatkan Pesanan",
+        // dan Kelas Saya (portal coach, termasuk ?tab=leave).
+        // Coach yang hanya punya menu kerja coach mendarat di Kelas Saya.
+        const home = (await coachOnly()) ? MY_CLASSES_PATH : "/dashboard/me";
         target =
           requestedRedirect?.startsWith("/dashboard/me") ||
-          requestedRedirect?.startsWith("/dashboard/pos/self-orders")
+          requestedRedirect?.startsWith("/dashboard/pos/self-orders") ||
+          requestedRedirect?.startsWith(MY_CLASSES_PATH)
             ? requestedRedirect
-            : "/dashboard/me";
+            : home;
       }
       setTransitioning(true);
       window.setTimeout(() => router.replace(target), 450);
