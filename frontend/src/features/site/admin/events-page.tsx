@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Globe, Plus } from "lucide-react";
+import { CalendarDays, Globe, Link2, ListChecks, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { EMPTY_PLACE, EventConflictError, type PlaceFields } from "@/features/events/api";
+import { ConflictDialog, toastWarnings } from "@/features/events/components/conflict-dialog";
+import { EventChecklistDialog } from "@/features/events/components/event-checklist-dialog";
+import { EventPlaceFields } from "@/features/events/components/event-place-fields";
+import { LinkDialog } from "@/features/events/components/link-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,9 +36,21 @@ interface Form {
   body_md: string;
   form_slug: string;
   status: PublishStatus;
+  place: PlaceFields;
 }
 
-const EMPTY: Form = { title: "", slug: "", starts_at: "", ends_at: "", location_text: "", cover_image_url: "", body_md: "", form_slug: "", status: "draft" };
+const EMPTY: Form = {
+  title: "",
+  slug: "",
+  starts_at: "",
+  ends_at: "",
+  location_text: "",
+  cover_image_url: "",
+  body_md: "",
+  form_slug: "",
+  status: "draft",
+  place: EMPTY_PLACE,
+};
 
 /** ISO to the value of a datetime-local input, in the browser's zone. */
 function toLocalInput(iso: string | null): string {
@@ -58,10 +75,11 @@ function toForm(e: SiteEvent): Form {
     body_md: e.body_md,
     form_slug: e.form_slug ?? "",
     status: e.status,
+    place: { branch_id: e.branch_id, area: e.area, coach_id: e.coach_id, organiser_user_id: e.organiser_user_id },
   };
 }
 
-function toInput(f: Form): EventInput {
+function toInput(f: Form, overrideReason?: string): EventInput {
   return {
     title: f.title.trim(),
     slug: f.slug.trim() || undefined,
@@ -72,6 +90,9 @@ function toInput(f: Form): EventInput {
     body_md: f.body_md,
     form_slug: f.form_slug.trim() || null,
     status: f.status,
+    ...f.place,
+    area: f.place.area?.trim() || null,
+    override_reason: overrideReason,
   };
 }
 
@@ -84,6 +105,9 @@ export function EventsPage() {
   const [editing, setEditing] = useState<SiteEvent | "new" | null>(null);
   const [form, setForm] = useState<Form>(EMPTY);
   const [deleting, setDeleting] = useState<SiteEvent | null>(null);
+  const [conflict, setConflict] = useState<EventConflictError | null>(null);
+  const [linking, setLinking] = useState<SiteEvent | null>(null);
+  const [checklist, setChecklist] = useState<SiteEvent | null>(null);
   const refresh = () => void queryClient.invalidateQueries({ queryKey: KEY });
 
   const open = (target: SiteEvent | "new") => {
@@ -92,13 +116,23 @@ export function EventsPage() {
   };
 
   const save = useMutation({
-    mutationFn: () => (editing === "new" || !editing ? siteAdminApi.createEvent(toInput(form)) : siteAdminApi.updateEvent(editing.id, toInput(form))),
+    mutationFn: (overrideReason?: string) =>
+      editing === "new" || !editing
+        ? siteAdminApi.createEvent(toInput(form, overrideReason))
+        : siteAdminApi.updateEvent(editing.id, toInput(form, overrideReason)),
     onSuccess: (e) => {
       toast.success("Event disimpan", { description: e.title });
+      toastWarnings(e.warnings);
       setEditing(null);
       refresh();
     },
-    onError: (error) => toast.error("Event gagal disimpan", { description: error.message }),
+    onError: (error) => {
+      if (error instanceof EventConflictError) {
+        setConflict(error);
+        return;
+      }
+      toast.error("Event gagal disimpan", { description: error.message });
+    },
   });
   const toggle = useMutation({
     mutationFn: (e: SiteEvent) => siteAdminApi.updateEvent(e.id, { status: e.status === "published" ? "draft" : "published" }),
@@ -162,6 +196,12 @@ export function EventsPage() {
                   <TableCell className="max-w-[20rem] whitespace-normal">
                     <p className="font-medium">{e.title}</p>
                     <p className="text-xs text-muted-foreground">{e.location_text ?? `/events/${e.slug}`}</p>
+                    {(e.branch_name || e.area || e.crm_event_id) && (
+                      <p className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                        {[e.branch_name, e.area, e.coach_name && `Coach ${e.coach_name}`].filter(Boolean).join(" · ")}
+                        {e.crm_event_id && <Badge variant="info">Event member</Badge>}
+                      </p>
+                    )}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{formatDateTime(e.starts_at)}</TableCell>
                   <TableCell className="hidden font-mono text-xs lg:table-cell">{e.form_slug ?? "-"}</TableCell>
@@ -170,6 +210,12 @@ export function EventsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => setChecklist(e)}>
+                        <ListChecks /> Checklist
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setLinking(e)}>
+                        <Link2 /> Tautkan
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => open(e)}>
                         Ubah
                       </Button>
@@ -193,7 +239,7 @@ export function EventsPage() {
           <DialogPanelForm
             onSubmit={(e) => {
               e.preventDefault();
-              save.mutate();
+              save.mutate(undefined);
             }}
           >
             <DialogPanelHeader>
@@ -233,6 +279,7 @@ export function EventsPage() {
                     <option value="published">Tayang</option>
                   </select>
                 </LabeledField>
+                <EventPlaceFields value={form.place} onChange={(place) => setForm({ ...form, place })} />
               </div>
             </DialogPanelBody>
             <DialogFooter>
@@ -246,6 +293,28 @@ export function EventsPage() {
           </DialogPanelForm>
         </DialogPanel>
       </Dialog>
+
+      <ConflictDialog
+        conflict={conflict}
+        menu="site.events"
+        saving={save.isPending}
+        onClose={() => setConflict(null)}
+        onOverride={(reason) => {
+          setConflict(null);
+          save.mutate(reason);
+        }}
+      />
+      {linking && (
+        <LinkDialog
+          source="site"
+          eventId={linking.id}
+          title={linking.title}
+          linkedId={linking.crm_event_id}
+          onClose={() => setLinking(null)}
+          onChanged={refresh}
+        />
+      )}
+      {checklist && <EventChecklistDialog source="site" eventId={checklist.id} title={checklist.title} onClose={() => setChecklist(null)} />}
 
       <ConfirmDialog
         open={deleting !== null}
