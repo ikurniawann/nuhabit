@@ -109,6 +109,8 @@ export const IAM = {
   gymReports: ["gym.reports"],
   /** Gym → Kelas Saya (portal coach: kelas, roster, absensi, insentif sendiri). */
   gymMyClasses: ["gym.my-classes"],
+  /** Gym → Cuti & Pengganti Coach (antrean Program Director, blackout, disiplin, laporan perubahan). */
+  gymCoachLeave: ["gym.coach-leave"],
   /** Gym → Personal Training (janji PT, ketersediaan coach). */
   gymPt: ["gym.pt"],
   /** Gym → Asesmen Kebugaran (metrik tubuh dan benchmark HYROX member). */

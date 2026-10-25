@@ -188,7 +188,7 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('accounting.reports.cash-flow', 'Cash Flow', '/dashboard/accounting/reports/cash-flow', 'banknotes', 'sidebar', 30, '{"actions":["read","export"]}'::jsonb),
   ('accounting.reports.equity', 'Changes in Equity', '/dashboard/accounting/reports/changes-in-equity', 'chart', 'sidebar', 40, '{"actions":["read"]}'::jsonb),
   ('accounting.reports.budget', 'Budget vs Actual', '/dashboard/accounting/reports/budget-vs-actual', 'chart-bar', 'sidebar', 50, '{"actions":["read"]}'::jsonb),
-  -- Gym & Kelas, as the gym migrations up to 22 Oct 2026 leave it
+  -- Gym & Kelas, as the gym migrations up to 28 Oct 2026 leave it
   -- (internal/migrate/seeders_test.go checks every gym menu is here).
   ('gym', 'Gym & Kelas', NULL, 'calendar', 'group', 3, '{"actions":["read"]}'::jsonb),
   ('gym.my-classes', 'Kelas Saya', '/dashboard/gym/my-classes', 'clipboard-document-check', 'sidebar', 2, '{"actions":["read","update"]}'::jsonb),
@@ -203,6 +203,7 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('gym.gate-devices', 'Perangkat Gate', '/dashboard/gym/gate-devices', 'plug', 'sidebar', 45, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.class-types', 'Jenis Kelas', '/dashboard/gym/class-types', 'clipboard', 'sidebar', 50, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.coaches', 'Coach', '/dashboard/gym/coaches', 'identification', 'sidebar', 60, '{"actions":["read","create","update","delete"]}'::jsonb),
+  ('gym.coach-leave', 'Cuti & Pengganti Coach', '/dashboard/gym/coach-leave', 'calendar', 'sidebar', 65, '{"actions":["read","update"]}'::jsonb),
   ('gym.packages', 'Paket Kredit', '/dashboard/gym/packages', 'package', 'sidebar', 70, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.credits', 'Kredit Member', '/dashboard/gym/credits', 'banknotes', 'sidebar', 80, '{"actions":["read","create","update"]}'::jsonb),
   ('gym.exercises', 'Stasiun & Latihan', '/dashboard/gym/exercises', 'video', 'sidebar', 85, '{"actions":["read","create","update","delete"]}'::jsonb),
@@ -344,6 +345,8 @@ WHERE deleted_at IS NULL
     -- assessments, coach portal, gate devices, referrals):
     'gym.members', 'gym.reports', 'gym.schedule.templates', 'gym.pt', 'gym.assessments',
     'gym.my-classes', 'gym.gate-devices', 'gym.referrals',
+    -- Coach leave and substitutes (28 Oct 2026):
+    'gym.coach-leave',
     'items.raw-material.inventory.expiry', 'items.raw-material.inventory.movements',
     'items.raw-material.inventory.scrap', 'pos.catalog.channel-prices',
     'pos.loyalty.wallet', 'pos.loyalty.wallet.packages', 'pos.loyalty.wallet.payments',
