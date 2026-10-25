@@ -3707,6 +3707,16 @@
   {
     "module": "integrations",
     "method": "GET",
+    "path": "/api/payments/midtrans/webhook"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/payments/midtrans/webhook"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
     "path": "/api/payments/xendit/webhook"
   },
   {
@@ -6258,6 +6268,11 @@
     "module": "integrations",
     "method": "PUT",
     "path": "/api/settings/payment-gateways"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/settings/payment-gateways/{provider}/test"
   },
   {
     "module": "configuration",

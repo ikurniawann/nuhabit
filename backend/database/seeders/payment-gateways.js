@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Seeder: payment gateways (Xendit + Midtrans placeholders)
+ * Seeder: payment gateways (Xendit and Midtrans rows, inactive until keys are set)
  *
  * Usage:
  *   npm run db:seed:payment-gateways

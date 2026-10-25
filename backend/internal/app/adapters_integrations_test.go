@@ -46,6 +46,11 @@ func TestIntegrationsAuthWiring(t *testing.T) {
 			t.Errorf("GET %s = %d, want %d", c.target, got, c.want)
 		}
 	}
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, testutil.AsStaff(testutil.Request("POST", "/api/settings/payment-gateways/midtrans/test", nil), plain))
+	if rec.Code != 403 {
+		t.Errorf("POST payment-gateways/midtrans/test as plain = %d, want 403", rec.Code)
+	}
 }
 
 type integrationsFixture struct {

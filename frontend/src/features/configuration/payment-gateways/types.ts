@@ -1,3 +1,8 @@
+import type {
+  PaymentGatewayEnvironment,
+  PaymentGatewayProvider,
+} from "@/lib/configuration/payment-gateways";
+
 export type {
   PaymentGatewayProvider,
   PaymentGatewayEnvironment,
@@ -13,6 +18,14 @@ export type UpdatePaymentGatewayPayload = {
   public_key?: string | null;
   webhook_secret?: string | null;
   callback_url?: string | null;
+  /** Midtrans merchant id; "" clears it, undefined keeps it. */
+  merchant_id?: string | null;
+};
+
+export type GatewayConnectionTest = {
+  provider: PaymentGatewayProvider;
+  environment: PaymentGatewayEnvironment;
+  message: string;
 };
 
 export type StaticQrisConfig = {

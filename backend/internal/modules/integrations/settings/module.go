@@ -103,6 +103,7 @@ func (h *Handler) Routes() []module.Route {
 		r("DELETE /api/settings/instagram", h.deleteInstagram),
 		r("GET /api/settings/payment-gateways", h.listGateways),
 		r("PUT /api/settings/payment-gateways", h.putGateway),
+		r("POST /api/settings/payment-gateways/{provider}/test", h.testGateway),
 		r("GET /api/settings/wa-gateway", h.getWaGateway),
 		r("PATCH /api/settings/wa-gateway", h.patchWaGateway),
 		r("GET /api/settings/wa-gateway/messages", h.listMessages),

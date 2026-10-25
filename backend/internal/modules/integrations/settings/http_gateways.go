@@ -12,12 +12,15 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/paygate"
 	"nuhabit/backend/internal/platform/validate"
 )
 
 // Payment gateways (configuration.payment_gateways): Xendit and Midtrans
 // credentials. Secrets come back only masked; an empty or masked value on
-// save keeps the stored one.
+// save keeps the stored one. At most one gateway is active: activating one
+// deactivates the other. Midtrans stores its server key as secret_key, its
+// client key as public_key and its merchant id in metadata.
 
 // gatewayRow is a payment_gateways row.
 type gatewayRow struct {
@@ -49,22 +52,28 @@ func scanGateway(row pgx.Row) (*gatewayRow, error) {
 
 // gatewayPublic is PaymentGatewayPublic.
 type gatewayPublic struct {
-	ID                  string          `json:"id"`
-	Provider            string          `json:"provider"`
-	DisplayName         string          `json:"display_name"`
-	IsActive            bool            `json:"is_active"`
-	Environment         string          `json:"environment"`
-	SecretKeyMasked     *string         `json:"secret_key_masked"`
-	PublicKeyMasked     *string         `json:"public_key_masked"`
-	WebhookSecretMasked *string         `json:"webhook_secret_masked"`
-	HasSecretKey        bool            `json:"has_secret_key"`
-	HasPublicKey        bool            `json:"has_public_key"`
-	HasWebhookSecret    bool            `json:"has_webhook_secret"`
-	CallbackURL         *string         `json:"callback_url"`
-	Metadata            json.RawMessage `json:"metadata"`
-	ComingSoon          bool            `json:"coming_soon"`
-	UpdatedAt           *httpx.JSTime   `json:"updated_at"`
+	ID                  string  `json:"id"`
+	Provider            string  `json:"provider"`
+	DisplayName         string  `json:"display_name"`
+	IsActive            bool    `json:"is_active"`
+	Environment         string  `json:"environment"`
+	SecretKeyMasked     *string `json:"secret_key_masked"`
+	PublicKeyMasked     *string `json:"public_key_masked"`
+	WebhookSecretMasked *string `json:"webhook_secret_masked"`
+	HasSecretKey        bool    `json:"has_secret_key"`
+	HasPublicKey        bool    `json:"has_public_key"`
+	HasWebhookSecret    bool    `json:"has_webhook_secret"`
+	CallbackURL         *string `json:"callback_url"`
+	MerchantID          *string `json:"merchant_id"`
+	// WebhookPath is the app endpoint to register at the provider.
+	WebhookPath string          `json:"webhook_path"`
+	Metadata    json.RawMessage `json:"metadata"`
+	ComingSoon  bool            `json:"coming_soon"`
+	UpdatedAt   *httpx.JSTime   `json:"updated_at"`
 }
+
+// webhookPaths are the inbound payment notification routes (webhooks module).
+var webhookPaths = map[string]string{"xendit": "/api/payments/xendit/webhook", "midtrans": "/api/payments/midtrans/webhook"}
 
 // metadata is `row.metadata && typeof row.metadata === "object" ? row.metadata : {}`:
 // the raw JSON to echo and its fields (empty for an array).
@@ -86,13 +95,17 @@ func (g *gatewayRow) public() gatewayPublic {
 	if g.Environment == "live" {
 		env = "live"
 	}
+	var merchant *string
+	if m, _ := meta["merchant_id"].(string); m != "" {
+		merchant = &m
+	}
 	return gatewayPublic{
 		ID: g.ID, Provider: g.Provider, DisplayName: g.DisplayName, IsActive: g.IsActive, Environment: env,
 		SecretKeyMasked: domain.MaskGatewaySecret(g.SecretKey), PublicKeyMasked: domain.MaskGatewaySecret(g.PublicKey),
 		WebhookSecretMasked: domain.MaskGatewaySecret(g.WebhookSecret),
 		HasSecretKey:        domain.HasGatewaySecret(g.SecretKey), HasPublicKey: domain.HasGatewaySecret(g.PublicKey),
-		HasWebhookSecret: domain.HasGatewaySecret(g.WebhookSecret), CallbackURL: g.CallbackURL,
-		Metadata: raw, ComingSoon: domain.Truthy(meta["coming_soon"]), UpdatedAt: httpx.NewJSTime(g.UpdatedAt),
+		HasWebhookSecret: domain.HasGatewaySecret(g.WebhookSecret), CallbackURL: g.CallbackURL, MerchantID: merchant,
+		WebhookPath: webhookPaths[g.Provider], Metadata: raw, ComingSoon: domain.Truthy(meta["coming_soon"]), UpdatedAt: httpx.NewJSTime(g.UpdatedAt),
 	}
 }
 
@@ -127,6 +140,8 @@ type gatewayUpdate struct {
 	isActive                      bool
 	secretKey, publicKey, webhook *string
 	callbackURL                   *string
+	// merchantID: nil leaves the stored one, "" clears it.
+	merchantID *string
 }
 
 // PUT /api/settings/payment-gateways
@@ -156,6 +171,7 @@ func (h *Handler) putGateway(w http.ResponseWriter, r *http.Request) error {
 	in.publicKey = f.Str("public_key", opt, validate.StrOpts{})
 	in.webhook = f.Str("webhook_secret", opt, validate.StrOpts{})
 	in.callbackURL = f.Str("callback_url", opt, validate.StrOpts{Trim: true, Max: 500})
+	in.merchantID = f.Str("merchant_id", opt, validate.StrOpts{Trim: true, Max: 64})
 	if err := f.Err("Validation failed"); err != nil {
 		return err
 	}
@@ -171,6 +187,14 @@ func (h *Handler) putGateway(w http.ResponseWriter, r *http.Request) error {
 		updated, err := updateGateway(r.Context(), tx, current, in, user.ID, h.now())
 		if err != nil {
 			return err
+		}
+		if in.isActive {
+			// One active gateway at a time: the member app and the webhooks
+			// pay and settle at the active one.
+			if _, err := tx.Exec(r.Context(), `UPDATE configuration.payment_gateways SET is_active = false, updated_by = $2, updated_at = $3
+				WHERE provider <> $1 AND is_active`, in.provider, user.ID, h.now()); err != nil {
+				return err
+			}
 		}
 		out = updated.public()
 		return nil
@@ -207,14 +231,46 @@ func updateGateway(ctx context.Context, q database.Querier, current *gatewayRow,
 	if in.displayName != nil && *in.displayName != "" {
 		displayName = in.displayName
 	}
+	merchant := ""
+	if in.merchantID != nil {
+		merchant = *in.merchantID
+	}
 	return scanGateway(q.QueryRow(ctx, `UPDATE configuration.payment_gateways
 		SET is_active = $2, environment = $3, callback_url = $4, updated_by = $5, updated_at = $6,
 		    display_name = COALESCE($7, display_name),
 		    secret_key = CASE WHEN $8::boolean THEN $9 ELSE secret_key END,
 		    public_key = CASE WHEN $10::boolean THEN $11 ELSE public_key END,
-		    webhook_secret = CASE WHEN $12::boolean THEN $13 ELSE webhook_secret END
+		    webhook_secret = CASE WHEN $12::boolean THEN $13 ELSE webhook_secret END,
+		    metadata = CASE WHEN NOT $14::boolean THEN metadata
+		                    WHEN $15::text = '' THEN metadata - 'merchant_id'
+		                    ELSE metadata || jsonb_build_object('merchant_id', $15::text) END
 		WHERE provider = $1
 		RETURNING `+gatewayColumns,
 		in.provider, in.isActive, in.environment, callback, userID, now,
-		displayName, secretKey != nil, secretKey, publicKey != nil, publicKey, webhook != nil, webhook))
+		displayName, secretKey != nil, secretKey, publicKey != nil, publicKey, webhook != nil, webhook,
+		in.merchantID != nil, merchant))
+}
+
+// POST /api/settings/payment-gateways/{provider}/test: checks the stored
+// server key against the provider's sandbox or production API without
+// moving money. Only Midtrans has a key check endpoint for now.
+func (h *Handler) testGateway(w http.ResponseWriter, r *http.Request) error {
+	if _, err := h.guard.RequireMenuPrefix(r, iam.SettingsPaymentGateways...); err != nil {
+		return err
+	}
+	provider := paygate.Provider(r.PathValue("provider"))
+	if provider != paygate.Midtrans {
+		return httpx.BadRequest("Tes koneksi hanya tersedia untuk Midtrans")
+	}
+	cfg, err := paygate.Load(r.Context(), h.db, provider)
+	if err != nil {
+		return httpx.BadRequest("Simpan server key Midtrans dulu sebelum tes koneksi")
+	}
+	if err := paygate.NewMidtrans(h.getenv).TestConnection(r.Context(), cfg); err != nil {
+		return httpx.BadRequest(err.Error())
+	}
+	return httpx.DataMessage(w, http.StatusOK, struct {
+		Provider    string `json:"provider"`
+		Environment string `json:"environment"`
+	}{string(provider), cfg.Environment}, "Server key Midtrans diterima ("+cfg.Environment+")")
 }

@@ -1,4 +1,6 @@
 import type {
+  GatewayConnectionTest,
+  PaymentGatewayProvider,
   PaymentGatewayPublic,
   StaticQrisConfig,
   UpdatePaymentGatewayPayload,
@@ -40,6 +42,21 @@ export async function updatePaymentGateway(
   });
   const json = await parseJson<{ data: PaymentGatewayPublic }>(res);
   return json.data;
+}
+
+/** Checks the stored server key against the provider's API; no money moves. */
+export async function testPaymentGateway(
+  provider: PaymentGatewayProvider,
+): Promise<GatewayConnectionTest> {
+  const res = await fetch(`/api/settings/payment-gateways/${provider}/test`, {
+    method: "POST",
+    credentials: "include",
+  });
+  const json = await parseJson<{
+    data: Omit<GatewayConnectionTest, "message">;
+    message?: string;
+  }>(res);
+  return { ...json.data, message: json.message ?? "Koneksi berhasil" };
 }
 
 export async function getStaticQris(): Promise<StaticQrisConfig> {

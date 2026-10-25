@@ -1,15 +1,19 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
-import { CreditCard, Loader2, Save, Shield } from "lucide-react";
+import { useId, useMemo, useState, useSyncExternalStore } from "react";
+import { CreditCard, Loader2, PlugZap, Save, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
-import { useUpdatePaymentGateway } from "../mutations";
+import { useTestPaymentGateway, useUpdatePaymentGateway } from "../mutations";
 import { usePaymentGateways } from "../queries";
-import type { PaymentGatewayEnvironment, PaymentGatewayPublic } from "../types";
+import type {
+  PaymentGatewayEnvironment,
+  PaymentGatewayProvider,
+  PaymentGatewayPublic,
+} from "../types";
 import { StaticQrisCard } from "./static-qris-card";
 
 type Draft = {
@@ -19,6 +23,7 @@ type Draft = {
   public_key: string;
   webhook_secret: string;
   callback_url: string;
+  merchant_id: string;
 };
 
 /** Draft awal dari data tersimpan; rahasia tampil tersamar (kosong = biarkan nilai lama). */
@@ -29,14 +34,34 @@ const draftFrom = (gateway: PaymentGatewayPublic): Draft => ({
   public_key: gateway.public_key_masked || "",
   webhook_secret: gateway.webhook_secret_masked || "",
   callback_url: gateway.callback_url || "",
+  merchant_id: gateway.merchant_id || "",
 });
+
+/** Label dan placeholder field per provider: Xendit memakai secret key, Midtrans server key. */
+const FIELDS: Record<
+  PaymentGatewayProvider,
+  { secret: string; secretPlaceholder: string; public: string; publicPlaceholder: string }
+> = {
+  xendit: {
+    secret: "Secret key",
+    secretPlaceholder: "xnd_development_...",
+    public: "Public key",
+    publicPlaceholder: "Opsional",
+  },
+  midtrans: {
+    secret: "Server key",
+    secretPlaceholder: "SB-Mid-server-... (sandbox) / Mid-server-... (production)",
+    public: "Client key",
+    publicPlaceholder: "SB-Mid-client-... (untuk snap.js, opsional)",
+  },
+};
 
 export function PaymentGatewaysPage() {
   const gatewaysQuery = usePaymentGateways();
   const updateMutation = useUpdatePaymentGateway();
-  const [selectedProvider, setSelectedProvider] = useState<
-    "xendit" | "midtrans"
-  >("xendit");
+  const testMutation = useTestPaymentGateway();
+  const [selectedProvider, setSelectedProvider] =
+    useState<PaymentGatewayProvider>("xendit");
   const gateways = useMemo(
     () => gatewaysQuery.data ?? [],
     [gatewaysQuery.data],
@@ -56,6 +81,7 @@ export function PaymentGatewaysPage() {
       public_key: draft.public_key || null,
       webhook_secret: draft.webhook_secret || null,
       callback_url: draft.callback_url || null,
+      merchant_id: selected.provider === "midtrans" ? draft.merchant_id : undefined,
     });
   }
 
@@ -63,7 +89,7 @@ export function PaymentGatewaysPage() {
     <div className="space-y-5">
       <PurchasingPageHeader
         title="Payment Gateways"
-        description="Konfigurasi multi payment gateway. Xendit siap dikonfigurasi; Midtrans placeholder untuk tahap berikutnya."
+        description="Pilih gateway pembayaran untuk paket gym dan member app. Xendit dan Midtrans tersedia; hanya satu yang aktif pada satu waktu."
       />
 
       {gatewaysQuery.isError ? (
@@ -107,8 +133,8 @@ export function PaymentGatewaysPage() {
                     {gateway.coming_soon
                       ? "Coming soon"
                       : gateway.is_active
-                        ? `Active · ${gateway.environment}`
-                        : `Inactive · ${gateway.environment}`}
+                        ? `Aktif · ${gateway.environment}`
+                        : `Nonaktif · ${gateway.environment}`}
                   </div>
                 </div>
               </button>
@@ -128,6 +154,8 @@ export function PaymentGatewaysPage() {
               gateway={selected}
               onSave={handleSave}
               saving={updateMutation.isPending}
+              onTest={() => testMutation.mutate(selected.provider)}
+              testing={testMutation.isPending}
             />
           )}
         </section>
@@ -142,13 +170,19 @@ function GatewayForm({
   gateway,
   onSave,
   saving,
+  onTest,
+  testing,
 }: {
   gateway: PaymentGatewayPublic;
   onSave: (draft: Draft) => void;
   saving: boolean;
+  onTest: () => void;
+  testing: boolean;
 }) {
   const [draft, onChange] = useState<Draft>(() => draftFrom(gateway));
   const disabled = gateway.coming_soon;
+  const midtrans = gateway.provider === "midtrans";
+  const fields = FIELDS[gateway.provider];
 
   return (
     <div className="space-y-5">
@@ -160,28 +194,50 @@ function GatewayForm({
           <p className="text-sm text-muted-foreground">
             {gateway.coming_soon
               ? "Provider ini masih placeholder dan belum bisa diaktifkan."
-              : "Isi kredensial API. Field secret kosong = biarkan nilai lama."}
+              : "Isi kredensial API. Field secret kosong = biarkan nilai lama. Mengaktifkan gateway ini menonaktifkan gateway lain."}
           </p>
         </div>
-        <Button
-          type="button"
-          onClick={() => onSave(draft)}
-          disabled={saving || disabled}
-          className="gap-2"
-        >
-          {saving ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Save className="size-4" />
-          )}
-          {saving ? "Saving..." : "Save settings"}
-        </Button>
+        <div className="flex gap-2">
+          {midtrans ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onTest}
+              disabled={testing || disabled || !gateway.has_secret_key}
+              title={
+                gateway.has_secret_key
+                  ? "Cek server key tersimpan ke API Midtrans"
+                  : "Simpan server key dulu"
+              }
+              className="gap-2"
+            >
+              {testing ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <PlugZap className="size-4" />
+              )}
+              Test koneksi
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            onClick={() => onSave(draft)}
+            disabled={saving || disabled}
+            className="gap-2"
+          >
+            {saving ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Save className="size-4" />
+            )}
+            {saving ? "Menyimpan..." : "Simpan pengaturan"}
+          </Button>
+        </div>
       </div>
 
       {disabled ? (
         <div className="rounded-lg border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Midtrans coming soon — struktur multi-gateway sudah siap untuk
-          ditambahkan.
+          Provider ini belum tersedia.
         </div>
       ) : null}
 
@@ -204,7 +260,7 @@ function GatewayForm({
                     : "border-border text-muted-foreground",
                 )}
               >
-                {env}
+                {env === "live" && midtrans ? "production" : env}
               </button>
             ))}
           </div>
@@ -240,51 +296,86 @@ function GatewayForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         <MaskedSecretField
-          label="Secret key"
+          label={fields.secret}
           disabled={disabled}
           value={draft.secret_key}
           maskedHint={gateway.secret_key_masked}
           hasValue={gateway.has_secret_key}
-          placeholder="xnd_development_..."
+          placeholder={fields.secretPlaceholder}
           onChange={(value) => onChange({ ...draft, secret_key: value })}
         />
         <MaskedSecretField
-          label="Public key"
+          label={fields.public}
           disabled={disabled}
           value={draft.public_key}
           maskedHint={gateway.public_key_masked}
           hasValue={gateway.has_public_key}
-          placeholder="Opsional"
+          placeholder={fields.publicPlaceholder}
           onChange={(value) => onChange({ ...draft, public_key: value })}
         />
-        <MaskedSecretField
-          label="Webhook secret / token"
-          disabled={disabled}
-          value={draft.webhook_secret}
-          maskedHint={gateway.webhook_secret_masked}
-          hasValue={gateway.has_webhook_secret}
-          placeholder="XENDIT_WEBHOOK_TOKEN"
-          onChange={(value) => onChange({ ...draft, webhook_secret: value })}
-        />
-        <div className="space-y-1.5">
-          <Label htmlFor="gateway-callback-url">Callback URL</Label>
-          <Input
-            id="gateway-callback-url"
-            disabled={disabled}
-            value={draft.callback_url}
-            onChange={(e) =>
-              onChange({ ...draft, callback_url: e.target.value })
-            }
-            placeholder="https://your-domain.com/api/payments/xendit/webhook"
-            className="border-border font-mono text-sm"
-          />
-          <p className="text-xs text-muted-foreground">
-            Samakan dengan Xendit Dashboard → Settings → Callbacks (QR code
-            paid). Endpoint app:{" "}
-            <span className="font-mono">/api/payments/xendit/webhook</span>
-          </p>
-        </div>
+        {midtrans ? (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="gateway-merchant-id">Merchant ID</Label>
+              <Input
+                id="gateway-merchant-id"
+                disabled={disabled}
+                value={draft.merchant_id}
+                onChange={(e) =>
+                  onChange({ ...draft, merchant_id: e.target.value })
+                }
+                placeholder="G123456789"
+                className="border-border font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Dari Midtrans Dashboard → Settings → Access Keys. Hanya untuk
+                referensi; server key yang dipakai untuk memanggil API.
+              </p>
+            </div>
+            <NotificationUrlField path={gateway.webhook_path} />
+          </>
+        ) : (
+          <>
+            <MaskedSecretField
+              label="Webhook secret / token"
+              disabled={disabled}
+              value={draft.webhook_secret}
+              maskedHint={gateway.webhook_secret_masked}
+              hasValue={gateway.has_webhook_secret}
+              placeholder="XENDIT_WEBHOOK_TOKEN"
+              onChange={(value) => onChange({ ...draft, webhook_secret: value })}
+            />
+            <div className="space-y-1.5">
+              <Label htmlFor="gateway-callback-url">Callback URL</Label>
+              <Input
+                id="gateway-callback-url"
+                disabled={disabled}
+                value={draft.callback_url}
+                onChange={(e) =>
+                  onChange({ ...draft, callback_url: e.target.value })
+                }
+                placeholder={`https://your-domain.com${gateway.webhook_path}`}
+                className="border-border font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Samakan dengan Xendit Dashboard → Settings → Callbacks (QR code
+                paid). Endpoint app:{" "}
+                <span className="font-mono">{gateway.webhook_path}</span>
+              </p>
+            </div>
+          </>
+        )}
       </div>
+
+      {midtrans ? (
+        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          Midtrans menandatangani notifikasi dengan server key (SHA-512), jadi
+          tidak ada webhook secret terpisah. QRIS dibuat lewat Core API; bila
+          akun belum punya kanal QRIS, member diarahkan ke halaman Snap.
+          Metode pembayaran tersimpan (kartu/e-wallet) hanya tersedia dengan
+          Xendit dan disembunyikan selama Midtrans aktif.
+        </div>
+      ) : null}
 
       <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
         <Shield className="mt-0.5 size-3.5 shrink-0" />
@@ -292,6 +383,36 @@ function GatewayForm({
         ke field lalu ketik ulang untuk mengganti. Simpan dengan nilai bertanda
         ***** = secret lama tetap dipakai.
       </div>
+    </div>
+  );
+}
+
+/** URL notifikasi lengkap yang harus didaftarkan di dashboard Midtrans. */
+function NotificationUrlField({ path }: { path: string }) {
+  // The origin exists only in the browser; the server render shows the path alone.
+  const origin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => "",
+  );
+  const url = `${origin}${path}`;
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor="gateway-notification-url">Payment Notification URL</Label>
+      <Input
+        id="gateway-notification-url"
+        readOnly
+        value={url}
+        onFocus={(e) => e.currentTarget.select()}
+        className="border-border font-mono text-sm"
+      />
+      <p className="text-xs text-muted-foreground">
+        Daftarkan di Midtrans Dashboard → Settings → Configuration → Payment
+        Notification URL (sandbox dan production punya dashboard terpisah).
+        Finish Redirect URL tidak perlu diisi; app mengirim URL-nya per
+        transaksi.
+      </p>
     </div>
   );
 }

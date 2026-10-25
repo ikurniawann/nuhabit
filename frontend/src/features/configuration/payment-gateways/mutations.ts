@@ -5,11 +5,31 @@ import { toast } from "sonner";
 import {
   removeStaticQris,
   setStaticQrisEnabled,
+  testPaymentGateway,
   updatePaymentGateway,
   uploadStaticQris,
 } from "./api";
 import { paymentGatewaysQueryKeys } from "./query-keys";
-import type { StaticQrisConfig, UpdatePaymentGatewayPayload } from "./types";
+import type {
+  PaymentGatewayProvider,
+  StaticQrisConfig,
+  UpdatePaymentGatewayPayload,
+} from "./types";
+
+export function useTestPaymentGateway() {
+  return useMutation({
+    mutationFn: (provider: PaymentGatewayProvider) =>
+      testPaymentGateway(provider),
+    onSuccess: (result) => {
+      toast.success(result.message);
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error ? error.message : "Tes koneksi gagal",
+      );
+    },
+  });
+}
 
 export function useUpdatePaymentGateway() {
   const queryClient = useQueryClient();

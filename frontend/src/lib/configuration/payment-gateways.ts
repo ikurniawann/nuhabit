@@ -29,9 +29,18 @@ export type PaymentGatewayPublic = {
   has_public_key: boolean;
   has_webhook_secret: boolean;
   callback_url: string | null;
+  /** Midtrans merchant id (metadata.merchant_id); null for Xendit. */
+  merchant_id: string | null;
+  /** App endpoint to register at the provider as the notification URL. */
+  webhook_path: string;
   metadata: Record<string, unknown>;
   coming_soon: boolean;
   updated_at: string | null;
+};
+
+export const WEBHOOK_PATHS: Record<PaymentGatewayProvider, string> = {
+  xendit: "/api/payments/xendit/webhook",
+  midtrans: "/api/payments/midtrans/webhook",
 };
 
 export function maskSecret(value: string | null | undefined): string | null {
@@ -63,6 +72,8 @@ export function toPaymentGatewayPublic(row: PaymentGatewayRow): PaymentGatewayPu
     has_public_key: Boolean(row.public_key && String(row.public_key).trim()),
     has_webhook_secret: Boolean(row.webhook_secret && String(row.webhook_secret).trim()),
     callback_url: row.callback_url,
+    merchant_id: typeof metadata.merchant_id === "string" && metadata.merchant_id ? metadata.merchant_id : null,
+    webhook_path: WEBHOOK_PATHS[row.provider],
     metadata,
     coming_soon: Boolean(metadata.coming_soon),
     updated_at: row.updated_at,

@@ -16,8 +16,9 @@ INSERT INTO configuration.payment_gateways (
         'Midtrans',
         false,
         'sandbox',
-        '{"supports":["qris","va","card"],"coming_soon":true}'::jsonb
+        '{"supports":["qris","gopay","shopeepay","va","card"],"docs":"https://docs.midtrans.com"}'::jsonb
     )
 ON CONFLICT (provider) DO UPDATE SET
     display_name = EXCLUDED.display_name,
+    metadata = (configuration.payment_gateways.metadata - 'coming_soon') || EXCLUDED.metadata,
     updated_at = now();
