@@ -28,6 +28,7 @@ type MemberTicket struct {
 	CoachName       *string       `json:"coach_name"`
 	SessionName     *string       `json:"session_name"`
 	SessionStartsAt *httpx.JSTime `json:"session_starts_at"`
+	Timezone        string        `json:"timezone"`
 	CreatedAt       httpx.JSTime  `json:"created_at"`
 	UpdatedAt       httpx.JSTime  `json:"updated_at"`
 	ResolvedAt      *httpx.JSTime `json:"resolved_at"`
@@ -36,7 +37,7 @@ type MemberTicket struct {
 func memberView(t Ticket) MemberTicket {
 	return MemberTicket{ID: t.ID, Code: t.Code, Category: t.Category, CategoryLabel: t.CategoryLabel, Status: t.Status,
 		Title: t.Title, Description: t.Description, CoachName: t.CoachName, SessionName: t.SessionName,
-		SessionStartsAt: t.SessionStartsAt, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt, ResolvedAt: t.ResolvedAt}
+		SessionStartsAt: t.SessionStartsAt, Timezone: t.Timezone, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt, ResolvedAt: t.ResolvedAt}
 }
 
 // MemberEvent is a public history entry: who wrote it is the member or
