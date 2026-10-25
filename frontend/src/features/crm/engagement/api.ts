@@ -1,5 +1,7 @@
 /** Klien API CRM → Engagement (pengumuman, event, challenge, check-in). */
 
+import { parseEnvelope, type Clash } from "@/features/events/api";
+
 export interface Announcement {
   id: string;
   title: string;
@@ -32,15 +34,34 @@ export interface CrmEvent {
   booking_closes_hours: number;
   cancel_deadline_hours: number;
   status: "draft" | "published" | "cancelled";
+  branch_id: string | null;
+  branch_name: string | null;
+  area: string | null;
+  coach_id: string | null;
+  coach_name: string | null;
+  organiser_user_id: string | null;
+  organiser_name: string | null;
+  /** Event situs yang mewakili event ini di halaman publik, bila tertaut. */
+  site_event_id: string | null;
   confirmed_count: number;
   waitlist_count: number;
   attended_count: number;
 }
 
-export type EventInput = Omit<CrmEvent, "id" | "status" | "confirmed_count" | "waitlist_count" | "attended_count"> & {
+export type EventInput = Omit<
+  CrmEvent,
+  "id" | "status" | "branch_name" | "coach_name" | "organiser_name" | "site_event_id" | "confirmed_count" | "waitlist_count" | "attended_count"
+> & {
   id?: string;
   status: "draft" | "published";
+  /** Alasan tetap simpan saat jadwal bentrok; dicatat di server. */
+  override_reason?: string;
 };
+
+export interface SavedEvent {
+  id: string;
+  warnings: Clash[];
+}
 
 export interface EventBooking {
   id: string;
@@ -131,7 +152,14 @@ export const engagementApi = {
     post<{ id: string; recipients: number }>("/api/crm/engagement/announcements", input),
 
   events: () => call<CrmEvent[]>("/api/crm/engagement/events"),
-  saveEvent: (input: EventInput) => post<{ id: string }>("/api/crm/engagement/events", input),
+  /** Simpan event; 409 bentrok jadwal menjadi EventConflictError agar form menawarkan tetap simpan. */
+  saveEvent: (input: EventInput) =>
+    fetch("/api/crm/engagement/events", {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }).then((res) => parseEnvelope<SavedEvent>(res)),
   cancelEvent: (id: string) =>
     call<{ notified: number }>(`/api/crm/engagement/events?id=${id}`, { method: "DELETE" }),
   bookings: (eventId: string) => call<EventBooking[]>(`/api/crm/engagement/events/bookings?event_id=${eventId}`),

@@ -1,3 +1,4 @@
+import { parseEnvelope, type Clash } from "@/features/events/api";
 import { apiGet, apiPatch, apiPost, apiPut } from "@/lib/api-client";
 import type { Article, ContentKey, SiteEvent } from "../types";
 
@@ -6,7 +7,21 @@ type Envelope<T> = { success: boolean; data: T };
 const BASE = "/api/site";
 
 export type ArticleInput = Partial<Omit<Article, "id" | "created_at" | "updated_at">>;
-export type EventInput = Partial<Omit<SiteEvent, "id" | "created_at" | "updated_at">>;
+export type EventInput = Partial<
+  Omit<SiteEvent, "id" | "created_at" | "updated_at" | "branch_name" | "coach_name" | "organiser_name" | "crm_event_id">
+> & {
+  /** Alasan tetap simpan saat jadwal bentrok; dicatat di server. */
+  override_reason?: string;
+};
+
+/** The saved row plus the calendar warnings (classes in the same branch). */
+export type SavedSiteEvent = SiteEvent & { warnings: Clash[] };
+
+function saveEvent(path: string, method: "POST" | "PATCH", body: EventInput) {
+  return fetch(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((res) =>
+    parseEnvelope<SavedSiteEvent>(res)
+  );
+}
 
 async function remove(path: string): Promise<void> {
   const res = await fetch(path, { method: "DELETE" });
@@ -25,8 +40,9 @@ export const siteAdminApi = {
   deleteArticle: (id: string) => remove(`${BASE}/articles/${id}`),
 
   events: () => apiGet<Envelope<SiteEvent[]>>(`${BASE}/events`).then((r) => r.data),
-  createEvent: (body: EventInput) => apiPost<Envelope<SiteEvent>>(`${BASE}/events`, body).then((r) => r.data),
-  updateEvent: (id: string, body: EventInput) => apiPatch<Envelope<SiteEvent>>(`${BASE}/events/${id}`, body).then((r) => r.data),
+  /** Simpan event; 409 bentrok jadwal menjadi EventConflictError agar form menawarkan tetap simpan. */
+  createEvent: (body: EventInput) => saveEvent(`${BASE}/events`, "POST", body),
+  updateEvent: (id: string, body: EventInput) => saveEvent(`${BASE}/events/${id}`, "PATCH", body),
   deleteEvent: (id: string) => remove(`${BASE}/events/${id}`),
 
   async upload(file: File): Promise<string> {

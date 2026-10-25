@@ -53,10 +53,11 @@ func (s *Service) Promos(ctx context.Context, customerID string) ([]domain.Membe
 // ── Events ────────────────────────────────────────────────────────────────
 
 // BookEvent confirms, waitlists or denies a booking. The event row is
-// locked so the last two applicants cannot both take the last seat.
+// locked so the last two applicants cannot both take the last seat. The
+// confirmation goes through the shared member notice, so the CRM
+// subscriber pushes it and sends WhatsApp and email after commit.
 func (s *Service) BookEvent(ctx context.Context, customerID, eventID string) (domain.BookingDecision, error) {
 	var decision domain.BookingDecision
-	var push *PushMessage
 	err := s.repo.InTx(ctx, func(tx Repository) error {
 		event, err := tx.LockEvent(ctx, eventID)
 		if err != nil {
@@ -91,16 +92,9 @@ func (s *Service) BookEvent(ctx context.Context, customerID, eventID string) (do
 			msg = PushMessage{Type: "booking_waitlist", Title: "Masuk waitlist: " + event.Title,
 				Body: "Posisi Anda #" + strconv.Itoa(decision.Position) + ". Kami kabari bila ada kursi kosong."}
 		}
-		push = &msg
-		return tx.InsertNotification(ctx, customerID, msg.Type, msg.Title, msg.Body)
+		return tx.NotifyMember(ctx, customerID, msg.Type, msg.Title, msg.Body)
 	})
-	if err != nil {
-		return decision, err
-	}
-	if push != nil {
-		s.pushAfter(customerID, *push)
-	}
-	return decision, nil
+	return decision, err
 }
 
 // CancelResult is the DELETE /events body.
@@ -114,11 +108,6 @@ type CancelResult struct {
 func (s *Service) CancelEventBooking(ctx context.Context, customerID, bookingID string) (*CancelResult, error) {
 	var result *CancelResult
 	var rejected *failure
-	type pending struct {
-		customerID string
-		msg        PushMessage
-	}
-	var pushes []pending
 	err := s.repo.InTx(ctx, func(tx Repository) error {
 		b, err := tx.LockEventBooking(ctx, bookingID)
 		if err != nil {
@@ -145,12 +134,10 @@ func (s *Service) CancelEventBooking(ctx context.Context, customerID, bookingID 
 				if err := tx.PromoteEventBooking(ctx, next.ID); err != nil {
 					return err
 				}
-				msg := PushMessage{Type: "waitlist_promoted", Title: "Kursi tersedia: " + b.Title,
-					Body: "Anda naik dari waitlist dan sudah terdaftar untuk " + domain.FormatWIB(b.StartsAt) + "."}
-				if err := tx.InsertNotification(ctx, next.CustomerID, msg.Type, msg.Title, msg.Body); err != nil {
+				if err := tx.NotifyMember(ctx, next.CustomerID, "waitlist_promoted", "Kursi tersedia: "+b.Title,
+					"Anda naik dari waitlist dan sudah terdaftar untuk "+domain.FormatWIB(b.StartsAt)+"."); err != nil {
 					return err
 				}
-				pushes = append(pushes, pending{next.CustomerID, msg})
 			}
 		}
 		result = &CancelResult{OK: true, LateCancel: late}
@@ -161,9 +148,6 @@ func (s *Service) CancelEventBooking(ctx context.Context, customerID, bookingID 
 	}
 	if rejected != nil {
 		return nil, rejected
-	}
-	for _, p := range pushes {
-		s.pushAfter(p.customerID, p.msg)
 	}
 	return result, nil
 }

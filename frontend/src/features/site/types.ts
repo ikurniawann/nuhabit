@@ -156,6 +156,15 @@ export interface SiteEvent {
   body_md: string;
   form_slug: string | null;
   status: PublishStatus;
+  branch_id: string | null;
+  branch_name: string | null;
+  area: string | null;
+  coach_id: string | null;
+  coach_name: string | null;
+  organiser_user_id: string | null;
+  organiser_name: string | null;
+  /** The CRM event this page represents, when linked. */
+  crm_event_id: string | null;
   created_at: string;
   updated_at: string;
 }

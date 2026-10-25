@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Hourglass, Plus, UserCheck, Users } from "lucide-react";
+import { CalendarDays, Hourglass, Link2, ListChecks, Plus, UserCheck, Users } from "lucide-react";
 import { toast } from "sonner";
+import { EMPTY_PLACE, EventConflictError, type PlaceFields } from "@/features/events/api";
+import { ConflictDialog, toastWarnings } from "@/features/events/components/conflict-dialog";
+import { EventChecklistDialog } from "@/features/events/components/event-checklist-dialog";
+import { EventPlaceFields } from "@/features/events/components/event-place-fields";
+import { LinkDialog } from "@/features/events/components/link-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -52,6 +57,8 @@ export function EventsPage() {
   const [editing, setEditing] = useState<CrmEvent | "new" | null>(null);
   const [roster, setRoster] = useState<CrmEvent | null>(null);
   const [cancelling, setCancelling] = useState<CrmEvent | null>(null);
+  const [linking, setLinking] = useState<CrmEvent | null>(null);
+  const [checklist, setChecklist] = useState<CrmEvent | null>(null);
 
   const cancelMutation = useMutation({
     mutationFn: (id: string) => engagementApi.cancelEvent(id),
@@ -125,6 +132,12 @@ export function EventsPage() {
                           .filter(Boolean)
                           .join(" · ")}
                       </p>
+                      {(event.branch_name || event.area || event.site_event_id) && (
+                        <p className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                          {[event.branch_name, event.area, event.coach_name && `Coach ${event.coach_name}`].filter(Boolean).join(" · ")}
+                          {event.site_event_id && <Badge variant="info">Situs</Badge>}
+                        </p>
+                      )}
                       <p className="mt-1 text-xs text-muted-foreground md:hidden">{waktu(event.starts_at)}</p>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{waktu(event.starts_at)}</TableCell>
@@ -142,8 +155,14 @@ export function EventsPage() {
                         <Button variant="ghost" size="sm" onClick={() => setRoster(event)}>
                           <UserCheck /> Peserta
                         </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setChecklist(event)}>
+                          <ListChecks /> Checklist
+                        </Button>
                         {event.status !== "cancelled" && !ended && (
                           <>
+                            <Button variant="ghost" size="sm" onClick={() => setLinking(event)}>
+                              <Link2 /> Tautkan
+                            </Button>
                             <Button variant="ghost" size="sm" onClick={() => setEditing(event)}>
                               Ubah
                             </Button>
@@ -170,6 +189,17 @@ export function EventsPage() {
         />
       )}
       {roster && <RosterDialog event={roster} onClose={() => setRoster(null)} />}
+      {linking && (
+        <LinkDialog
+          source="crm"
+          eventId={linking.id}
+          title={linking.title}
+          linkedId={linking.site_event_id}
+          onClose={() => setLinking(null)}
+          onChanged={() => void queryClient.invalidateQueries({ queryKey: EVENTS_KEY })}
+        />
+      )}
+      {checklist && <EventChecklistDialog source="crm" eventId={checklist.id} title={checklist.title} onClose={() => setChecklist(null)} />}
       <ConfirmDialog
         open={cancelling !== null}
         onOpenChange={(open) => !open && setCancelling(null)}
@@ -201,11 +231,18 @@ function EventDialog({ event, onClose, onSaved }: { event: CrmEvent | null; onCl
       cancel_deadline_hours: String(event?.cancel_deadline_hours ?? 2),
     };
   });
+  const [place, setPlace] = useState<PlaceFields>(() =>
+    event
+      ? { branch_id: event.branch_id, area: event.area, coach_id: event.coach_id, organiser_user_id: event.organiser_user_id }
+      : EMPTY_PLACE
+  );
+  // The refused save and the status it asked for, so "tetap simpan" repeats it.
+  const [conflict, setConflict] = useState<{ error: EventConflictError; status: EventInput["status"] } | null>(null);
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((cur) => ({ ...cur, [key]: e.target.value }));
 
   const save = useMutation({
-    mutationFn: (status: EventInput["status"]) =>
+    mutationFn: ({ status, overrideReason }: { status: EventInput["status"]; overrideReason?: string }) =>
       engagementApi.saveEvent({
         id: event?.id,
         title: form.title.trim(),
@@ -219,13 +256,23 @@ function EventDialog({ event, onClose, onSaved }: { event: CrmEvent | null; onCl
         booking_closes_hours: Number(form.booking_closes_hours) || 0,
         cancel_deadline_hours: Number(form.cancel_deadline_hours) || 0,
         status,
+        ...place,
+        area: place.area?.trim() || null,
+        override_reason: overrideReason,
       }),
-    onSuccess: (_data, status) => {
+    onSuccess: (data, { status }) => {
       toast.success(status === "published" ? "Event diterbitkan" : "Draf event disimpan", { description: form.title });
+      toastWarnings(data.warnings);
       onSaved();
       onClose();
     },
-    onError: (error) => toast.error("Event gagal disimpan", { description: error.message }),
+    onError: (error, { status }) => {
+      if (error instanceof EventConflictError) {
+        setConflict({ error, status });
+        return;
+      }
+      toast.error("Event gagal disimpan", { description: error.message });
+    },
   });
 
   const valid =
@@ -234,63 +281,77 @@ function EventDialog({ event, onClose, onSaved }: { event: CrmEvent | null; onCl
     new Date(form.ends_at).getTime() > new Date(form.starts_at).getTime();
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogPanel size="lg">
-        <DialogPanelForm
-          onSubmit={(e) => {
-            e.preventDefault();
-            save.mutate("published");
-          }}
-        >
-          <DialogPanelHeader>
-            <DialogPanelTitle>{event ? `Ubah ${event.title}` : "Event baru"}</DialogPanelTitle>
-            <DialogPanelDescription>
-              Draf belum terlihat oleh member. Event terbit langsung muncul di portal.
-            </DialogPanelDescription>
-          </DialogPanelHeader>
-          <DialogPanelBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Judul" className="sm:col-span-2">
-              <Input value={form.title} onChange={set("title")} placeholder="HYROX Simulation Day" required />
-            </Field>
-            <Field label="Deskripsi" className="sm:col-span-2">
-              <textarea className={TEXTAREA} value={form.description} onChange={set("description")} />
-            </Field>
-            <Field label="Host">
-              <Input value={form.host_name} onChange={set("host_name")} placeholder="Program Director" />
-            </Field>
-            <Field label="Lokasi">
-              <Input value={form.location} onChange={set("location")} placeholder="BCD Dago, lantai 2" />
-            </Field>
-            <Field label="Mulai">
-              <Input type="datetime-local" value={form.starts_at} onChange={set("starts_at")} required />
-            </Field>
-            <Field label="Selesai">
-              <Input type="datetime-local" value={form.ends_at} onChange={set("ends_at")} required />
-            </Field>
-            <Field label="Kapasitas" hint="Pendaftar setelah penuh masuk waitlist.">
-              <Input type="number" min={1} value={form.capacity} onChange={set("capacity")} required />
-            </Field>
-            <Field label="Harga (Rp)" hint="0 = gratis. Dibayar di outlet.">
-              <Input type="number" min={0} value={form.price_idr} onChange={set("price_idr")} />
-            </Field>
-            <Field label="Pendaftaran tutup (jam sebelum mulai)">
-              <Input type="number" min={0} value={form.booking_closes_hours} onChange={set("booking_closes_hours")} />
-            </Field>
-            <Field label="Batas batal tanpa catatan (jam)" hint="Batal setelah ini dicatat sebagai batal terlambat.">
-              <Input type="number" min={0} value={form.cancel_deadline_hours} onChange={set("cancel_deadline_hours")} />
-            </Field>
-          </DialogPanelBody>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => save.mutate("draft")} disabled={!valid || save.isPending}>
-              Simpan draf
-            </Button>
-            <Button type="submit" disabled={!valid || save.isPending}>
-              {event?.status === "published" ? "Simpan perubahan" : "Terbitkan"}
-            </Button>
-          </DialogFooter>
-        </DialogPanelForm>
-      </DialogPanel>
-    </Dialog>
+    <>
+      <Dialog open onOpenChange={(open) => !open && onClose()}>
+        <DialogPanel size="lg">
+          <DialogPanelForm
+            onSubmit={(e) => {
+              e.preventDefault();
+              save.mutate({ status: "published" });
+            }}
+          >
+            <DialogPanelHeader>
+              <DialogPanelTitle>{event ? `Ubah ${event.title}` : "Event baru"}</DialogPanelTitle>
+              <DialogPanelDescription>
+                Draf belum terlihat oleh member. Event terbit langsung muncul di portal.
+              </DialogPanelDescription>
+            </DialogPanelHeader>
+            <DialogPanelBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Judul" className="sm:col-span-2">
+                <Input value={form.title} onChange={set("title")} placeholder="HYROX Simulation Day" required />
+              </Field>
+              <Field label="Deskripsi" className="sm:col-span-2">
+                <textarea className={TEXTAREA} value={form.description} onChange={set("description")} />
+              </Field>
+              <Field label="Host">
+                <Input value={form.host_name} onChange={set("host_name")} placeholder="Program Director" />
+              </Field>
+              <Field label="Lokasi">
+                <Input value={form.location} onChange={set("location")} placeholder="BCD Dago, lantai 2" />
+              </Field>
+              <Field label="Mulai">
+                <Input type="datetime-local" value={form.starts_at} onChange={set("starts_at")} required />
+              </Field>
+              <Field label="Selesai">
+                <Input type="datetime-local" value={form.ends_at} onChange={set("ends_at")} required />
+              </Field>
+              <Field label="Kapasitas" hint="Pendaftar setelah penuh masuk waitlist.">
+                <Input type="number" min={1} value={form.capacity} onChange={set("capacity")} required />
+              </Field>
+              <Field label="Harga (Rp)" hint="0 = gratis. Dibayar di outlet.">
+                <Input type="number" min={0} value={form.price_idr} onChange={set("price_idr")} />
+              </Field>
+              <Field label="Pendaftaran tutup (jam sebelum mulai)">
+                <Input type="number" min={0} value={form.booking_closes_hours} onChange={set("booking_closes_hours")} />
+              </Field>
+              <Field label="Batas batal tanpa catatan (jam)" hint="Batal setelah ini dicatat sebagai batal terlambat.">
+                <Input type="number" min={0} value={form.cancel_deadline_hours} onChange={set("cancel_deadline_hours")} />
+              </Field>
+              <EventPlaceFields value={place} onChange={setPlace} />
+            </DialogPanelBody>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => save.mutate({ status: "draft" })} disabled={!valid || save.isPending}>
+                Simpan draf
+              </Button>
+              <Button type="submit" disabled={!valid || save.isPending}>
+                {event?.status === "published" ? "Simpan perubahan" : "Terbitkan"}
+              </Button>
+            </DialogFooter>
+          </DialogPanelForm>
+        </DialogPanel>
+      </Dialog>
+      <ConflictDialog
+        conflict={conflict?.error ?? null}
+        menu="crm.engagement"
+        saving={save.isPending}
+        onClose={() => setConflict(null)}
+        onOverride={(reason) => {
+          if (!conflict) return;
+          save.mutate({ status: conflict.status, overrideReason: reason });
+          setConflict(null);
+        }}
+      />
+    </>
   );
 }
 

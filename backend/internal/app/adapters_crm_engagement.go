@@ -20,9 +20,10 @@ import (
 // mailer port, adapters_mail.go).
 func crmEngagementPorts(d module.Deps) engagement.Ports {
 	return engagement.Ports{
-		Orders: engagement.OrdersSQL{},
-		Push:   engagement.NewWebPush(d.DB, d.Log, d.Now),
-		Gym:    newGymChannels(d),
+		Orders:   engagement.OrdersSQL{},
+		Push:     engagement.NewWebPush(d.DB, d.Log, d.Now),
+		Gym:      newGymChannels(d),
+		Calendar: EventCalendar(d, d.DB),
 	}
 }
 

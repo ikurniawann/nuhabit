@@ -76,6 +76,7 @@ var PublicAuthPrefixes = []string{
 	"/equipment",
 	"/contact",
 	"/api/public/site",
+	"/api/public/events",
 	"/api/health",
 	"/api/ready",
 }

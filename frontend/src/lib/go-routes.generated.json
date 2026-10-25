@@ -1505,6 +1505,81 @@
     "path": "/api/desktop/wallpapers"
   },
   {
+    "module": "events",
+    "method": "GET",
+    "path": "/api/events/calendar"
+  },
+  {
+    "module": "events",
+    "method": "GET",
+    "path": "/api/events/export.csv"
+  },
+  {
+    "module": "events",
+    "method": "GET",
+    "path": "/api/events/feeds"
+  },
+  {
+    "module": "events",
+    "method": "POST",
+    "path": "/api/events/feeds"
+  },
+  {
+    "module": "events",
+    "method": "DELETE",
+    "path": "/api/events/feeds/{id}"
+  },
+  {
+    "module": "events",
+    "method": "POST",
+    "path": "/api/events/link"
+  },
+  {
+    "module": "events",
+    "method": "GET",
+    "path": "/api/events/link/candidates"
+  },
+  {
+    "module": "events",
+    "method": "POST",
+    "path": "/api/events/link/publish"
+  },
+  {
+    "module": "events",
+    "method": "DELETE",
+    "path": "/api/events/link/{crmEventId}"
+  },
+  {
+    "module": "events",
+    "method": "GET",
+    "path": "/api/events/options"
+  },
+  {
+    "module": "events",
+    "method": "GET",
+    "path": "/api/events/overrides"
+  },
+  {
+    "module": "events",
+    "method": "GET",
+    "path": "/api/events/tasks"
+  },
+  {
+    "module": "events",
+    "method": "POST",
+    "path": "/api/events/tasks"
+  },
+  {
+    "module": "events",
+    "method": "DELETE",
+    "path": "/api/events/tasks/{id}"
+  },
+  {
+    "module": "events",
+    "method": "PATCH",
+    "path": "/api/events/tasks/{id}"
+  },
+  {
     "module": "files",
     "method": "GET",
     "path": "/api/files/{bucket}/{path...}"
@@ -4823,6 +4898,11 @@
     "module": "crm",
     "method": "POST",
     "path": "/api/public/crm/forms/{slug}"
+  },
+  {
+    "module": "events",
+    "method": "GET",
+    "path": "/api/public/events/calendar.ics"
   },
   {
     "module": "integrations",

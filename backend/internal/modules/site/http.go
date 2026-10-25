@@ -301,6 +301,12 @@ func (h *Handler) deleteArticle(w http.ResponseWriter, r *http.Request) error {
 
 /* ── events ──────────────────────────────────────────────────────────── */
 
+var (
+	areaOpts   = validate.StrOpts{Trim: true, Max: 80}
+	reasonOpts = validate.StrOpts{Trim: true, Max: 500}
+	uuidOpts   = validate.StrOpts{Check: validate.UUIDCheck}
+)
+
 func parseEventInput(f *validate.Form) EventInput {
 	in := EventInput{
 		Title:  f.StrDefault("title", "", titleOpts),
@@ -318,6 +324,11 @@ func parseEventInput(f *validate.Form) EventInput {
 	_, in.Location = field(f, "location_text", excerptOpts)
 	_, in.CoverImage = field(f, "cover_image_url", urlOpts)
 	_, in.FormSlug = field(f, "form_slug", slugOpts)
+	_, in.BranchID = field(f, "branch_id", uuidOpts)
+	_, in.Area = field(f, "area", areaOpts)
+	_, in.CoachID = field(f, "coach_id", uuidOpts)
+	_, in.OrganiserUserID = field(f, "organiser_user_id", uuidOpts)
+	_, in.OverrideReason = field(f, "override_reason", reasonOpts)
 	return in
 }
 
@@ -344,7 +355,33 @@ func parseEventPatch(f *validate.Form) EventPatch {
 	if sent, v := field(f, "form_slug", slugOpts); sent {
 		p.FormSlug = &v
 	}
+	if sent, v := field(f, "branch_id", uuidOpts); sent {
+		p.BranchID = &v
+	}
+	if sent, v := field(f, "area", areaOpts); sent {
+		p.Area = &v
+	}
+	if sent, v := field(f, "coach_id", uuidOpts); sent {
+		p.CoachID = &v
+	}
+	if sent, v := field(f, "organiser_user_id", uuidOpts); sent {
+		p.OrganiserUserID = &v
+	}
+	_, p.OverrideReason = field(f, "override_reason", reasonOpts)
 	return p
+}
+
+// canOverride reports whether the caller may save over a calendar clash:
+// update on the site events menu.
+func (h *Handler) canOverride(r *http.Request, user *auth.User) (bool, error) {
+	return h.auth.HasMenuAction(r.Context(), user, "update", iam.SiteEvents...)
+}
+
+func overrideForbidden(err error) error {
+	if errors.Is(err, ErrOverrideForbidden) {
+		return httpx.Forbidden("Butuh izin mengubah event untuk tetap menyimpan jadwal yang bentrok")
+	}
+	return slugTaken(err)
 }
 
 func (h *Handler) listEvents(w http.ResponseWriter, r *http.Request) error {
@@ -368,9 +405,13 @@ func (h *Handler) createEvent(w http.ResponseWriter, r *http.Request) error {
 	if err := f.Err("Validation failed"); err != nil {
 		return err
 	}
-	e, err := h.svc.CreateEvent(r.Context(), in, user.ID)
+	canOverride, err := h.canOverride(r, user)
 	if err != nil {
-		return slugTaken(err)
+		return err
+	}
+	e, err := h.svc.CreateEvent(r.Context(), in, user.ID, canOverride)
+	if err != nil {
+		return overrideForbidden(err)
 	}
 	return httpx.Data(w, http.StatusCreated, e)
 }
@@ -394,7 +435,8 @@ func (h *Handler) getEvent(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) patchEvent(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.SiteEvents...); err != nil {
+	user, err := h.auth.RequireMenuPrefix(r, iam.SiteEvents...)
+	if err != nil {
 		return err
 	}
 	id, err := pathID(r)
@@ -406,9 +448,13 @@ func (h *Handler) patchEvent(w http.ResponseWriter, r *http.Request) error {
 	if err := f.Err("Validation failed"); err != nil {
 		return err
 	}
-	e, err := h.svc.UpdateEvent(r.Context(), id, patch)
+	canOverride, err := h.canOverride(r, user)
 	if err != nil {
-		return slugTaken(err)
+		return err
+	}
+	e, err := h.svc.UpdateEvent(r.Context(), id, patch, user.ID, canOverride)
+	if err != nil {
+		return overrideForbidden(err)
 	}
 	if err := notFound(e, "Event tidak ditemukan"); err != nil {
 		return err
@@ -417,14 +463,15 @@ func (h *Handler) patchEvent(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) deleteEvent(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.SiteEvents...); err != nil {
+	user, err := h.auth.RequireMenuPrefix(r, iam.SiteEvents...)
+	if err != nil {
 		return err
 	}
 	id, err := pathID(r)
 	if err != nil {
 		return err
 	}
-	deleted, err := h.svc.DeleteEvent(r.Context(), id)
+	deleted, err := h.svc.DeleteEvent(r.Context(), id, user.ID)
 	if err != nil {
 		return err
 	}
