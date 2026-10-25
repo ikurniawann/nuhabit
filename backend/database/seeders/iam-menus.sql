@@ -209,6 +209,7 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('gym.races', 'Race HYROX', '/dashboard/gym/races', 'map', 'sidebar', 87, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.incentives', 'Insentif Coach', '/dashboard/gym/incentives', 'money', 'sidebar', 90, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.referrals', 'Referral', '/dashboard/gym/referrals', 'user-plus', 'sidebar', 90, '{"actions":["read","update"]}'::jsonb),
+  ('gym.complaints', 'Keluhan', '/dashboard/gym/complaints', 'megaphone', 'sidebar', 92, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.reports', 'Laporan Gym', '/dashboard/gym/reports', 'chart-bar', 'sidebar', 95, '{"actions":["read"]}'::jsonb),
   ('gym.rules', 'Aturan Gym', '/dashboard/gym/rules', 'settings', 'sidebar', 100, '{"actions":["read","update"]}'::jsonb)
 ON CONFLICT (code) DO UPDATE SET
@@ -344,6 +345,8 @@ WHERE deleted_at IS NULL
     -- assessments, coach portal, gate devices, referrals):
     'gym.members', 'gym.reports', 'gym.schedule.templates', 'gym.pt', 'gym.assessments',
     'gym.my-classes', 'gym.gate-devices', 'gym.referrals',
+    -- Gym complaint tickets (28 Oct 2026):
+    'gym.complaints',
     'items.raw-material.inventory.expiry', 'items.raw-material.inventory.movements',
     'items.raw-material.inventory.scrap', 'pos.catalog.channel-prices',
     'pos.loyalty.wallet', 'pos.loyalty.wallet.packages', 'pos.loyalty.wallet.payments',
