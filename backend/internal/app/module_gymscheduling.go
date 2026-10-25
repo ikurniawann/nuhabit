@@ -12,6 +12,7 @@ import (
 	creditsdomain "nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/modules/gymscheduling"
 	scheddomain "nuhabit/backend/internal/modules/gymscheduling/domain"
+	"nuhabit/backend/internal/modules/hris"
 	memberdomain "nuhabit/backend/internal/modules/memberportal/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
@@ -71,8 +72,16 @@ func schedulingPortsOn(d module.Deps, db gymcredits.DB) gymscheduling.Ports {
 		Qr:            gymscheduling.QrTokensSQL{},
 		Notifier:      gymscheduling.NotificationsSQL{},
 		PT:            schedulingPT{svc: gymcoaching.NewService(db, coachingPortsOn(d, db), d.Now, d.Log)},
+		Holidays:      schedulingHolidays{},
 		WaiverVersion: memberdomain.WaiverVersion,
 	}
+}
+
+// schedulingHolidays reads the HRIS public holidays template generation skips.
+type schedulingHolidays struct{}
+
+func (schedulingHolidays) Holidays(ctx context.Context, q database.Querier, from, to string) (map[string]string, error) {
+	return hris.Holidays{}.Between(ctx, q, from, to)
 }
 
 // schedulingService is the scheduling service for background jobs.

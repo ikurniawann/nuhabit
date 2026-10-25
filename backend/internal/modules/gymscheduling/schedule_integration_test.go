@@ -291,7 +291,7 @@ func TestTemplatesAndGeneration(t *testing.T) {
 	if n, err := svc.GenerateFromTemplates(f.ctx, now, 60); err != nil || n != 0 {
 		t.Fatalf("inactive template generated: %d %v", n, err)
 	}
-	if res := f.asStaff("POST", "/api/gym/session-templates/generate", map[string]any{}); res.Raw != `{"success":true,"data":{"created":0,"skipped":0,"conflicts":[]}}` {
+	if res := f.asStaff("POST", "/api/gym/session-templates/generate", map[string]any{}); res.Raw != `{"success":true,"data":{"created":0,"skipped":0,"conflicts":[],"holidays":[]}}` {
 		t.Fatalf("generate now: %s", res.Raw)
 	}
 	if res := f.asStaff("DELETE", "/api/gym/session-templates/"+templateID, nil); res.Status != 200 {

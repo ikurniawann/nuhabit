@@ -25,6 +25,7 @@ type TemplateInput struct {
 	ValidFrom               string // "" is today in the branch zone
 	ValidUntil              *string
 	Active                  bool
+	SkipHolidays            bool
 }
 
 // TemplatePatch is a partial TemplateInput: nil keeps the stored value.
@@ -39,6 +40,7 @@ type TemplatePatch struct {
 	ValidFrom               *string
 	ValidUntil              Optional[string]
 	Active                  *bool
+	SkipHolidays            *bool
 }
 
 var errTemplateNotFound = httpx.NotFound("Template jadwal tidak ditemukan")
@@ -75,7 +77,8 @@ func (s *Service) CreateTemplate(ctx context.Context, in TemplateInput, createdB
 			DurationMin: orDefault(in.DurationMin, def.DurationMin),
 			Capacity:    orDefault(in.Capacity, def.Capacity),
 			CreditCost:  orDefault(in.CreditCost, def.CreditCost),
-			ValidFrom:   in.ValidFrom, ValidUntil: in.ValidUntil, Active: in.Active, CreatedBy: createdBy,
+			ValidFrom:   in.ValidFrom, ValidUntil: in.ValidUntil, Active: in.Active, SkipHolidays: in.SkipHolidays,
+			CreatedBy: createdBy,
 		}
 		if err := validRange(t); err != nil {
 			return err
@@ -110,6 +113,7 @@ func (s *Service) UpdateTemplate(ctx context.Context, id string, p TemplatePatch
 		set(&t.CreditCost, p.CreditCost)
 		set(&t.ValidFrom, p.ValidFrom)
 		set(&t.Active, p.Active)
+		set(&t.SkipHolidays, p.SkipHolidays)
 		if err := validRange(*t); err != nil {
 			return err
 		}
@@ -148,12 +152,48 @@ func (s *Service) DeleteTemplate(ctx context.Context, id string) error {
 	return err
 }
 
-// GenerateResult is {created, skipped, conflicts}: skipped occurrences clash
-// with a busy coach or room, or their slot already holds the class.
+// GenerateResult is {created, skipped, conflicts, holidays}: skipped
+// occurrences clash with a busy coach or room, or their slot already holds
+// the class; holidays are the dates left out because they are public
+// holidays, with how many sessions each would have had.
 type GenerateResult struct {
-	Created   int      `json:"created"`
-	Skipped   int      `json:"skipped"`
-	Conflicts []string `json:"conflicts"`
+	Created   int           `json:"created"`
+	Skipped   int           `json:"skipped"`
+	Conflicts []string      `json:"conflicts"`
+	Holidays  []HolidaySkip `json:"holidays"`
+}
+
+// HolidaySkip is a holiday date generation left out.
+type HolidaySkip struct {
+	Date     string `json:"date"`
+	Name     string `json:"name"`
+	Sessions int    `json:"sessions"`
+}
+
+// holidayLookahead bounds the holidays read per run: past the longest
+// horizon (the 90-day rule maximum) with room for branch zones.
+const holidayLookahead = 92
+
+// holidaysFrom maps the public holiday dates from the Jakarta day of now
+// (a branch day is never earlier) up to the lookahead to their names; none
+// without a calendar.
+func (s *Service) holidaysFrom(ctx context.Context, q Q, now time.Time) (map[string]string, error) {
+	if s.Holidays == nil {
+		return map[string]string{}, nil
+	}
+	from := now.In(localtime.Jakarta)
+	return s.Holidays.Holidays(ctx, q, localtime.DayKey(from, localtime.Jakarta),
+		localtime.DayKey(from.AddDate(0, 0, holidayLookahead), localtime.Jakarta))
+}
+
+func (r *GenerateResult) skipHoliday(date, name string) {
+	for i := range r.Holidays {
+		if r.Holidays[i].Date == date {
+			r.Holidays[i].Sessions++
+			return
+		}
+	}
+	r.Holidays = append(r.Holidays, HolidaySkip{Date: date, Name: name, Sessions: 1})
 }
 
 // GenerateFromTemplates creates the published sessions active templates
@@ -167,9 +207,13 @@ func (s *Service) GenerateFromTemplates(ctx context.Context, now time.Time, hori
 }
 
 func (s *Service) generateFromTemplates(ctx context.Context, now time.Time, horizonDays int) (GenerateResult, error) {
-	out := GenerateResult{Conflicts: []string{}}
+	out := GenerateResult{Conflicts: []string{}, Holidays: []HolidaySkip{}}
 	err := s.inTx(ctx, func(q Q) error {
 		if err := s.repo.LockSchedule(ctx, q); err != nil {
+			return err
+		}
+		holidays, err := s.holidaysFrom(ctx, q, now)
+		if err != nil {
 			return err
 		}
 		// Jakarta is the westernmost zone: its date is never later than a
@@ -194,6 +238,10 @@ func (s *Service) generateFromTemplates(ctx context.Context, now time.Time, hori
 			}
 			for _, occ := range domain.TemplateOccurrences(t.weeklySlot(), now, horizon) {
 				if done[occ.Date] {
+					continue
+				}
+				if name, closed := holidays[occ.Date]; closed && t.SkipHolidays {
+					out.skipHoliday(occ.Date, name)
 					continue
 				}
 				created, err := s.generateOccurrence(ctx, q, t, occ, rules, &out)

@@ -162,6 +162,12 @@ type PersonalTraining interface {
 	GateCheckIn(ctx context.Context, q database.Querier, participantID string, now time.Time) (charged int, ok bool, err error)
 }
 
+// HolidayCalendar is the public holiday calendar (owned by HRIS).
+type HolidayCalendar interface {
+	// Holidays maps each holiday date (YYYY-MM-DD) in [from, to] to its name.
+	Holidays(ctx context.Context, q database.Querier, from, to string) (map[string]string, error)
+}
+
 // Notifier delivers member notifications (owned by CRM).
 type Notifier interface {
 	NotifyMember(ctx context.Context, q database.Querier, customerID string, n Notification) error
@@ -184,6 +190,9 @@ type Ports struct {
 	Qr       QrTokens
 	Notifier Notifier
 	PT       PersonalTraining
+	// Holidays is the public holiday calendar template generation skips;
+	// nil skips none.
+	Holidays HolidayCalendar
 	// WaiverVersion is the waiver text members accept today; "" accepts
 	// any version on record.
 	WaiverVersion string
