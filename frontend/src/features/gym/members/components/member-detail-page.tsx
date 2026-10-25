@@ -22,6 +22,9 @@ import { GATE_DENIAL_LABEL } from "@/lib/gym/booking";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import { MEMBER_KEYS, membersApi, type Member360, type MemberBooking } from "../api";
 import { MemberAssessments } from "@/features/gym/coaching/components/member-assessments";
+import { useCan } from "@/components/iam/iam-access-provider";
+import { CoachNoteHistory } from "@/features/gym/care/components/coach-notes";
+import { MemberFlagsPanel } from "@/features/gym/care/components/member-flags-panel";
 import { MemberNotes } from "./member-notes";
 import { ProfileDialog } from "./profile-dialog";
 
@@ -47,6 +50,7 @@ export function MemberDetailPage({ customerId }: { customerId: string }) {
   const requested = searchParams.get("tab");
   const tab: TabValue = TABS.some((t) => t.value === requested) ? (requested as TabValue) : "profil";
   const [editing, setEditing] = useState(false);
+  const manager = useCan("gym.member-flags", "read_medical");
   const detail = useQuery({ queryKey: MEMBER_KEYS.detail(customerId), queryFn: () => membersApi.detail(customerId) });
 
   const back = (
@@ -102,6 +106,7 @@ export function MemberDetailPage({ customerId }: { customerId: string }) {
         }
       />
       {!p.is_active && <Badge variant="destructive">Member nonaktif</Badge>}
+      <MemberFlagsPanel customerId={p.id} />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Saldo kredit" value={formatNumber(m.credits.balance)} unit="kredit" icon={<Ticket />} tone="ink" />
@@ -159,8 +164,9 @@ export function MemberDetailPage({ customerId }: { customerId: string }) {
         <TabsContent value="asesmen" className="mt-4">
           <MemberAssessments customerId={p.id} />
         </TabsContent>
-        <TabsContent value="catatan" className="mt-4">
+        <TabsContent value="catatan" className="mt-4 space-y-6">
           <MemberNotes customerId={p.id} notes={m.notes} />
+          {manager && <CoachNoteHistory customerId={p.id} />}
         </TabsContent>
       </Tabs>
 

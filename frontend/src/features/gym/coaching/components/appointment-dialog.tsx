@@ -24,6 +24,12 @@ import { rentangJam, tanggal } from "@/features/gym/scheduling/api";
 import { MemberLink } from "@/features/gym/members/member-link";
 import { COACHING_KEYS, coachingApi, PT_BADGE, type AppointmentAction, type PtAppointment, type PtParticipant } from "../api";
 import { MemberPicker } from "./member-picker";
+import { useIamAccess } from "@/components/iam/iam-access-provider";
+import { CoachNotes, useRosterNotes } from "@/features/gym/care/components/coach-notes";
+import { FlagBadges, useMemberFlags } from "@/features/gym/care/components/flag-badges";
+
+/** Catatan coach ditulis sesudah sesi mulai, paling lama 7 hari (aturan server). */
+const NOTE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Detail sesi PT dengan aksinya: konfirmasi permintaan, tandai selesai
@@ -51,6 +57,13 @@ export function AppointmentDialog({
   const [openedAt] = useState(() => Date.now());
   const started = Date.parse(a.starts_at) <= openedAt;
   const active = a.participants.filter((p) => p.status === "requested" || p.status === "confirmed");
+  const members = a.participants.filter((p) => p.status !== "cancelled").map((p) => p.customer_id);
+  const flags = useMemberFlags(members);
+  const notes = useRosterNotes(members);
+  // Catatan sesi ditulis coach PT-nya (read_own gym.pt), setelah sesi mulai.
+  const coachView = useIamAccess().can("gym.pt", "read_own");
+  const canWriteNotes =
+    coachView && a.status !== "cancelled" && started && openedAt - Date.parse(a.starts_at) <= NOTE_WINDOW_MS;
 
   const act = useMutation({
     mutationFn: (body: AppointmentAction) => coachingApi.act(a.id, body),
@@ -126,6 +139,7 @@ export function AppointmentDialog({
                         {p.credits_charged > 0 && ` · ${formatNumber(p.credits_charged)} kredit dipotong`}
                         {p.late_cancel && " · batal terlambat"}
                       </span>
+                      <FlagBadges entry={flags.get(p.customer_id)} />
                     </span>
                     <span className="flex flex-wrap items-center gap-1.5">
                       <Badge variant={pb.variant}>{pb.label}</Badge>
@@ -150,6 +164,16 @@ export function AppointmentDialog({
                         </Button>
                       )}
                     </span>
+                    {p.status !== "cancelled" && (
+                      <div className="basis-full">
+                        <CoachNotes
+                          customerId={p.customer_id}
+                          memberName={p.name}
+                          notes={notes.get(p.customer_id)}
+                          target={canWriteNotes ? { pt_appointment_id: a.id } : undefined}
+                        />
+                      </div>
+                    )}
                   </li>
                 );
               })}
