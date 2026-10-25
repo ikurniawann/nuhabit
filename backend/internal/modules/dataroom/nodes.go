@@ -478,16 +478,6 @@ func (s *Service) PurgeNode(ctx context.Context, node *Node, actorID, actorName 
 	return len(paths), nil
 }
 
-// DeleteNode is PurgeNode for callers that only have an id (tests and the
-// filing port).
-func (s *Service) DeleteNode(ctx context.Context, id string) (int, error) {
-	n, err := s.Node(ctx, id)
-	if err != nil || n == nil {
-		return 0, err
-	}
-	return s.PurgeNode(ctx, n, "", "")
-}
-
 /* ── Lock ────────────────────────────────────────────────────────────── */
 
 // Lock marks the file as being edited by the actor; a lock held by someone

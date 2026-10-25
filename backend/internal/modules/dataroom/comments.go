@@ -109,8 +109,8 @@ func (s *Service) AddComment(ctx context.Context, a *Access, node *Node, parentI
 	return &c, nil
 }
 
-// DeleteComment soft-deletes a comment; the author or an owner of the node
-// may do it. It returns the node for the permission check.
+// CommentNode loads a comment with its node for the permission check; both
+// nil when the comment does not exist.
 func (s *Service) CommentNode(ctx context.Context, commentID string) (*Comment, *Node, error) {
 	rows, err := s.db.Query(ctx, `SELECT `+commentCols+` FROM dataroom.comments WHERE id = $1`, commentID)
 	if err != nil {

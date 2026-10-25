@@ -440,6 +440,18 @@ export function DataroomPage() {
   const onSort = (key: SortKey) => setSort((s) => ({ key, dir: s.key === key ? (s.dir === "asc" ? "desc" : "asc") as SortDir : "asc" }));
   const viewLabel = VIEWS.find((v) => v.key === view)?.label ?? "Drive saya";
   const bulkFiles = selectedItems.filter((i) => i.kind === "file");
+  const newMenu = (align: "start" | "end", triggerClass: string) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger className={cn("inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90", triggerClass)}>
+        <Plus className="h-4 w-4" />Baru
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={align}>
+        <DropdownMenuItem onClick={() => setDialog({ kind: "new-folder" })}><FolderPlus className="mr-2 h-4 w-4" />Folder baru</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => fileInput.current?.click()}><Upload className="mr-2 h-4 w-4" />Upload file</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => folderInput.current?.click()}><FolderUp className="mr-2 h-4 w-4" />Upload folder</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <div className="flex h-full min-h-[calc(100vh-4rem)] flex-col lg:flex-row" onClick={() => setSelected(new Set())}>
@@ -461,20 +473,7 @@ export function DataroomPage() {
         <div className="hidden px-4 pt-4 lg:block">
           <h1 className="flex items-center gap-2 text-lg font-semibold"><HardDrive className="h-5 w-5 text-brand-text" />Dataroom</h1>
         </div>
-        {perms.create && view === "" && (
-          <div className="hidden px-4 pt-3 lg:block">
-            <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90">
-                <Plus className="h-4 w-4" />Baru
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem onClick={() => setDialog({ kind: "new-folder" })}><FolderPlus className="mr-2 h-4 w-4" />Folder baru</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => fileInput.current?.click()}><Upload className="mr-2 h-4 w-4" />Upload file</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => folderInput.current?.click()}><FolderUp className="mr-2 h-4 w-4" />Upload folder</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
+        {perms.create && view === "" && <div className="hidden px-4 pt-3 lg:block">{newMenu("start", "h-9 w-full justify-center")}</div>}
         <ul className="flex gap-1 overflow-x-auto px-2 py-2 lg:flex-col lg:px-2 lg:py-3">
           {VIEWS.map((v) => (
             <li key={v.key || "drive"}>
@@ -537,20 +536,7 @@ export function DataroomPage() {
           <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setDialog({ kind: "share", item: null }); }}>
             <Link2 className="mr-1.5 h-4 w-4" />Link dibagikan
           </Button>
-          {perms.create && view === "" && (
-            <div className="lg:hidden">
-              <DropdownMenu>
-                <DropdownMenuTrigger className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90" onClick={(e) => e.stopPropagation()}>
-                  <Plus className="h-4 w-4" />Baru
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setDialog({ kind: "new-folder" })}><FolderPlus className="mr-2 h-4 w-4" />Folder baru</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => fileInput.current?.click()}><Upload className="mr-2 h-4 w-4" />Upload file</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => folderInput.current?.click()}><FolderUp className="mr-2 h-4 w-4" />Upload folder</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
+          {perms.create && view === "" && <div className="lg:hidden" onClick={(e) => e.stopPropagation()}>{newMenu("end", "h-8")}</div>}
           <div className="flex rounded-md border p-0.5" role="group" aria-label="Mode tampilan" onClick={(e) => e.stopPropagation()}>
             <button type="button" onClick={() => changeViewMode("grid")} aria-pressed={viewMode === "grid"} className={cn("rounded p-1", viewMode === "grid" ? "bg-muted" : "text-muted-foreground")} title="Tampilan kotak" aria-label="Tampilan kotak"><LayoutGrid className="h-4 w-4" /></button>
             <button type="button" onClick={() => changeViewMode("list")} aria-pressed={viewMode === "list"} className={cn("rounded p-1", viewMode === "list" ? "bg-muted" : "text-muted-foreground")} title="Tampilan daftar" aria-label="Tampilan daftar"><List className="h-4 w-4" /></button>
