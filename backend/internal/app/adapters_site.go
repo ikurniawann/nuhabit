@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/jackc/pgx/v5"
+
 	"nuhabit/backend/internal/modules/configuration/branches"
 	"nuhabit/backend/internal/modules/site"
 	"nuhabit/backend/internal/platform/database"
@@ -16,7 +18,41 @@ func SitePorts(d module.Deps) site.Ports { return SitePortsOn(d.DB) }
 // SitePortsOn wires the site module on q; integration tests pass their
 // rolled-back transaction.
 func SitePortsOn(q database.Querier) site.Ports {
-	return site.Ports{Branches: siteBranches{db: q}}
+	return site.Ports{Branches: siteBranches{db: q}, News: siteNewsAudience{db: q}}
+}
+
+// siteNewsAudience tells the member news feed which branches a member
+// trains at: those of the gym packages they bought in the last year and of
+// the classes and PT sessions they booked in the last 90 days.
+type siteNewsAudience struct{ db database.Querier }
+
+var _ site.NewsAudience = siteNewsAudience{}
+
+func (a siteNewsAudience) Branches(ctx context.Context) ([]site.BranchOption, error) {
+	rows, err := a.db.Query(ctx, `SELECT id::text, name FROM configuration.branches WHERE is_active ORDER BY name`)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[site.BranchOption])
+}
+
+func (a siteNewsAudience) MemberBranches(ctx context.Context, customerID string) ([]string, error) {
+	rows, err := a.db.Query(ctx, `
+SELECT DISTINCT branch_id::text FROM (
+  SELECT COALESCE(p.branch_id, k.branch_id) AS branch_id
+    FROM gym.credit_purchases p JOIN gym.credit_packages k ON k.id = p.package_id
+   WHERE p.customer_id = $1 AND p.status = 'paid' AND p.created_at > now() - interval '365 days'
+  UNION ALL
+  SELECT s.branch_id FROM gym.bookings b JOIN gym.class_sessions s ON s.id = b.session_id
+   WHERE b.customer_id = $1 AND s.starts_at > now() - interval '90 days'
+  UNION ALL
+  SELECT ap.branch_id FROM gym.pt_participants pp JOIN gym.pt_appointments ap ON ap.id = pp.appointment_id
+   WHERE pp.customer_id = $1 AND ap.starts_at > now() - interval '90 days'
+) x WHERE branch_id IS NOT NULL`, customerID)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
 // siteBranches reads public branch profiles from the configuration context.

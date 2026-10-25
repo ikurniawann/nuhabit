@@ -81,4 +81,6 @@ type Branches interface {
 // Ports are the adapters internal/app wires.
 type Ports struct {
 	Branches Branches
+	// News says which members see which news.
+	News NewsAudience
 }

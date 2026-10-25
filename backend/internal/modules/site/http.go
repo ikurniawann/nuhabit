@@ -34,7 +34,7 @@ func (h *Handler) Routes() []module.Route {
 	r := func(pattern string, fn httpx.HandlerFunc) module.Route {
 		return module.Route{Pattern: pattern, Handler: httpx.Handle(fn)}
 	}
-	return []module.Route{
+	routes := []module.Route{
 		r("GET "+staffPrefix+"/content/{key}", h.getContent),
 		r("PUT "+staffPrefix+"/content/{key}", h.putContent),
 		r("GET "+staffPrefix+"/articles", h.listArticles),
@@ -57,6 +57,7 @@ func (h *Handler) Routes() []module.Route {
 		r("GET "+publicPrefix+"/events", h.publicEvents),
 		r("GET "+publicPrefix+"/events/{slug}", h.publicEvent),
 	}
+	return append(routes, h.newsRoutes()...)
 }
 
 func ok(w http.ResponseWriter, data any) error { return httpx.Data(w, http.StatusOK, data) }
@@ -445,6 +446,12 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 	if _, err := h.auth.RequireMenuPrefix(r, iam.Site...); err != nil {
 		return err
 	}
+	return h.storeImage(w, r)
+}
+
+// storeImage stores the uploaded "file" image in the site bucket and
+// answers its URL.
+func (h *Handler) storeImage(w http.ResponseWriter, r *http.Request) error {
 	form, err := storage.ReadForm(r, storage.MaxRequestBytes)
 	if err != nil {
 		return httpx.BadRequest("Format unggahan tidak valid")

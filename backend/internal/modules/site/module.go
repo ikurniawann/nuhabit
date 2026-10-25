@@ -23,7 +23,7 @@ func New(deps module.Deps, ports Ports) module.Module { return NewOn(deps, deps.
 // NewOn mounts the module on db: the pool in production, a rolled-back
 // transaction in tests.
 func NewOn(deps module.Deps, db database.DB, ports Ports) module.Module {
-	svc := &Service{repo: Postgres{db: db}, branches: ports.Branches, now: deps.Now}
+	svc := &Service{repo: Postgres{db: db}, branches: ports.Branches, audience: ports.News, now: deps.Now}
 	h := &Handler{svc: svc, auth: deps.Auth, log: deps.Log}
 	return siteModule{routes: h.Routes()}
 }

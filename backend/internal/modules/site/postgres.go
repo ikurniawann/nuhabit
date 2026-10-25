@@ -48,14 +48,15 @@ func (p Postgres) PutContent(ctx context.Context, key string, value map[string]a
 
 /* ── articles ────────────────────────────────────────────────────────── */
 
-const articleColumns = `id::text, slug, title, category, excerpt, cover_image_url, body_md, status, published_at, created_at, updated_at`
+const articleColumns = `id::text, slug, title, category, excerpt, cover_image_url, body_md, status, published_at, created_at, updated_at,
+	audience, member_category, pinned, branch_ids::text[]`
 
 func scanArticle(row pgx.Row) (*Article, error) {
 	var a Article
 	var published *time.Time
 	var created, updated time.Time
 	if err := row.Scan(&a.ID, &a.Slug, &a.Title, &a.Category, &a.Excerpt, &a.CoverImage, &a.BodyMD, &a.Status,
-		&published, &created, &updated); err != nil {
+		&published, &created, &updated, &a.Audience, &a.MemberCategory, &a.Pinned, &a.BranchIDs); err != nil {
 		return nil, err
 	}
 	a.PublishedAt = httpx.NewJSTime(published)
@@ -88,20 +89,41 @@ func many[T any](ctx context.Context, q database.Querier, scan func(pgx.Row) (*T
 	return out, rows.Err()
 }
 
-// Articles lists articles newest first (by publish date, then creation).
+// Articles lists articles newest first (by publish date, then creation);
+// the member feed puts pinned articles first.
 func (p Postgres) Articles(ctx context.Context, f ArticleFilter) ([]Article, error) {
 	where := []string{"true"}
 	var args []any
+	arg := func(v any) string {
+		args = append(args, v)
+		return "$" + strconv.Itoa(len(args))
+	}
 	if f.Category != "" {
-		args = append(args, f.Category)
-		where = append(where, "category = $"+strconv.Itoa(len(args)))
+		where = append(where, "category = "+arg(f.Category))
 	}
 	if f.PublishedOnly {
-		args = append(args, f.Now)
-		where = append(where, "status = 'published' AND published_at <= $"+strconv.Itoa(len(args)))
+		where = append(where, "status = 'published' AND published_at <= "+arg(f.Now))
+	}
+	order := ""
+	switch f.Audience {
+	case AudienceSite:
+		where = append(where, "audience <> 'members'")
+	case AudienceMembers:
+		where = append(where, "audience <> 'site'")
+		order = "pinned DESC, "
+	}
+	if f.MemberCategory != "" {
+		where = append(where, "member_category = "+arg(f.MemberCategory))
+	}
+	if f.MemberBranches != nil {
+		where = append(where, "(branch_ids = '{}' OR branch_ids && "+arg(f.MemberBranches)+"::uuid[])")
+	}
+	limit := ""
+	if f.Limit > 0 {
+		limit = " LIMIT " + arg(f.Limit)
 	}
 	return many(ctx, p.db, scanArticle, `SELECT `+articleColumns+` FROM site.articles WHERE `+strings.Join(where, " AND ")+
-		` ORDER BY coalesce(published_at, created_at) DESC, created_at DESC`, args...)
+		` ORDER BY `+order+`coalesce(published_at, created_at) DESC, created_at DESC`+limit, args...)
 }
 
 // ArticleByID reads one article, nil when none.
@@ -109,10 +131,19 @@ func (p Postgres) ArticleByID(ctx context.Context, id string) (*Article, error) 
 	return one(scanArticle, p.db.QueryRow(ctx, `SELECT `+articleColumns+` FROM site.articles WHERE id = $1`, id))
 }
 
-// ArticleBySlug reads one article by slug, published and live only when asked.
+// ArticleBySlug reads one article by slug, published and live on the
+// public site only when asked.
 func (p Postgres) ArticleBySlug(ctx context.Context, slug string, publishedOnly bool, now time.Time) (*Article, error) {
 	return one(scanArticle, p.db.QueryRow(ctx, `SELECT `+articleColumns+` FROM site.articles
-		WHERE slug = $1 AND ($2 = false OR (status = 'published' AND published_at <= $3))`, slug, publishedOnly, now))
+		WHERE slug = $1 AND ($2 = false OR (status = 'published' AND published_at <= $3 AND audience <> 'members'))`, slug, publishedOnly, now))
+}
+
+// MemberArticle reads one published article the member app shows to a
+// member of branches; nil when there is none.
+func (p Postgres) MemberArticle(ctx context.Context, id string, branches []string, now time.Time) (*Article, error) {
+	return one(scanArticle, p.db.QueryRow(ctx, `SELECT `+articleColumns+` FROM site.articles
+		WHERE id = $1 AND status = 'published' AND published_at <= $2 AND audience <> 'site'
+		  AND (branch_ids = '{}' OR branch_ids && $3::uuid[])`, id, now, branches))
 }
 
 // write runs a statement that may hit the slug index inside a savepoint,
@@ -136,10 +167,20 @@ func write[T any](ctx context.Context, db database.DB, scan func(pgx.Row) (*T, e
 
 // InsertArticle writes a new article; ErrSlugTaken on a duplicate slug.
 func (p Postgres) InsertArticle(ctx context.Context, in ArticleInput, userID string, at time.Time) (*Article, error) {
+	audience := in.Audience
+	if audience == "" {
+		audience = AudienceSite
+	}
+	branches := in.BranchIDs
+	if branches == nil {
+		branches = []string{}
+	}
 	return write(ctx, p.db, scanArticle, `INSERT INTO site.articles
-		(slug, title, category, excerpt, cover_image_url, body_md, status, published_at, created_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10) RETURNING `+articleColumns,
-		in.Slug, in.Title, in.Category, in.Excerpt, in.CoverImage, in.BodyMD, in.Status, in.PublishedAt, userID, at)
+		(slug, title, category, excerpt, cover_image_url, body_md, status, published_at, created_by, created_at, updated_at,
+		 audience, member_category, pinned, branch_ids)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10, $11, $12, $13, $14::uuid[]) RETURNING `+articleColumns,
+		in.Slug, in.Title, in.Category, in.Excerpt, in.CoverImage, in.BodyMD, in.Status, in.PublishedAt, userID, at,
+		audience, in.MemberCategory, in.Pinned, branches)
 }
 
 // setList builds a SET clause from the patch fields that are set.
@@ -179,6 +220,19 @@ func (p Postgres) UpdateArticle(ctx context.Context, id string, in ArticlePatch,
 	}
 	if in.PublishedAt != nil {
 		s.add("published_at", *in.PublishedAt)
+	}
+	if in.Audience != nil {
+		s.add("audience", *in.Audience)
+	}
+	if in.MemberCategory != nil {
+		s.add("member_category", *in.MemberCategory)
+	}
+	if in.Pinned != nil {
+		s.add("pinned", *in.Pinned)
+	}
+	if in.BranchIDs != nil {
+		s.args = append(s.args, *in.BranchIDs)
+		s.sets = append(s.sets, "branch_ids = $"+strconv.Itoa(len(s.args))+"::uuid[]")
 	}
 	s.add("updated_at", at)
 	s.args = append(s.args, id)

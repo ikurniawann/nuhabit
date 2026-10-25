@@ -19,6 +19,7 @@ type Repository interface {
 	Articles(ctx context.Context, f ArticleFilter) ([]Article, error)
 	ArticleByID(ctx context.Context, id string) (*Article, error)
 	ArticleBySlug(ctx context.Context, slug string, publishedOnly bool, now time.Time) (*Article, error)
+	MemberArticle(ctx context.Context, id string, branches []string, now time.Time) (*Article, error)
 	InsertArticle(ctx context.Context, in ArticleInput, userID string, at time.Time) (*Article, error)
 	UpdateArticle(ctx context.Context, id string, in ArticlePatch, at time.Time) (*Article, error)
 	DeleteArticle(ctx context.Context, id string) (bool, error)
@@ -38,6 +39,7 @@ var ErrSlugTaken = errors.New("slug sudah dipakai")
 type Service struct {
 	repo     Repository
 	branches Branches
+	audience NewsAudience
 	now      func() time.Time
 }
 
@@ -81,7 +83,21 @@ type Article struct {
 	PublishedAt *httpx.JSTime `json:"published_at"`
 	CreatedAt   httpx.JSTime  `json:"created_at"`
 	UpdatedAt   httpx.JSTime  `json:"updated_at"`
+	// Audience is where the article shows: site, members or both.
+	Audience string `json:"audience"`
+	// MemberCategory is the member app filter (news, event, tips, promo).
+	MemberCategory *string `json:"member_category"`
+	Pinned         bool    `json:"pinned"`
+	// BranchIDs target the member app at those branches; empty is all.
+	BranchIDs []string `json:"branch_ids"`
 }
+
+// Article audiences.
+const (
+	AudienceSite    = "site"
+	AudienceMembers = "members"
+	AudienceBoth    = "both"
+)
 
 // ArticleInput creates an article.
 type ArticleInput struct {
@@ -93,18 +109,27 @@ type ArticleInput struct {
 	BodyMD      string
 	Status      string
 	PublishedAt *time.Time
+	// The member app fields; an empty Audience is the public site only.
+	Audience       string
+	MemberCategory *string
+	Pinned         bool
+	BranchIDs      []string
 }
 
 // ArticlePatch changes the fields that are set.
 type ArticlePatch struct {
-	Slug        *string
-	Title       *string
-	Category    *string
-	Excerpt     **string
-	CoverImage  **string
-	BodyMD      *string
-	Status      *string
-	PublishedAt **time.Time
+	Slug           *string
+	Title          *string
+	Category       *string
+	Excerpt        **string
+	CoverImage     **string
+	BodyMD         *string
+	Status         *string
+	PublishedAt    **time.Time
+	Audience       *string
+	MemberCategory *string
+	Pinned         *bool
+	BranchIDs      *[]string
 }
 
 // ArticleFilter narrows a listing.
@@ -112,6 +137,14 @@ type ArticleFilter struct {
 	Category      string
 	PublishedOnly bool
 	Now           time.Time
+	// Audience site leaves out member-only articles; members leaves out
+	// site-only ones and puts pinned articles first.
+	Audience       string
+	MemberCategory string
+	// MemberBranches, when not nil, keeps the articles for every branch
+	// and those targeting one of these.
+	MemberBranches []string
+	Limit          int
 }
 
 var nonSlug = regexp.MustCompile(`[^a-z0-9]+`)
@@ -132,14 +165,15 @@ func slugFor(slug, title string) string {
 	return "artikel"
 }
 
-// ListArticles is the staff listing: every article, newest first.
+// ListArticles is the site staff listing: every article the public site
+// shows, newest first.
 func (s *Service) ListArticles(ctx context.Context) ([]Article, error) {
-	return s.repo.Articles(ctx, ArticleFilter{})
+	return s.repo.Articles(ctx, ArticleFilter{Audience: AudienceSite})
 }
 
-// PublishedArticles lists published articles of a category (any when empty).
+// PublishedArticles lists published site articles of a category (any when empty).
 func (s *Service) PublishedArticles(ctx context.Context, category string) ([]Article, error) {
-	return s.repo.Articles(ctx, ArticleFilter{Category: category, PublishedOnly: true, Now: s.now()})
+	return s.repo.Articles(ctx, ArticleFilter{Category: category, PublishedOnly: true, Now: s.now(), Audience: AudienceSite})
 }
 
 // PublishedArticle reads one published article by slug.
