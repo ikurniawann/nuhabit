@@ -106,6 +106,32 @@ export function ScheduleTemplatesPage() {
         }
       />
 
+      {lastRun && lastRun.holidays.length > 0 && (
+        <Card size="sm" className="gap-2 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-semibold">{formatNumber(lastRun.holidays.length)} tanggal libur dilewati</p>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => setLastRun({ ...lastRun, holidays: [] })}
+              aria-label="Tutup daftar libur"
+            >
+              <X />
+            </Button>
+          </div>
+          <ul className="space-y-1 text-sm text-muted-foreground">
+            {lastRun.holidays.map((h) => (
+              <li key={h.date}>
+                {tanggal(dayStart(h.date))}: {h.name} ({formatNumber(h.sessions)} sesi)
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-muted-foreground">
+            Libur diambil dari HRIS. Bila liburnya dihapus, generate berikutnya membuat sesinya.
+          </p>
+        </Card>
+      )}
+
       {lastRun && lastRun.conflicts.length > 0 && (
         <Card size="sm" className="gap-2 p-4">
           <div className="flex items-start justify-between gap-2">
@@ -254,6 +280,7 @@ function TemplateDialog({
       valid_from: template?.valid_from ?? localDay(new Date(), zoneOfBranch(branchId)),
       valid_until: template?.valid_until ?? "",
       active: template?.active ?? true,
+      skip_holidays: template?.skip_holidays ?? true,
     };
   });
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -281,6 +308,7 @@ function TemplateDialog({
           valid_from: form.valid_from,
           valid_until: form.valid_until || null,
           active: form.active,
+          skip_holidays: form.skip_holidays,
         },
         template?.id
       ),
@@ -402,6 +430,13 @@ function TemplateDialog({
             <label className="flex items-center gap-2 text-sm sm:col-span-2">
               <Switch checked={form.active} onCheckedChange={(active) => setForm((cur) => ({ ...cur, active }))} />
               Aktif (ikut dibuat saat generate)
+            </label>
+            <label className="flex items-center gap-2 text-sm sm:col-span-2">
+              <Switch
+                checked={form.skip_holidays}
+                onCheckedChange={(skip_holidays) => setForm((cur) => ({ ...cur, skip_holidays }))}
+              />
+              Lewati hari libur (kalender libur HRIS)
             </label>
           </DialogPanelBody>
           <DialogFooter>
