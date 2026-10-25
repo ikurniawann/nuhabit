@@ -98,7 +98,14 @@ func (h *Handler) handleXendit(w http.ResponseWriter, r *http.Request) error {
 	if !p.Paid {
 		return httpx.JSON(w, http.StatusOK, ignored{Success: true, Ignored: true, Reason: "not_paid", Status: &p.Status})
 	}
+	return h.settlePaidQR(w, r, p)
+}
 
+// settlePaidQR settles a verified, paid QR callback of either gateway: a
+// gym purchase at once, a top-up, checkout or order through the outbox.
+// The amount is checked against the pending record first.
+func (h *Handler) settlePaidQR(w http.ResponseWriter, r *http.Request, p domain.QrWebhook) error {
+	ctx := r.Context()
 	// Gym credit package purchase (reference_id gymcp_…).
 	if h.ports.Payments.IsGymPurchaseReference(p.ReferenceID) {
 		purchase, err := h.ports.Payments.GymPurchase(ctx, h.db, p.ReferenceID)

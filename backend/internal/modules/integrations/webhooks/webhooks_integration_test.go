@@ -38,7 +38,13 @@ type fakePayments struct {
 	topups               map[string]*Pending // column=value
 	children             int
 	settled              []string
+	closed               []string
 	events               []domain.XenditEvent
+}
+
+func (f *fakePayments) CloseGymPurchase(_ context.Context, _ database.DB, ref, status string) (any, error) {
+	f.closed = append(f.closed, ref+"/"+status)
+	return map[string]string{"status": status, "purchase_id": "gp-1"}, nil
 }
 
 func (f *fakePayments) IsGymPurchaseReference(ref string) bool {

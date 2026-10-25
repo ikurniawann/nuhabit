@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { isProtectedPagePath, isPublicAuthPath } from "./middleware";
 
 describe("isPublicAuthPath", () => {
-  it("allows Xendit POS webhook without a session", () => {
+  it("allows the payment gateway webhooks without a session", () => {
     expect(isPublicAuthPath("/api/payments/xendit/webhook")).toBe(true);
+    expect(isPublicAuthPath("/api/payments/midtrans/webhook")).toBe(true);
   });
 
   it("allows static product photos & QRIS logos for the public self-order page (EPIC-048)", () => {

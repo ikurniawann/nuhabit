@@ -1,5 +1,6 @@
 // Package webhooks ports the inbound webhooks: the Xendit QRIS payment
-// callback, the self-hosted WhatsApp gateway's messages, the Telegram order
+// callback, the Midtrans payment notification, the self-hosted WhatsApp
+// gateway's messages, the Telegram order
 // alert bot and the loyalty partners' events. Each authenticates its caller
 // (constant-time token or HMAC compare) before touching any data.
 package webhooks
@@ -33,6 +34,9 @@ type Payments interface {
 	GymPurchase(ctx context.Context, q database.Querier, referenceID string) (*Pending, error)
 	// SettleGymPurchase is settleGymPurchaseByReference: its JSON result.
 	SettleGymPurchase(ctx context.Context, db database.DB, referenceID string, paymentID *string) (any, error)
+	// CloseGymPurchase closes a still-pending purchase as expired or failed
+	// when the gateway reports the payment expired, canceled or denied.
+	CloseGymPurchase(ctx context.Context, db database.DB, referenceID, status string) (any, error)
 	// GymPaymentsEvent applies a Payments API event other than a capture
 	// (saved method links, token changes, failed charges): its JSON result.
 	GymPaymentsEvent(ctx context.Context, db database.DB, ev domain.XenditEvent) (any, error)
@@ -134,6 +138,8 @@ func (h *Handler) Routes() []module.Route {
 	return []module.Route{
 		{Pattern: "GET /api/payments/xendit/webhook", Handler: http.HandlerFunc(h.xenditProbe)},
 		{Pattern: "POST /api/payments/xendit/webhook", Handler: http.HandlerFunc(h.xenditWebhook)},
+		{Pattern: "GET /api/payments/midtrans/webhook", Handler: http.HandlerFunc(h.midtransProbe)},
+		{Pattern: "POST /api/payments/midtrans/webhook", Handler: http.HandlerFunc(h.midtransWebhook)},
 		{Pattern: "POST /api/wa/inbound", Handler: http.HandlerFunc(h.waInbound)},
 		{Pattern: "POST /api/integrations/telegram/webhook/{secret}", Handler: http.HandlerFunc(h.telegramWebhook)},
 		{Pattern: "POST /api/integrations/loyalty-events/{partner}", Handler: http.HandlerFunc(h.loyaltyEvent)},

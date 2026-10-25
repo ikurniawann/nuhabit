@@ -296,6 +296,11 @@ func (p integrationsPayments) SettleGymPurchase(ctx context.Context, db database
 	return gymcredits.NewDefaultService(p.deps, db).WithVouchers(newGymVouchers(p.deps)).SettleByReference(ctx, ref, paymentID)
 }
 
+// CloseGymPurchase closes a pending purchase the gateway reported closed.
+func (p integrationsPayments) CloseGymPurchase(ctx context.Context, db database.DB, ref, status string) (any, error) {
+	return gymcredits.NewDefaultService(p.deps, db).WithVouchers(newGymVouchers(p.deps)).CloseByReference(ctx, ref, status)
+}
+
 // GymPaymentsEvent hands a Payments API event to gym-credits.
 func (p integrationsPayments) GymPaymentsEvent(ctx context.Context, db database.DB, ev domain.XenditEvent) (any, error) {
 	return gymcredits.NewDefaultService(p.deps, db).WithVouchers(newGymVouchers(p.deps)).HandleGatewayEvent(ctx, gymcredits.GatewayEvent{

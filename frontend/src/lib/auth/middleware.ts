@@ -65,6 +65,7 @@ const PUBLIC_AUTH_PREFIXES = [
   "/api/wa/inbound",
   "/api/crm/instagram/webhook",
   "/api/payments/xendit/webhook",
+  "/api/payments/midtrans/webhook",
   "/booking",
   "/api/public/booking",
   "/pass",
