@@ -11,6 +11,7 @@ export const RECURRENCE_LABEL: Record<DeptTaskRecurrence, string> = {
 
 export const OCCURRENCE_STATUS_META: Record<DeptOccurrenceStatus, { label: string; cls: string }> = {
   pending: { label: "Belum", cls: "bg-gray-100 text-gray-600" },
+  in_progress: { label: "Sedang dikerjakan", cls: "bg-amber-100 text-amber-800" },
   done: { label: "Selesai — tunggu review Head", cls: "bg-blue-100 text-blue-700" },
   approved: { label: "Disetujui", cls: "bg-green-100 text-green-700" },
   rejected: { label: "Ditolak", cls: "bg-red-100 text-red-700" },

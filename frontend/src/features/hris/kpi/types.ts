@@ -89,7 +89,7 @@ export interface CreateKpiTargetPayload {
 
 // ── Task Departemen (/api/hris/dept-tasks) ──
 export type DeptTaskRecurrence = "once" | "daily" | "weekly" | "monthly";
-export type DeptOccurrenceStatus = "pending" | "done" | "approved" | "rejected";
+export type DeptOccurrenceStatus = "pending" | "in_progress" | "done" | "approved" | "rejected";
 
 export interface DeptTaskRow {
   id: string;
