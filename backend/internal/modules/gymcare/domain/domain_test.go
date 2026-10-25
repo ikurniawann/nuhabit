@@ -59,10 +59,6 @@ func TestFlagExpiry(t *testing.T) {
 	if !ValidExpiry(today, today) || ValidExpiry(today.AddDate(0, 0, -1), today) || ValidExpiry(today.AddDate(11, 0, 0), today) {
 		t.Fatal("expiry bounds")
 	}
-	yesterday := today.AddDate(0, 0, -1)
-	if !Active(false, nil, today) || !Active(false, &today, today) || Active(false, &yesterday, today) || Active(true, nil, today) {
-		t.Fatal("active rule")
-	}
 	if ReviewKeepsFlag(ReviewCleared) || !ReviewKeepsFlag(ReviewRestricted) || !ReviewKeepsFlag(ReviewDoctorNote) {
 		t.Fatal("review keeps flag")
 	}

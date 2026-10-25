@@ -27,11 +27,10 @@ var Colors = []string{"lime", "info", "warning", "danger", "success", "ink"}
 // key to a lucide icon.
 var Icons = []string{"flag", "bandage", "heart", "baby", "clipboard", "sprout", "star", "message", "alert", "shield"}
 
-// Flag sources.
+// Flag sources a staff write records; PAR-Q flags carry "parq".
 const (
 	SourceStaff = "staff"
 	SourceCoach = "coach"
-	SourceParq  = "parq"
 )
 
 // ParqTypeCode is the system flag type a PAR-Q "yes" answer creates.
@@ -145,12 +144,6 @@ func DefaultExpiry(today time.Time, defaultDays *int) *time.Time {
 // MaxExpiryDays ahead. Dates are calendar days (midnight UTC).
 func ValidExpiry(expires, today time.Time) bool {
 	return !expires.Before(today) && !expires.After(today.AddDate(0, 0, MaxExpiryDays))
-}
-
-// Active reports whether a flag shows on today: not removed and its expiry,
-// when set, is today or later.
-func Active(removed bool, expiresOn *time.Time, today time.Time) bool {
-	return !removed && (expiresOn == nil || !expiresOn.Before(today))
 }
 
 // ReviewKeepsFlag: a cleared member needs no flag; a restriction or a

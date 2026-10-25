@@ -2,6 +2,7 @@ package gymcare
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -48,10 +49,11 @@ const noteSelect = `SELECT n.id::text, n.customer_id::text, n.coach_id::text, co
   LEFT JOIN gym.class_types pt ON pt.id = a.class_type_id`
 
 // noteVisible is the condition on n for a note the viewer ($2, manager $3,
-// now $4) may read: carried forward, or written in the last 60 days.
-var noteVisible = `n.removed_at IS NULL
-   AND ((n.carry_forward AND n.released_at IS NULL) OR n.created_at >= $4::timestamptz - interval '60 days')
-   AND ($3::boolean OR n.created_by = $2::uuid OR ` + assignedSQL("n.customer_id", "$2::uuid", "$4") + `)`
+// now $4) may read: carried forward, or written in the last
+// NoteHistoryDays days.
+var noteVisible = fmt.Sprintf(`n.removed_at IS NULL
+   AND ((n.carry_forward AND n.released_at IS NULL) OR n.created_at >= $4::timestamptz - make_interval(days => %d))
+   AND ($3::boolean OR n.created_by = $2::uuid OR %s)`, domain.NoteHistoryDays, assignedSQL("n.customer_id", "$2::uuid", "$4"))
 
 func (s *Service) notes(ctx context.Context, v Viewer, ids []string) ([]SessionNote, error) {
 	rows, err := s.db.Query(ctx, noteSelect+` WHERE n.customer_id = ANY($1::uuid[]) AND `+noteVisible+`

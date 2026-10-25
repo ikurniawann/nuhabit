@@ -296,7 +296,9 @@ func TestMedicalFlagVisibility(t *testing.T) {
 	// The PAR-Q type is the system's own.
 	f.want(f.as(manager, "POST", "/api/gym/member-flags", map[string]any{"customer_id": m1, "type_id": f.typeID("parq_review")}), 400)
 
-	// A coach of the member reviews and removes.
+	// A coach of the member edits, reviews and removes.
+	f.want(f.as(desk, "PATCH", "/api/gym/member-flags/"+injury, map[string]any{"note": "x"}), 404)
+	f.want(f.as(coachA, "PATCH", "/api/gym/member-flags/"+injury, map[string]any{"note": "ACL kiri", "expires_on": "2031-06-30"}), 200)
 	f.want(f.as(coachA, "POST", "/api/gym/member-flags/"+injury+"/review", map[string]any{"decision": "doctor_note", "note": "minta surat"}), 200)
 	res = f.want(f.as(coachA, "GET", "/api/gym/member-flags/members?ids="+m1, nil), 200)
 	if !strings.Contains(res.Raw, `"review_status":"doctor_note"`) || !strings.Contains(res.Raw, `"review_note":"minta surat"`) {

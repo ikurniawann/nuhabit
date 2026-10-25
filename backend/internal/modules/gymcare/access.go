@@ -64,23 +64,14 @@ func (s *Service) seesMedical(ctx context.Context, q database.Querier, v Viewer,
 	return s.assigned(ctx, q, v.ID, customerID)
 }
 
-// coachFor is the active coach profile linked to the staff account, "" when
-// none.
-func coachFor(ctx context.Context, q database.Querier, userID string) (string, error) {
+// requireCoach is the active coach profile linked to the staff account (the
+// oldest when several are); it fails without one.
+func requireCoach(ctx context.Context, q database.Querier, userID string) (string, error) {
 	var id string
 	err := q.QueryRow(ctx,
 		`SELECT id::text FROM gym.coaches WHERE user_id = $1 AND status = 'active' ORDER BY created_at LIMIT 1`, userID).Scan(&id)
 	if database.IsNoRows(err) {
-		return "", nil
-	}
-	return id, err
-}
-
-// requireCoach fails unless the staff account has a coach profile.
-func requireCoach(ctx context.Context, q database.Querier, userID string) (string, error) {
-	id, err := coachFor(ctx, q, userID)
-	if err == nil && id == "" {
-		err = httpx.Forbidden("Hanya coach yang bisa melakukan ini")
+		return "", httpx.Forbidden("Hanya coach yang bisa melakukan ini")
 	}
 	return id, err
 }
