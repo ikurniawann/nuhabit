@@ -58,63 +58,71 @@ func (s *Service) ListTemplates(ctx context.Context) (*Row, error) {
 
 func (s *Service) CreateTemplate(ctx context.Context, in TemplateInput, createdBy *string) (id string, err error) {
 	err = s.inTx(ctx, func(q Q) error {
-		def, err := s.activeClassType(ctx, q, in.ClassTypeID)
-		if err != nil {
-			return err
-		}
-		if in.ValidFrom == "" {
-			zone, err := localtime.BranchZone(ctx, q, in.BranchID)
-			if err != nil {
-				return err
-			}
-			in.ValidFrom = localtime.DayKey(s.now(), zone)
-		}
-		t := SessionTemplate{
-			ClassTypeID: in.ClassTypeID, CoachID: in.CoachID, BranchID: in.BranchID, Area: in.Area,
-			Weekday: in.Weekday, StartTime: in.StartTime,
-			DurationMin: orDefault(in.DurationMin, def.DurationMin),
-			Capacity:    orDefault(in.Capacity, def.Capacity),
-			CreditCost:  orDefault(in.CreditCost, def.CreditCost),
-			ValidFrom:   in.ValidFrom, ValidUntil: in.ValidUntil, Active: in.Active, CreatedBy: createdBy,
-		}
-		if err := validRange(t); err != nil {
-			return err
-		}
-		id, err = s.repo.InsertTemplate(ctx, q, t)
+		id, err = s.createTemplate(ctx, q, in, createdBy)
 		return err
 	})
 	return id, err
 }
 
-func (s *Service) UpdateTemplate(ctx context.Context, id string, p TemplatePatch) error {
-	return s.inTx(ctx, func(q Q) error {
-		t, err := s.repo.GetTemplate(ctx, q, id)
+// createTemplate is CreateTemplate on q, for callers in a transaction.
+func (s *Service) createTemplate(ctx context.Context, q Q, in TemplateInput, createdBy *string) (string, error) {
+	def, err := s.activeClassType(ctx, q, in.ClassTypeID)
+	if err != nil {
+		return "", err
+	}
+	if in.ValidFrom == "" {
+		zone, err := localtime.BranchZone(ctx, q, in.BranchID)
 		if err != nil {
+			return "", err
+		}
+		in.ValidFrom = localtime.DayKey(s.now(), zone)
+	}
+	t := SessionTemplate{
+		ClassTypeID: in.ClassTypeID, CoachID: in.CoachID, BranchID: in.BranchID, Area: in.Area,
+		Weekday: in.Weekday, StartTime: in.StartTime,
+		DurationMin: orDefault(in.DurationMin, def.DurationMin),
+		Capacity:    orDefault(in.Capacity, def.Capacity),
+		CreditCost:  orDefault(in.CreditCost, def.CreditCost),
+		ValidFrom:   in.ValidFrom, ValidUntil: in.ValidUntil, Active: in.Active, CreatedBy: createdBy,
+	}
+	if err := validRange(t); err != nil {
+		return "", err
+	}
+	return s.repo.InsertTemplate(ctx, q, t)
+}
+
+func (s *Service) UpdateTemplate(ctx context.Context, id string, p TemplatePatch) error {
+	return s.inTx(ctx, func(q Q) error { return s.updateTemplate(ctx, q, id, p) })
+}
+
+// updateTemplate is UpdateTemplate on q, for callers in a transaction.
+func (s *Service) updateTemplate(ctx context.Context, q Q, id string, p TemplatePatch) error {
+	t, err := s.repo.GetTemplate(ctx, q, id)
+	if err != nil {
+		return err
+	}
+	if t == nil {
+		return errTemplateNotFound
+	}
+	if p.ClassTypeID != nil && *p.ClassTypeID != t.ClassTypeID {
+		if _, err := s.activeClassType(ctx, q, *p.ClassTypeID); err != nil {
 			return err
 		}
-		if t == nil {
-			return errTemplateNotFound
-		}
-		if p.ClassTypeID != nil && *p.ClassTypeID != t.ClassTypeID {
-			if _, err := s.activeClassType(ctx, q, *p.ClassTypeID); err != nil {
-				return err
-			}
-			t.ClassTypeID = *p.ClassTypeID
-		}
-		t.CoachID, t.BranchID, t.Area = pick(p.CoachID, t.CoachID), pick(p.BranchID, t.BranchID), pick(p.Area, t.Area)
-		t.ValidUntil = pick(p.ValidUntil, t.ValidUntil)
-		set(&t.Weekday, p.Weekday)
-		set(&t.StartTime, p.StartTime)
-		set(&t.DurationMin, p.DurationMin)
-		set(&t.Capacity, p.Capacity)
-		set(&t.CreditCost, p.CreditCost)
-		set(&t.ValidFrom, p.ValidFrom)
-		set(&t.Active, p.Active)
-		if err := validRange(*t); err != nil {
-			return err
-		}
-		return s.repo.UpdateTemplate(ctx, q, *t)
-	})
+		t.ClassTypeID = *p.ClassTypeID
+	}
+	t.CoachID, t.BranchID, t.Area = pick(p.CoachID, t.CoachID), pick(p.BranchID, t.BranchID), pick(p.Area, t.Area)
+	t.ValidUntil = pick(p.ValidUntil, t.ValidUntil)
+	set(&t.Weekday, p.Weekday)
+	set(&t.StartTime, p.StartTime)
+	set(&t.DurationMin, p.DurationMin)
+	set(&t.Capacity, p.Capacity)
+	set(&t.CreditCost, p.CreditCost)
+	set(&t.ValidFrom, p.ValidFrom)
+	set(&t.Active, p.Active)
+	if err := validRange(*t); err != nil {
+		return err
+	}
+	return s.repo.UpdateTemplate(ctx, q, *t)
 }
 
 func set[T any](dst *T, v *T) {
