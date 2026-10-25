@@ -93,6 +93,7 @@ const (
 	GateTokenExpired        GateDenialReason = "token_expired"
 	GateTokenConsumed       GateDenialReason = "token_consumed"
 	GateMemberNotActive     GateDenialReason = "member_not_active"
+	GateMemberBanned        GateDenialReason = "member_banned"
 	GateWaiverRequired      GateDenialReason = "waiver_required"
 	GateAntiPassback        GateDenialReason = "anti_passback"
 	GateNoBooking           GateDenialReason = "no_booking"
@@ -105,6 +106,7 @@ var GateDenialLabel = map[GateDenialReason]string{
 	GateTokenExpired:        "QR kedaluwarsa, minta member membuka ulang kartunya",
 	GateTokenConsumed:       "QR sudah dipakai",
 	GateMemberNotActive:     "Keanggotaan tidak aktif",
+	GateMemberBanned:        "Akun member diblokir, arahkan ke front desk",
 	GateWaiverRequired:      "Waiver belum disetujui, minta member menyetujui waiver dulu",
 	GateAntiPassback:        "Baru saja masuk, tunggu sebelum scan lagi",
 	GateNoBooking:           "Tidak ada booking kelas",
@@ -186,8 +188,10 @@ type OpenGymVisit struct {
 
 type GateScanInput struct {
 	// TokenProblem is empty when the caller already validated the token.
-	TokenProblem       QrTokenProblem
-	MemberActive       bool
+	TokenProblem QrTokenProblem
+	MemberActive bool
+	// MemberBanned: a manager banned the member (gym-loyalty status).
+	MemberBanned       bool
 	WaiverMissing      bool
 	LastAllowedEntryAt *time.Time
 	Candidate          *GateCandidate
@@ -213,9 +217,12 @@ func EvaluateGateScan(in GateScanInput) GateScanEvaluation {
 	}
 	consume := GateEffect{Kind: EffectConsumeToken}
 
-	// 2. Active membership and an accepted waiver?
+	// 2. Active membership, not banned, and an accepted waiver?
 	if !in.MemberActive {
 		return denied(GateMemberNotActive, consume)
+	}
+	if in.MemberBanned {
+		return denied(GateMemberBanned, consume)
 	}
 	if in.WaiverMissing {
 		return denied(GateWaiverRequired, consume)

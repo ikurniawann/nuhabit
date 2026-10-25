@@ -131,6 +131,10 @@ func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, at
 	if err != nil {
 		return res, err
 	}
+	perks, err := s.memberPerks(ctx, q, customerID)
+	if err != nil {
+		return res, err
+	}
 	rules, err := s.Rules.ForBranch(ctx, q, at.BranchID)
 	if err != nil {
 		return res, err
@@ -192,6 +196,7 @@ func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, at
 
 	in := domain.GateScanInput{
 		MemberActive:       member.Active(),
+		MemberBanned:       perks.Banned,
 		WaiverMissing:      s.waiverMissing(rules, member),
 		LastAllowedEntryAt: lastEntry,
 		OpenGym:            openGym,
@@ -380,6 +385,13 @@ func (s *Service) CheckInManually(ctx context.Context, bookingID string, scanned
 		}
 		if !domain.CanTransitionBooking(booking.Status, domain.BookingCheckedIn) {
 			return codedError("CHECKIN_NOT_CONFIRMED", "Hanya booking terkonfirmasi yang bisa check-in", nil)
+		}
+		perks, err := s.memberPerks(ctx, q, booking.CustomerID)
+		if err != nil {
+			return err
+		}
+		if perks.Banned {
+			return codedError("CHECKIN_MEMBER_BANNED", domain.GateDenialLabel[domain.GateMemberBanned], nil)
 		}
 		if err := s.requireWaiver(ctx, q, booking.CustomerID, session.BranchID); err != nil {
 			return err

@@ -142,6 +142,7 @@ type BookingDenialReason string
 
 const (
 	DenyMemberNotActive     BookingDenialReason = "member_not_active"
+	DenyMemberBanned        BookingDenialReason = "member_banned"
 	DenyWaiverRequired      BookingDenialReason = "waiver_required"
 	DenySessionNotBookable  BookingDenialReason = "session_not_bookable"
 	DenyBookingNotOpenYet   BookingDenialReason = "booking_not_open_yet"
@@ -159,6 +160,7 @@ const (
 
 var BookingDenialLabel = map[BookingDenialReason]string{
 	DenyMemberNotActive:     "Keanggotaan ini belum bisa booking kelas",
+	DenyMemberBanned:        "Akun member ini diblokir. Hubungi front desk",
 	DenyWaiverRequired:      "Waiver belum disetujui. Setujui waiver digital terlebih dulu untuk booking kelas",
 	DenySessionNotBookable:  "Kelas ini tidak dibuka untuk booking",
 	DenyBookingNotOpenYet:   "Booking kelas ini belum dibuka",
@@ -203,6 +205,8 @@ type BookableSession struct {
 // EligibilityInput collects the facts eligibility is decided on.
 type EligibilityInput struct {
 	MemberActive bool
+	// Banned: a manager banned the member (gym-loyalty status).
+	Banned bool
 	// WaiverMissing: the rules require a waiver the member has not accepted.
 	WaiverMissing bool
 	Session       BookableSession
@@ -260,6 +264,8 @@ func EvaluateBookingEligibility(in EligibilityInput) BookingDecision {
 	switch {
 	case !in.MemberActive:
 		return deny(DenyMemberNotActive)
+	case in.Banned:
+		return deny(DenyMemberBanned)
 	case !slices.Contains(BookableSessionStatuses, in.Session.Status):
 		return deny(DenySessionNotBookable)
 	case !in.OverrideWindow && in.Now.Before(in.Session.BookingOpensAt):
@@ -280,13 +286,15 @@ func EvaluateBookingEligibility(in EligibilityInput) BookingDecision {
 
 // EvaluateMemberEligibility is what a member must meet to hold a seat,
 // checked at booking and again before a waitlist promotion or an accepted
-// offer: active, waiver accepted, not suspended, under the booking caps, then
+// offer: active, not banned, waiver accepted, not suspended, under the booking caps, then
 // enough available credits and a package covering the class (a pass waives
 // both). It returns "" when the member qualifies.
 func EvaluateMemberEligibility(in EligibilityInput) BookingDenialReason {
 	switch {
 	case !in.MemberActive:
 		return DenyMemberNotActive
+	case in.Banned:
+		return DenyMemberBanned
 	case in.WaiverMissing:
 		return DenyWaiverRequired
 	case in.SuspendedUntil != nil && in.Now.Before(*in.SuspendedUntil):
@@ -430,6 +438,9 @@ type WaitlistEntry struct {
 	WaitlistPosition   *int
 	CreatedAt          time.Time
 	PromotionOfferedAt *time.Time
+	// Rank is the member's tier rank when the tier has waitlist priority,
+	// 0 otherwise.
+	Rank int
 }
 
 func positionOr(p *int, fallback int) int {
@@ -439,8 +450,9 @@ func positionOr(p *int, fallback int) int {
 	return *p
 }
 
-// WaitlistQueue is the promotion order, FIFO: lowest position first, ties
-// broken by sign-up time. Entries already offered a seat are left out.
+// WaitlistQueue is the promotion order: higher tier rank first, then FIFO
+// (lowest position first, ties broken by sign-up time). Entries already
+// offered a seat are left out.
 func WaitlistQueue(rows []WaitlistEntry) []WaitlistEntry {
 	var queue []WaitlistEntry
 	for _, b := range rows {
@@ -449,6 +461,9 @@ func WaitlistQueue(rows []WaitlistEntry) []WaitlistEntry {
 		}
 	}
 	sort.SliceStable(queue, func(i, j int) bool {
+		if queue[i].Rank != queue[j].Rank {
+			return queue[i].Rank > queue[j].Rank
+		}
 		pi, pj := positionOr(queue[i].WaitlistPosition, math.MaxInt), positionOr(queue[j].WaitlistPosition, math.MaxInt)
 		if pi != pj {
 			return pi < pj
