@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatNumber } from "@/lib/format";
 import { MY_CLASSES_KEYS, myClassesApi } from "../api";
+import { CoachComplaints } from "@/features/gym/complaints/components/coach-complaints";
 import { MyIncentives } from "./my-incentives";
 
 const UPCOMING_DAYS = 14;
@@ -84,6 +85,7 @@ export function MyClassesPage() {
           <TabsTrigger value="schedule">Jadwal</TabsTrigger>
           <TabsTrigger value="history">Riwayat</TabsTrigger>
           <TabsTrigger value="incentives">Insentif</TabsTrigger>
+          <TabsTrigger value="complaints">Keluhan</TabsTrigger>
         </TabsList>
         <TabsContent value="schedule" className="mt-4">
           {sessions.length === 0 ? (
@@ -113,6 +115,9 @@ export function MyClassesPage() {
         </TabsContent>
         <TabsContent value="incentives" className="mt-4">
           <MyIncentives />
+        </TabsContent>
+        <TabsContent value="complaints" className="mt-4">
+          <CoachComplaints />
         </TabsContent>
       </Tabs>
     </div>

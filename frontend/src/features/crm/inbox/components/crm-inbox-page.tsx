@@ -19,6 +19,7 @@ import { ChatPanel } from "./chat-panel";
 import { ConversationList } from "./conversation-list";
 import { MemberContextPanel } from "./member-context-panel";
 import { ComplaintPanel } from "./complaint-panel";
+import { InboxTicketPanel } from "@/features/gym/complaints/components/inbox-ticket-panel";
 
 /**
  * EPIC-012 Fase C — Inbox WhatsApp CS: daftar percakapan, thread chat, dan
@@ -133,6 +134,7 @@ export function CrmInboxPage() {
                 onSetComplaint={(payload) => runAction({ action: "set_complaint", ...payload })}
                 onAddNote={(body) => runAction({ action: "add_note", body })}
               />
+              <InboxTicketPanel conversationId={detail.conversation.id} />
             </>
           ) : (
             <div className="p-6 text-center text-xs text-slate-400">Profil member tampil di sini.</div>
