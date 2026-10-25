@@ -33,14 +33,41 @@ func dataroomPorts(d module.Deps, getenv func(string) string, lookup func(string
 		from = v
 	}
 	return dataroom.Ports{
-		Directory:    dataroomDirectory{db: d.DB},
-		Mailer:       &resendMailer{apiKey: strings.TrimSpace(getenv("RESEND_API_KEY")), log: d.Log, client: &http.Client{Timeout: 15 * time.Second}},
-		AppOrigin:    ticketingAppOrigin(getenv),
-		Brand:        brand,
-		MailFrom:     from,
-		QuotaBytes:   envSize(getenv("DATAROOM_QUOTA_GB"), 50) * math.Pow(1024, 3),
-		MaxFileBytes: envSize(getenv("DATAROOM_MAX_FILE_MB"), 100) * math.Pow(1024, 2),
+		Directory:       dataroomDirectory{db: d.DB},
+		People:          dataroomPeople{db: d.DB},
+		Mailer:          &resendMailer{apiKey: strings.TrimSpace(getenv("RESEND_API_KEY")), log: d.Log, client: &http.Client{Timeout: 15 * time.Second}},
+		AppOrigin:       ticketingAppOrigin(getenv),
+		Brand:           brand,
+		MailFrom:        from,
+		QuotaBytes:      envSize(getenv("DATAROOM_QUOTA_GB"), 50) * math.Pow(1024, 3),
+		MaxFileBytes:    envSize(getenv("DATAROOM_MAX_FILE_MB"), 100) * math.Pow(1024, 2),
+		MaxChunkedBytes: envSize(getenv("DATAROOM_MAX_CHUNKED_MB"), 2048) * math.Pow(1024, 2),
 	}
+}
+
+// dataroomPeople reads active staff accounts (configuration.users) for
+// grants and mentions.
+type dataroomPeople struct{ db database.Querier }
+
+var _ dataroom.People = dataroomPeople{}
+
+const dataroomPersonCols = `SELECT id::text, full_name, email, role FROM configuration.users WHERE status = 'active'`
+
+func (p dataroomPeople) Search(ctx context.Context, q string, limit int) ([]dataroom.Person, error) {
+	return p.people(ctx, dataroomPersonCols+` AND (full_name ILIKE '%' || $1 || '%' OR email ILIKE '%' || $1 || '%')
+		ORDER BY full_name LIMIT $2`, strings.TrimSpace(q), limit)
+}
+
+func (p dataroomPeople) ByIDs(ctx context.Context, ids []string) ([]dataroom.Person, error) {
+	return p.people(ctx, dataroomPersonCols+` AND id = ANY($1::uuid[]) ORDER BY full_name`, ids)
+}
+
+func (p dataroomPeople) people(ctx context.Context, sql string, args ...any) ([]dataroom.Person, error) {
+	rows, err := p.db.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[dataroom.Person])
 }
 
 // envSize is Math.max(1, Number(value) || def).

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"nuhabit/backend/internal/modules/dataroom"
 	"nuhabit/backend/internal/modules/payroll"
 	"nuhabit/backend/internal/platform/module"
 )
@@ -23,6 +24,9 @@ func init() {
 		ports.PayslipFrom = from
 		if from != "" && strings.TrimSpace(os.Getenv("RESEND_API_KEY")) != "" {
 			ports.PayslipMailer = &resendPayslipMailer{apiKey: strings.TrimSpace(os.Getenv("RESEND_API_KEY")), client: &http.Client{Timeout: 15 * time.Second}}
+		}
+		if d.Config.ModuleEnabled(dataroom.Name) {
+			ports.DocumentFiler = dataroomFiler(d)
 		}
 		return payroll.New(d, ports)
 	})

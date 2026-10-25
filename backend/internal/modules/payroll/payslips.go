@@ -1,6 +1,7 @@
 package payroll
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"html"
@@ -76,7 +77,7 @@ type notifyData struct {
 	PayslipSent bool   `json:"payslip_sent"`
 }
 
-func (s *service) notifyPayslip(ctx context.Context, detailID string) (*messageData, error) {
+func (s *service) notifyPayslip(ctx context.Context, detailID, actorID string) (*messageData, error) {
 	var runStatus string
 	var month *int
 	var year int
@@ -129,7 +130,23 @@ func (s *service) notifyPayslip(ctx context.Context, detailID string) (*messageD
 		s.log.ErrorContext(ctx, "payslip: mark sent failed", "id", detailID, "error", err)
 		return nil, err
 	}
+	s.filePayslip(ctx, actorID, doc, period, pdf)
 	return &messageData{Data: notifyData{to, true}, Message: "Email slip gaji diterima Resend"}, nil
+}
+
+// filePayslip stores the emailed PDF in the Data Room under
+// Payroll/Slip Gaji/<tahun>/<periode>, owned by the HR user who sent it.
+// A failure is logged and never fails the email.
+func (s *service) filePayslip(ctx context.Context, actorID string, doc *payslipDoc, period string, pdf []byte) {
+	if s.ports.DocumentFiler == nil {
+		return
+	}
+	folder := fmt.Sprintf("Payroll/Slip Gaji/%d/%s", doc.year, period)
+	tags := []string{"slip-gaji", strings.ToLower(period)}
+	if _, err := s.ports.DocumentFiler.FileDocument(ctx, actorID, folder,
+		domain.PayslipFileName(doc.employee.FullName, doc.month, doc.year), "application/pdf", bytes.NewReader(pdf), tags); err != nil {
+		s.log.WarnContext(ctx, "payslip: gagal arsip ke Dataroom", "error", err)
+	}
 }
 
 // GET /api/hris/payslips?employee_id&payroll_run_id&year&month
@@ -155,7 +172,8 @@ func (h *handler) listPayslips(w http.ResponseWriter, r *http.Request) error {
 
 // POST /api/hris/payslips/notify { payroll_detail_id }
 func (h *handler) notifyPayslip(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...); err != nil {
+	u, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...)
+	if err != nil {
 		return err
 	}
 	f, err := readJSON(r, "")
@@ -166,7 +184,7 @@ func (h *handler) notifyPayslip(w http.ResponseWriter, r *http.Request) error {
 	if err := issuesErr(f, ""); err != nil {
 		return err
 	}
-	out, err := h.svc.notifyPayslip(r.Context(), *id)
+	out, err := h.svc.notifyPayslip(r.Context(), *id, u.ID)
 	if err != nil {
 		return err
 	}
