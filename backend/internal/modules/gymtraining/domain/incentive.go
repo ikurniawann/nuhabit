@@ -86,14 +86,17 @@ func PeriodMonthOf(t time.Time) string { return t.In(studioZone).Format("2006-01
 type Period struct{ Start, End time.Time }
 
 // MonthPeriod bounds the calendar month YYYY-MM in the studio zone.
-func MonthPeriod(periodMonth string) (Period, error) {
+func MonthPeriod(periodMonth string) (Period, error) { return MonthPeriodIn(periodMonth, studioZone) }
+
+// MonthPeriodIn bounds the calendar month YYYY-MM in zone.
+func MonthPeriodIn(periodMonth string, zone *time.Location) (Period, error) {
 	m := periodRE.FindStringSubmatch(periodMonth)
 	if m == nil {
 		return Period{}, fmt.Errorf("Periode tidak valid: %s", periodMonth)
 	}
 	year, _ := strconv.Atoi(m[1])
 	month, _ := strconv.Atoi(m[2])
-	start := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, studioZone)
+	start := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, zone)
 	return Period{Start: start.UTC(), End: start.AddDate(0, 1, 0).UTC()}, nil
 }
 

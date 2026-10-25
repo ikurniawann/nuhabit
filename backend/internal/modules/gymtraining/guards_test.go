@@ -68,6 +68,15 @@ func TestStaffRouteGrants(t *testing.T) {
 		"GET /api/gym/incentives/payouts/{id}":    "read gym.incentives",
 		"POST /api/gym/incentives/payouts/{id}":   "update gym.incentives",
 		"GET /api/gym/my-classes/incentives":      "read gym.my-classes",
+
+		"GET /api/gym/incentives/commission":              "read gym.incentives",
+		"POST /api/gym/incentives/commission":             upsert("gym.incentives"),
+		"POST /api/gym/incentives/commission/lines/{id}":  "update gym.incentives",
+		"GET /api/gym/incentives/commission/settings":     "read gym.incentives",
+		"POST /api/gym/incentives/commission/settings":    upsert("gym.incentives"),
+		"DELETE /api/gym/incentives/commission/settings":  "delete gym.incentives",
+		"PUT /api/gym/incentives/commission/coaches/{id}": "update gym.incentives",
+		"GET /api/gym/my-classes/commission":              "read gym.my-classes",
 	}
 	seen := 0
 	for _, route := range (handlers{}).Routes() {
@@ -87,6 +96,21 @@ func TestStaffRouteGrants(t *testing.T) {
 	}
 	if seen != len(want) {
 		t.Errorf("%d staff routes, %d expected", seen, len(want))
+	}
+}
+
+// Saving a commission draft creates, approving updates.
+func TestCommissionActionNeedsItsGrant(t *testing.T) {
+	for action, want := range map[string]string{"draft": "create gym.incentives", "approve": "update gym.incentives"} {
+		guard := &recordingGuard{allow: 1}
+		body := `{"branch_id":"` + anyID + `","month":"2026-04","action":"` + action + `"}`
+		code := serve(guard, "POST", "/api/gym/incentives/commission", body)
+		if len(guard.calls) != 2 {
+			t.Fatalf("%s: status %d after %d guard calls", action, code, len(guard.calls))
+		}
+		if got := describe(guard.calls[1]); got != want {
+			t.Errorf("%s requires %q, want %q", action, got, want)
+		}
 	}
 }
 

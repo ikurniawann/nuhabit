@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"nuhabit/backend/internal/modules/gymcredits"
 	"nuhabit/backend/internal/modules/gymscheduling"
 	"nuhabit/backend/internal/modules/gymtraining"
 	"nuhabit/backend/internal/modules/gymtraining/domain"
@@ -84,9 +85,13 @@ func (a gymTrainingPayroll) PostIncentive(ctx context.Context, q database.Querie
 	if err != nil {
 		return "", err
 	}
+	source, label := p.SourceType, p.Label
+	if source == "" {
+		source, label = coachPayoutSource, "Insentif coach "+p.PeriodMonth
+	}
 	period, err := payroll.AddToOpenPeriod(ctx, q, payroll.Addition{
-		EmployeeID: emp.ID, Amount: p.AmountIDR, Label: "Insentif coach " + p.PeriodMonth,
-		SourceType: coachPayoutSource, SourceID: p.PayoutID, CreatedBy: &p.ActorID,
+		EmployeeID: emp.ID, Amount: p.AmountIDR, Label: label,
+		SourceType: source, SourceID: p.PayoutID, CreatedBy: &p.ActorID,
 	}, payroll.Period{Month: int(from.Month()), Year: from.Year()})
 	if err != nil {
 		return "", err
@@ -98,6 +103,26 @@ func gymCatalog(entries []gymscheduling.CatalogEntry, err error) ([]gymtraining.
 	out := make([]gymtraining.CatalogEntry, len(entries))
 	for i, e := range entries {
 		out[i] = gymtraining.CatalogEntry(e)
+	}
+	return out, err
+}
+
+// gymTrainingCommission reads the revenue a branch recognised from
+// gym-credits and the sessions each coach taught from gym-scheduling.
+type gymTrainingCommission struct{}
+
+var _ gymtraining.CommissionSources = gymTrainingCommission{}
+
+func (gymTrainingCommission) BranchRevenue(ctx context.Context, q database.Querier, branchID string, start, end time.Time, fromDay, toDay string) (float64, float64, error) {
+	r, err := gymcredits.RecognisedRevenue(ctx, q, branchID, start, end, fromDay, toDay)
+	return r.ClassIDR, r.PtIDR, err
+}
+
+func (gymTrainingCommission) CoachActivity(ctx context.Context, q database.Querier, start, end time.Time) ([]gymtraining.CoachActivity, error) {
+	rows, err := gymscheduling.NewReader(q).CoachActivity(ctx, start, end)
+	out := make([]gymtraining.CoachActivity, len(rows))
+	for i, a := range rows {
+		out[i] = gymtraining.CoachActivity(a)
 	}
 	return out, err
 }

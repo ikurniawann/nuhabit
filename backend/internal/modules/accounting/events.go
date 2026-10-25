@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"nuhabit/backend/internal/contracts/gym"
 	"nuhabit/backend/internal/contracts/gymcredits"
 	"nuhabit/backend/internal/contracts/inventory"
 	"nuhabit/backend/internal/contracts/payroll"
@@ -81,6 +82,10 @@ func (s *Service) subscribe(bus *outbox.Bus) {
 	}))
 	bus.Subscribe(gymcredits.TopicJournal, "accounting.journal-gym-credits", handle(s, func(ctx context.Context, tx pgx.Tx, in gymcredits.Journal) ([]domain.PostResult, error) {
 		r, err := s.PostGymCredits(ctx, tx, in)
+		return []domain.PostResult{r}, err
+	}))
+	bus.Subscribe(gym.TopicCommissionJournal, "accounting.journal-gym-commission", handle(s, func(ctx context.Context, tx pgx.Tx, in gym.CommissionJournal) ([]domain.PostResult, error) {
+		r, err := s.PostGymCommission(ctx, tx, in)
 		return []domain.PostResult{r}, err
 	}))
 	bus.Subscribe(payroll.TopicRunPaid, "accounting.journal-payroll-run", handle(s, func(ctx context.Context, tx pgx.Tx, in payroll.RunPaid) ([]domain.PostResult, error) {
