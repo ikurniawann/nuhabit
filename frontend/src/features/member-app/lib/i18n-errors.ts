@@ -1,6 +1,7 @@
 /** Kamus ID untuk pesan kode error server (lihat error-codes.ts). */
 export const ERRORS_ID: Record<string, string> = {
   "Your membership can't book classes yet.": "Keanggotaan ini belum bisa booking kelas.",
+  "Your account is blocked from booking. Please see the front desk.": "Akunmu diblokir untuk booking. Silakan hubungi front desk.",
   "This class isn't open for booking.": "Kelas ini tidak dibuka untuk booking.",
   "Booking for this class hasn't opened yet.": "Booking kelas ini belum dibuka.",
   "Booking for this class has closed.": "Booking kelas ini sudah ditutup.",

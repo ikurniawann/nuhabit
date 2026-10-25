@@ -164,6 +164,13 @@ type PersonalTraining interface {
 	GateCheckIn(ctx context.Context, q database.Querier, participantID string, now time.Time) (charged int, ok bool, err error)
 }
 
+// TierPerks reads what a member's membership tier and status change in
+// booking: earlier booking, their own late-cancel window, waitlist priority,
+// and a ban (owned by gym-loyalty). nil means no tier changes anything.
+type TierPerks interface {
+	TierPerks(ctx context.Context, q database.Querier, customerID string) (domain.MemberPerks, error)
+}
+
 // Notifier delivers member notifications (owned by CRM).
 type Notifier interface {
 	NotifyMember(ctx context.Context, q database.Querier, customerID string, n Notification) error
@@ -186,6 +193,7 @@ type Ports struct {
 	Qr       QrTokens
 	Notifier Notifier
 	PT       PersonalTraining
+	Perks    TierPerks
 	// WaiverVersion is the waiver text members accept today; "" accepts
 	// any version on record.
 	WaiverVersion string
@@ -198,6 +206,14 @@ func (s *Service) waiverMissing(rules domain.Rules, m *Member) bool {
 		return false
 	}
 	return domain.WaiverMissing(rules, m.WaiverVersion, m.WaiverAcceptedAt, s.WaiverVersion)
+}
+
+// memberPerks are the member's tier perks; none without the port.
+func (s *Service) memberPerks(ctx context.Context, q database.Querier, customerID string) (domain.MemberPerks, error) {
+	if s.Perks == nil {
+		return domain.MemberPerks{}, nil
+	}
+	return s.Perks.TierPerks(ctx, q, customerID)
 }
 
 // Service implements the scheduling use cases.

@@ -83,6 +83,7 @@ docs/ARCHITECTURE.md
 | `gym-desk` | 11 | member list and 360 page, staff notes, front desk registration, gym reports, check-in log export |
 | `gym-coaching` | 26 | personal training (coach availability, PT appointments, PT reminders) and fitness assessments |
 | `gym-complaints` | 24 | complaint tickets from the inbox, front desk and member app, SLA settings, escalation job, complaint report |
+| `gym-loyalty` | 13 | membership tiers from 12-month spending and their perks, attendance XP and streaks, member status, attendance leaderboard |
 | `gym-training` | 30 | exercises, HYROX workouts and sessions, races, coach incentives and payouts |
 | `athlete` | 30 | member app train tab (activities, feed, clubs, challenges, gear) and home settings |
 | `member-portal` | 46 | member OTP sign-in, profile, inbox, push, top-up, engagement, collectibles, app home |

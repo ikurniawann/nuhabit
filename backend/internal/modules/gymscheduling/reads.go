@@ -156,6 +156,10 @@ func sessionMove(r *Row) domain.SessionMove {
 // moved shows the waived deadline the cancel itself will apply.
 func (s *Service) attachCancelInfo(ctx context.Context, customerID string, rows []*Row, booking func(*Row) (domain.BookingStatus, time.Time), now time.Time) error {
 	rulesFor := s.branchRules(s.db)
+	perks, err := s.memberPerks(ctx, s.db, customerID)
+	if err != nil {
+		return err
+	}
 	for _, r := range rows {
 		st, bookedAt := booking(r)
 		if st != domain.BookingConfirmed {
@@ -166,6 +170,7 @@ func (s *Service) attachCancelInfo(ctx context.Context, customerID string, rows 
 		if err != nil {
 			return err
 		}
+		rules = perks.CancelRules(rules)
 		pass, err := s.Passes.ActivePassAt(ctx, s.db, customerID, r.Time("starts_at"))
 		if err != nil {
 			return err
@@ -176,6 +181,21 @@ func (s *Service) attachCancelInfo(ctx context.Context, customerID string, rows 
 			Deadline: jsTime(out.Deadline), Late: out.Late, PenaltyCredits: out.PenaltyCredits, PassStrike: out.PassStrike,
 			Policy: rules.LateCancelPolicy,
 		})
+	}
+	return nil
+}
+
+// shiftBookingOpens shows each session's booking opening for the member,
+// earlier by their tier's early booking days.
+func (s *Service) shiftBookingOpens(ctx context.Context, customerID string, rows []*Row) error {
+	perks, err := s.memberPerks(ctx, s.db, customerID)
+	if err != nil || perks.EarlyBookingDays == 0 {
+		return err
+	}
+	for _, r := range rows {
+		if opens := r.Time("booking_opens_at"); !opens.IsZero() {
+			r.Set("booking_opens_at", jsTime(perks.BookingOpensAt(opens)))
+		}
 	}
 	return nil
 }
@@ -210,6 +230,9 @@ func (s *Service) MemberSessions(ctx context.Context, customerID string, from, t
 	if err := s.attachCancelInfo(ctx, customerID, sessions, myBookingStatus, now); err != nil {
 		return nil, err
 	}
+	if err := s.shiftBookingOpens(ctx, customerID, sessions); err != nil {
+		return nil, err
+	}
 	credits, err := s.Credits.GetBalance(ctx, s.db, customerID)
 	if err != nil {
 		return nil, err
@@ -233,6 +256,9 @@ func (s *Service) MemberSession(ctx context.Context, customerID, id string) (*Ro
 		return nil, err
 	}
 	if err := s.attachCancelInfo(ctx, customerID, []*Row{session}, myBookingStatus, s.now()); err != nil {
+		return nil, err
+	}
+	if err := s.shiftBookingOpens(ctx, customerID, []*Row{session}); err != nil {
 		return nil, err
 	}
 	details, err := s.repo.ClassDetails(ctx, s.db, session.Str("class_type_id"), session.StrPtr("coach_id"))

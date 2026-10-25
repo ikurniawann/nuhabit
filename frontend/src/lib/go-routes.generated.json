@@ -2085,6 +2085,46 @@
     "path": "/api/gym/incentives/statements"
   },
   {
+    "module": "gym-loyalty",
+    "method": "GET",
+    "path": "/api/gym/loyalty/leaderboard"
+  },
+  {
+    "module": "gym-loyalty",
+    "method": "GET",
+    "path": "/api/gym/loyalty/members"
+  },
+  {
+    "module": "gym-loyalty",
+    "method": "POST",
+    "path": "/api/gym/loyalty/recompute"
+  },
+  {
+    "module": "gym-loyalty",
+    "method": "PUT",
+    "path": "/api/gym/loyalty/settings"
+  },
+  {
+    "module": "gym-loyalty",
+    "method": "GET",
+    "path": "/api/gym/loyalty/tiers"
+  },
+  {
+    "module": "gym-loyalty",
+    "method": "POST",
+    "path": "/api/gym/loyalty/tiers"
+  },
+  {
+    "module": "gym-loyalty",
+    "method": "DELETE",
+    "path": "/api/gym/loyalty/tiers/{id}"
+  },
+  {
+    "module": "gym-loyalty",
+    "method": "PATCH",
+    "path": "/api/gym/loyalty/tiers/{id}"
+  },
+  {
     "module": "gym-desk",
     "method": "GET",
     "path": "/api/gym/members"
@@ -2115,6 +2155,11 @@
     "path": "/api/gym/members/{id}"
   },
   {
+    "module": "gym-loyalty",
+    "method": "GET",
+    "path": "/api/gym/members/{id}/loyalty"
+  },
+  {
     "module": "gym-desk",
     "method": "POST",
     "path": "/api/gym/members/{id}/notes"
@@ -2123,6 +2168,11 @@
     "module": "gym-desk",
     "method": "DELETE",
     "path": "/api/gym/members/{id}/notes/{noteId}"
+  },
+  {
+    "module": "gym-loyalty",
+    "method": "PUT",
+    "path": "/api/gym/members/{id}/status"
   },
   {
     "module": "gym-scheduling",
@@ -3673,6 +3723,21 @@
     "module": "member-portal",
     "method": "GET",
     "path": "/api/member-portal/app/home/visits"
+  },
+  {
+    "module": "gym-loyalty",
+    "method": "GET",
+    "path": "/api/member-portal/app/leaderboard"
+  },
+  {
+    "module": "gym-loyalty",
+    "method": "GET",
+    "path": "/api/member-portal/app/membership"
+  },
+  {
+    "module": "gym-loyalty",
+    "method": "GET",
+    "path": "/api/member-portal/app/progress"
   },
   {
     "module": "member-portal",

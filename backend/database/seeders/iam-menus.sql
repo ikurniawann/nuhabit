@@ -211,6 +211,7 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('gym.incentives', 'Insentif Coach', '/dashboard/gym/incentives', 'money', 'sidebar', 90, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.referrals', 'Referral', '/dashboard/gym/referrals', 'user-plus', 'sidebar', 90, '{"actions":["read","update"]}'::jsonb),
   ('gym.complaints', 'Keluhan', '/dashboard/gym/complaints', 'megaphone', 'sidebar', 92, '{"actions":["read","create","update","delete"]}'::jsonb),
+  ('gym.loyalty', 'Membership & Progres', '/dashboard/gym/loyalty', 'star', 'sidebar', 92, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.reports', 'Laporan Gym', '/dashboard/gym/reports', 'chart-bar', 'sidebar', 95, '{"actions":["read"]}'::jsonb),
   ('gym.rules', 'Aturan Gym', '/dashboard/gym/rules', 'settings', 'sidebar', 100, '{"actions":["read","update"]}'::jsonb),
   -- Investor portal (27 Oct 2026): read-only pages for the investor role and
@@ -367,6 +368,8 @@ WHERE deleted_at IS NULL
     -- Coach leave and substitutes (28 Oct 2026):
     'gym.coach-leave',
     'tasks', 'tasks.team', 'tasks.kpi',
+    -- Membership tiers and attendance progress (28 Oct 2026):
+    'gym.loyalty',
     'items.raw-material.inventory.expiry', 'items.raw-material.inventory.movements',
     'items.raw-material.inventory.scrap', 'pos.catalog.channel-prices',
     'pos.loyalty.wallet', 'pos.loyalty.wallet.packages', 'pos.loyalty.wallet.payments',

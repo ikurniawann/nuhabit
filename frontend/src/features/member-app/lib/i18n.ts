@@ -10,6 +10,7 @@ import { FEEDBACK_ID } from "./i18n-feedback";
 import { HOME_ID } from "./i18n-home";
 import { LOYALTY_ID } from "./i18n-loyalty";
 import { RACES_ID } from "./i18n-races";
+import { PROGRESS_ID } from "./i18n-progress";
 import { REFERRAL_ID } from "./i18n-referral";
 import { TRAIN_ID } from "./i18n-train";
 import { ID_WORKOUT } from "./i18n-workout";
@@ -172,6 +173,7 @@ export const ID: Record<string, string> = {
   ...ERRORS_ID,
   ...REFERRAL_ID,
   ...FEEDBACK_ID,
+  ...PROGRESS_ID,
 };
 
 /** Isi placeholder `{name}` pada teks yang sudah diterjemahkan; yang tak berisi dibiarkan. */

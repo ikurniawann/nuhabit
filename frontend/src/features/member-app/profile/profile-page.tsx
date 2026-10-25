@@ -9,7 +9,9 @@ import {
   ChevronRight,
   Coins,
   CreditCard,
+  Crown,
   Dumbbell,
+  Flame,
   Flag,
   Footprints,
   Gift,
@@ -310,6 +312,8 @@ export function ProfilePage() {
         <p className="nh-label !mb-0 px-2 pt-2">{t("Member")}</p>
         <LinkRows
           items={[
+            { to: "/membership", icon: Crown, title: t("Membership & tier"), hint: t("Perks from what you spend") },
+            { to: "/progress", icon: Flame, title: t("Progress"), hint: t("XP, streaks, leaderboard") },
             {
               to: "/coins",
               icon: Coins,

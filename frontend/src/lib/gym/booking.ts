@@ -255,6 +255,7 @@ export type GateDenialReason =
   | "token_expired"
   | "token_consumed"
   | "member_not_active"
+  | "member_banned"
   | "anti_passback"
   | "no_booking"
   | "insufficient_credits"
@@ -266,6 +267,7 @@ export const GATE_DENIAL_LABEL: Record<GateDenialReason, string> = {
   token_expired: "QR kedaluwarsa, minta member membuka ulang kartunya",
   token_consumed: "QR sudah dipakai",
   member_not_active: "Keanggotaan tidak aktif",
+  member_banned: "Akun member diblokir, arahkan ke front desk",
   anti_passback: "Baru saja masuk, tunggu sebelum scan lagi",
   no_booking: "Tidak ada booking kelas",
   insufficient_credits: "Kredit tidak cukup untuk kelas ini",

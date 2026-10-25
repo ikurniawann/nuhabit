@@ -45,9 +45,10 @@ func (s *Service) usableBalance(ctx context.Context, q Q, customerID, classTypeI
 }
 
 // memberFacts gathers what EvaluateMemberEligibility needs for one member
-// and session: membership, pass, the balance and the credits the member's
-// other upcoming bookings reserve, package coverage, the booking caps and
-// pass strikes. found is false when the customer does not exist.
+// and session: membership and ban, pass, the balance and the credits the
+// member's other upcoming bookings reserve, package coverage, the booking
+// caps and pass strikes. The session's booking opens earlier by the
+// member's tier perk. found is false when the customer does not exist.
 func (s *Service) memberFacts(ctx context.Context, q Q, customerID string, session *SessionRow, rules domain.Rules, now time.Time) (in domain.EligibilityInput, found bool, err error) {
 	member, err := s.Members.Get(ctx, q, customerID)
 	if err != nil || member == nil {
@@ -65,8 +66,13 @@ func (s *Service) memberFacts(ctx context.Context, q Q, customerID string, sessi
 	if err != nil {
 		return in, true, err
 	}
+	perks, err := s.memberPerks(ctx, q, customerID)
+	if err != nil {
+		return in, true, err
+	}
 	in = domain.EligibilityInput{
 		MemberActive:   member.Active(),
+		Banned:         perks.Banned,
 		WaiverMissing:  s.waiverMissing(rules, member),
 		Session:        session.bookable(),
 		Balance:        balance,
@@ -77,6 +83,7 @@ func (s *Service) memberFacts(ctx context.Context, q Q, customerID string, sessi
 		Zone:           session.Zone,
 		Now:            now,
 	}
+	in.Session.BookingOpensAt = perks.BookingOpensAt(in.Session.BookingOpensAt)
 	dayStart, dayEnd := localtime.DayBounds(session.StartsAt, session.Zone)
 	commitments, err := s.repo.MemberCommitments(ctx, q, customerID, session.ID, dayStart, dayEnd, now)
 	if err != nil {
@@ -248,8 +255,14 @@ func (s *Service) CancelBooking(ctx context.Context, bookingID, customerID strin
 		if err != nil {
 			return err
 		}
-		outcome := domain.EvaluateCancellation(booking.Status, session.StartsAt, session.CreditCost, pass != nil, rules, now)
-		outcome = domain.WaiveLateCancelForMove(outcome, session.Move(), booking.CreatedAt, rules, now)
+		perks, err := s.memberPerks(ctx, q, booking.CustomerID)
+		if err != nil {
+			return err
+		}
+		// The member's tier may give a later free cancel than the branch.
+		cancelRules := perks.CancelRules(rules)
+		outcome := domain.EvaluateCancellation(booking.Status, session.StartsAt, session.CreditCost, pass != nil, cancelRules, now)
+		outcome = domain.WaiveLateCancelForMove(outcome, session.Move(), booking.CreatedAt, cancelRules, now)
 		if waivePenalty && customerID == "" {
 			outcome = outcome.Waived()
 		}
@@ -301,8 +314,8 @@ func (s *Service) CancelBooking(ctx context.Context, bookingID, customerID strin
 	return out, err
 }
 
-// promoteWaitlist fills the free seats from the head of the queue while
-// booking is open. Each member is checked again first (credits available,
+// promoteWaitlist fills the free seats from the head of the queue (tier
+// rank first, then FIFO) while booking is open. Each member is checked again first (credits available,
 // pass, coverage, caps, suspension); one who no longer qualifies is told
 // why, stays on the waitlist and is skipped. Outside the cutoff a seat is
 // confirmed at once; inside it, or with auto promotion off, it is offered
@@ -330,6 +343,11 @@ func (s *Service) promoteWaitlist(ctx context.Context, q Q, session *SessionRow,
 	entries := make([]domain.WaitlistEntry, len(rows))
 	for i, r := range rows {
 		entries[i] = r.waitlistEntry()
+		perks, err := s.memberPerks(ctx, q, entries[i].CustomerID)
+		if err != nil {
+			return nil, err
+		}
+		entries[i].Rank = perks.WaitlistRank
 	}
 	mode := domain.WaitlistPromotionMode(rules, session.StartsAt, now)
 	var promoted []Promoted

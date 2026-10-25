@@ -136,6 +136,10 @@ func (crmSQL) Venue(ctx context.Context, q database.Querier) (string, string) {
 	return company, branch
 }
 
+// DefaultCRM is the CRM port self-order uses when none is wired, for
+// adapters that extend it.
+func DefaultCRM() CRM { return crmSQL{} }
+
 // MemberDiscountPercent is loadMemberDiscountPercent: 0 on any failure.
 func (crmSQL) MemberDiscountPercent(ctx context.Context, q database.Querier, customerID string) float64 {
 	var xp *float64

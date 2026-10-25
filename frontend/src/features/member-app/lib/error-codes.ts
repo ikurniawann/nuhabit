@@ -17,6 +17,7 @@ export const WAIVER_REQUIRED = "BOOKING_WAIVER_REQUIRED";
 export const ERROR_MESSAGES: Record<string, string> = {
   // Booking (gymscheduling)
   BOOKING_MEMBER_NOT_ACTIVE: "Your membership can't book classes yet.",
+  BOOKING_MEMBER_BANNED: "Your account is blocked from booking. Please see the front desk.",
   BOOKING_SESSION_NOT_BOOKABLE: "This class isn't open for booking.",
   BOOKING_BOOKING_NOT_OPEN_YET: "Booking for this class hasn't opened yet.",
   BOOKING_BOOKING_WINDOW_CLOSED: "Booking for this class has closed.",

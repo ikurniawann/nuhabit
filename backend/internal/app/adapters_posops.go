@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"nuhabit/backend/internal/modules/gymloyalty"
 	"nuhabit/backend/internal/modules/posops"
 	"nuhabit/backend/internal/modules/posops/domain"
 	"nuhabit/backend/internal/platform/database"
@@ -315,6 +316,16 @@ func (posOpsCRM) TierDiscounts(ctx context.Context, q database.Querier) (map[str
 		}
 	}
 	return out, rows.Err()
+}
+
+// MemberDiscounts are the gym membership tier discounts (gym-loyalty).
+func (posOpsCRM) MemberDiscounts(ctx context.Context, q database.Querier, customerIDs []string) (map[string]posops.MemberDiscount, error) {
+	found, err := gymloyalty.Discounts(ctx, q, customerIDs, time.Now())
+	out := make(map[string]posops.MemberDiscount, len(found))
+	for id, d := range found {
+		out[id] = posops.MemberDiscount(d)
+	}
+	return out, err
 }
 
 func (posOpsCRM) PosXp(ctx context.Context, q database.Querier, start, end time.Time) ([]domain.XpRow, error) {

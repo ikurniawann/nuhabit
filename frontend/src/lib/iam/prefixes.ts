@@ -131,6 +131,8 @@ export const IAM = {
   tasksTeam: ["tasks.team"],
   /** Tampilan KPI & Tugas per indikator. */
   tasksKpi: ["tasks.kpi"],
+  /** Gym → Membership & Progres (tier dari belanja, XP kehadiran, status member). */
+  gymLoyalty: ["gym.loyalty"],
   /** HRIS → Master Data (departemen, jabatan, status kepegawaian). */
   hrisMaster: ["hris.master"],
   /** HRIS → Organisasi (struktur organisasi, seksi). */
