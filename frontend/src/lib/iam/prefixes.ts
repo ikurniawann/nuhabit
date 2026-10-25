@@ -147,6 +147,8 @@ export const IAM = {
   siteContent: ["site.content"],
   siteArticles: ["site.articles"],
   siteEvents: ["site.events"],
+  /** Event → Kalender Event: satu kalender untuk event, kelas dan PT. */
+  eventsCalendar: ["events.calendar"],
   /** Items → approval PR per modul. */
   itemsPrApproval: [
     "items.general.purchasing.approval-pr",

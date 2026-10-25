@@ -349,6 +349,9 @@ WHERE deleted_at IS NULL
     'pos.loyalty.wallet', 'pos.loyalty.wallet.packages', 'pos.loyalty.wallet.payments',
     'pos.loyalty.wallet.settings', 'settings.audit', 'shop.wholesale', 'shop.settings',
     'site', 'site.articles', 'site.content', 'site.events',
+    -- Event calendar (27 Oct 2026): one calendar over CRM events, site
+    -- events, classes and PT.
+    'events', 'events.calendar',
     -- Production module (19 Oct 2026): WIP and batch cost pages.
     'items.product.production.wip', 'items.product.production.batches',
     'items.raw-material.production.wip', 'items.raw-material.production.batches');

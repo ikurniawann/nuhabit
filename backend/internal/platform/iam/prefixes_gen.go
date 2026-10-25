@@ -93,6 +93,7 @@ var (
 	SiteContent             = []string{"site.content"}
 	SiteArticles            = []string{"site.articles"}
 	SiteEvents              = []string{"site.events"}
+	EventsCalendar          = []string{"events.calendar"}
 	ItemsPrApproval         = []string{"items.general.purchasing.approval-pr", "items.product.approval.pr", "items.raw-material.approval.pr"}
 )
 
@@ -186,5 +187,6 @@ var ByKey = map[string][]string{
 	"siteContent":             SiteContent,
 	"siteArticles":            SiteArticles,
 	"siteEvents":              SiteEvents,
+	"eventsCalendar":          EventsCalendar,
 	"itemsPrApproval":         ItemsPrApproval,
 }

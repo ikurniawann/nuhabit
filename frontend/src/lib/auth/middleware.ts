@@ -91,6 +91,8 @@ const PUBLIC_AUTH_PREFIXES = [
   "/equipment",
   "/contact",
   "/api/public/site",
+  // Langganan ICS kalender event; token di query adalah satu-satunya kredensial.
+  "/api/public/events",
   // Probe liveness/readiness untuk Docker HEALTHCHECK & load balancer.
   "/api/health",
   "/api/ready",
