@@ -114,5 +114,7 @@ func (c testCredits) ForBranch(ctx context.Context, q database.Querier, branchID
 		OpenGymEnabled:            r.OpenGymEnabled,
 		OpenGymCreditCost:         r.OpenGymCreditCost,
 		CorrectionWindowDays:      r.CorrectionWindowDays,
+		ChangeFreeCancelHours:     r.ChangeFreeCancelHours,
+		ChangeNoticeMinHours:      r.ChangeNoticeMinHours,
 	}, err
 }

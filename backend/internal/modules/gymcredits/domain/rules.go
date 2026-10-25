@@ -86,6 +86,13 @@ type Rules struct {
 	// PtRescheduleLimit: how many times a member may move one PT session
 	// from the member app, before its free cancellation deadline. 0 = never.
 	PtRescheduleLimit int `json:"ptRescheduleLimit"`
+	// ChangeFreeCancelHours: after the studio moves a class or changes its
+	// coach, members booked before the change may cancel free for this many
+	// hours (never past the start). 0 = only the normal deadline.
+	ChangeFreeCancelHours int `json:"changeFreeCancelHours"`
+	// ChangeNoticeMinHours: a change announced less than this many hours
+	// before the start is flagged late in the change report.
+	ChangeNoticeMinHours int `json:"changeNoticeMinHours"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
@@ -127,6 +134,8 @@ type RulesPatch struct {
 	MaxTransferCreditsPerMonth *int    `json:"maxTransferCreditsPerMonth,omitempty"`
 	DefaultCompanyID           *string `json:"defaultCompanyId,omitempty"`
 	PtRescheduleLimit          *int    `json:"ptRescheduleLimit,omitempty"`
+	ChangeFreeCancelHours      *int    `json:"changeFreeCancelHours,omitempty"`
+	ChangeNoticeMinHours       *int    `json:"changeNoticeMinHours,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -168,6 +177,8 @@ var RuleDefaults = Rules{
 	OpenGymCreditCost:         1,
 	CorrectionWindowDays:      7,
 	PtRescheduleLimit:         2,
+	ChangeFreeCancelHours:     24,
+	ChangeNoticeMinHours:      12,
 }
 
 type ruleKind int
@@ -250,6 +261,8 @@ var ruleSpecs = []ruleSpec{
 	intRule("maxTransferCreditsPerMonth", 0, 1000, "Batas transfer kredit per bulan", func(p *RulesPatch) **int { return &p.MaxTransferCreditsPerMonth }),
 	uuidRule("defaultCompanyId", "Perusahaan default", func(p *RulesPatch) **string { return &p.DefaultCompanyID }),
 	intRule("ptRescheduleLimit", 0, 20, "Batas ubah jadwal PT", func(p *RulesPatch) **int { return &p.PtRescheduleLimit }),
+	intRule("changeFreeCancelHours", 0, 168, "Batal gratis setelah perubahan jadwal", func(p *RulesPatch) **int { return &p.ChangeFreeCancelHours }),
+	intRule("changeNoticeMinHours", 0, 72, "Batas kabar perubahan jadwal", func(p *RulesPatch) **int { return &p.ChangeNoticeMinHours }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -448,6 +461,8 @@ func (p RulesPatch) Over(base Rules) Rules {
 		base.DefaultCompanyID = *p.DefaultCompanyID
 	}
 	setInt(&base.PtRescheduleLimit, p.PtRescheduleLimit)
+	setInt(&base.ChangeFreeCancelHours, p.ChangeFreeCancelHours)
+	setInt(&base.ChangeNoticeMinHours, p.ChangeNoticeMinHours)
 	return base
 }
 

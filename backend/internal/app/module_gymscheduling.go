@@ -189,5 +189,7 @@ func schedulingRules(r creditsdomain.Rules) scheddomain.Rules {
 		OpenGymEnabled:            r.OpenGymEnabled,
 		OpenGymCreditCost:         r.OpenGymCreditCost,
 		CorrectionWindowDays:      r.CorrectionWindowDays,
+		ChangeFreeCancelHours:     r.ChangeFreeCancelHours,
+		ChangeNoticeMinHours:      r.ChangeNoticeMinHours,
 	}
 }

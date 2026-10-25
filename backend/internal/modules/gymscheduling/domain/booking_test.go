@@ -14,6 +14,8 @@ var rules = Rules{
 	WaitlistAutoPromote:       true,
 	BookingOpensDaysBefore:    7,
 	BookingClosesMinBefore:    0,
+	ChangeFreeCancelHours:     24,
+	ChangeNoticeMinHours:      12,
 }
 
 func at(s string) time.Time {

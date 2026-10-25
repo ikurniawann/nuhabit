@@ -133,11 +133,13 @@ type QrTokens interface {
 	Consume(ctx context.Context, q database.Querier, token string, at time.Time) error
 }
 
-// Notification is an in-app message to a member.
+// Notification is an in-app message to a member. DeliverAfter holds the
+// push and WhatsApp back (quiet hours); zero sends after commit.
 type Notification struct {
-	Type  string
-	Title string
-	Body  string
+	Type         string
+	Title        string
+	Body         string
+	DeliverAfter time.Time
 }
 
 // PTCandidate is a confirmed personal training session the gate may check

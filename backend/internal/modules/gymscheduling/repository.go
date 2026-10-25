@@ -162,13 +162,14 @@ type SessionRow struct {
 	Status                                domain.SessionStatus
 	Notes                                 *string
 	MovedAt, OriginalStartsAt             *time.Time
+	CoachChangedAt                        *time.Time
 	// Zone is the branch zone: days and times shown to members read in it.
 	Zone *time.Location
 }
 
 // Move is the studio's last move of the session, for the late-cancel waiver.
 func (s *SessionRow) Move() domain.SessionMove {
-	return domain.SessionMove{MovedAt: s.MovedAt, OriginalStartsAt: s.OriginalStartsAt}
+	return domain.SessionMove{MovedAt: s.MovedAt, OriginalStartsAt: s.OriginalStartsAt, CoachChangedAt: s.CoachChangedAt}
 }
 
 // when is the start as "Sab, 24 Okt, 18.00" in the branch zone.

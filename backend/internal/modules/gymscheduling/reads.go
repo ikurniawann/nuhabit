@@ -148,7 +148,7 @@ func sessionMove(r *Row) domain.SessionMove {
 		}
 		return nil
 	}
-	return domain.SessionMove{MovedAt: at("moved_at"), OriginalStartsAt: at("original_starts_at")}
+	return domain.SessionMove{MovedAt: at("moved_at"), OriginalStartsAt: at("original_starts_at"), CoachChangedAt: at("coach_changed_at")}
 }
 
 // attachCancelInfo adds cancel_info to each row: null unless the member's
