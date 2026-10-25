@@ -9,6 +9,7 @@ import (
 	"nuhabit/backend/internal/modules/gymcoaching"
 	"nuhabit/backend/internal/modules/gymcredits"
 	creditsdomain "nuhabit/backend/internal/modules/gymcredits/domain"
+	"nuhabit/backend/internal/modules/gymloyalty"
 	"nuhabit/backend/internal/modules/gymscheduling"
 	scheddomain "nuhabit/backend/internal/modules/gymscheduling/domain"
 	memberdomain "nuhabit/backend/internal/modules/memberportal/domain"
@@ -56,6 +57,7 @@ func schedulingPortsOn(d module.Deps, db gymcredits.DB) gymscheduling.Ports {
 		Qr:            gymscheduling.QrTokensSQL{},
 		Notifier:      gymscheduling.NotificationsSQL{},
 		PT:            schedulingPT{svc: gymcoaching.NewService(db, coachingPortsOn(d, db), d.Now, d.Log)},
+		Perks:         schedulingPerks{svc: gymloyalty.NewService(db, gymloyalty.Ports{}, d.Now, d.Log)},
 		WaiverVersion: memberdomain.WaiverVersion,
 	}
 }

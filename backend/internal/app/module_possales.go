@@ -1,6 +1,7 @@
 package app
 
 import (
+	"nuhabit/backend/internal/modules/gymloyalty"
 	"nuhabit/backend/internal/modules/possales"
 	"nuhabit/backend/internal/modules/possales/adapters"
 	"nuhabit/backend/internal/modules/possales/gofood"
@@ -33,7 +34,9 @@ func init() {
 			salesHandler,
 			kitchen.New(d),
 			gofoodHandler,
-			tableorder.New(d, tableorder.Ports{Loyalty: loyalty, Wallet: wallet, Directory: set.Directory}),
+			tableorder.New(d, tableorder.Ports{Loyalty: loyalty, Wallet: wallet, Directory: set.Directory, CRM: memberDiscountCRM{
+				CRM: tableorder.DefaultCRM(), loyalty: gymloyalty.NewService(d.DB, gymloyalty.Ports{}, d.Now, d.Log),
+			}}),
 			offers.NewWithBackend(d, offersBackend, offers.CrmSettingsVenue{}),
 			lookup.New(d, possalesLookupPorts(d)),
 		)
