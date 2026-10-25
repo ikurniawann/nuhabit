@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FadeIn } from "@/components/motion";
 import { ApiTokensPage } from "@/features/configuration/api-tokens/api-tokens-page";
+import { EmailSummaryCard } from "@/features/configuration/email";
 import { GobizSettingsPanel } from "@/features/gobiz/components/gobiz-settings-panel";
 
 interface ProviderConfig {
@@ -286,6 +287,10 @@ export function IntegrationsPage() {
           />
         </>
       )}
+
+      {/* Email keluar (Resend atau Microsoft 365): form lengkap dan log ada di
+          halaman sendiri karena memuat log kirim. */}
+      <EmailSummaryCard />
 
       {/* EPIC-049 — GoBiz / GoFood. Menu Settings → Integrasi membuka halaman ini,
           bukan /dashboard/integration (Integration Center lama tanpa tautan menu),

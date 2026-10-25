@@ -6122,6 +6122,31 @@
   {
     "module": "integrations",
     "method": "GET",
+    "path": "/api/settings/email"
+  },
+  {
+    "module": "integrations",
+    "method": "PUT",
+    "path": "/api/settings/email"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/email/log"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/settings/email/log/{id}/resend"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/settings/email/test"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
     "path": "/api/settings/gobiz"
   },
   {
