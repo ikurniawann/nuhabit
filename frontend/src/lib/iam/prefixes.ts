@@ -117,6 +117,8 @@ export const IAM = {
   gymGateDevices: ["gym.gate-devices"],
   /** Gym → Referral (pengaturan program, daftar referral, leaderboard). */
   gymReferrals: ["gym.referrals"],
+  /** Gym → Membership & Progres (tier dari belanja, XP kehadiran, status member). */
+  gymLoyalty: ["gym.loyalty"],
   /** HRIS → Master Data (departemen, jabatan, status kepegawaian). */
   hrisMaster: ["hris.master"],
   /** HRIS → Organisasi (struktur organisasi, seksi). */

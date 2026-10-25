@@ -188,7 +188,7 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('accounting.reports.cash-flow', 'Cash Flow', '/dashboard/accounting/reports/cash-flow', 'banknotes', 'sidebar', 30, '{"actions":["read","export"]}'::jsonb),
   ('accounting.reports.equity', 'Changes in Equity', '/dashboard/accounting/reports/changes-in-equity', 'chart', 'sidebar', 40, '{"actions":["read"]}'::jsonb),
   ('accounting.reports.budget', 'Budget vs Actual', '/dashboard/accounting/reports/budget-vs-actual', 'chart-bar', 'sidebar', 50, '{"actions":["read"]}'::jsonb),
-  -- Gym & Kelas, as the gym migrations up to 22 Oct 2026 leave it
+  -- Gym & Kelas, as the gym migrations up to 28 Oct 2026 leave it
   -- (internal/migrate/seeders_test.go checks every gym menu is here).
   ('gym', 'Gym & Kelas', NULL, 'calendar', 'group', 3, '{"actions":["read"]}'::jsonb),
   ('gym.my-classes', 'Kelas Saya', '/dashboard/gym/my-classes', 'clipboard-document-check', 'sidebar', 2, '{"actions":["read","update"]}'::jsonb),
@@ -209,6 +209,7 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('gym.races', 'Race HYROX', '/dashboard/gym/races', 'map', 'sidebar', 87, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.incentives', 'Insentif Coach', '/dashboard/gym/incentives', 'money', 'sidebar', 90, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.referrals', 'Referral', '/dashboard/gym/referrals', 'user-plus', 'sidebar', 90, '{"actions":["read","update"]}'::jsonb),
+  ('gym.loyalty', 'Membership & Progres', '/dashboard/gym/loyalty', 'star', 'sidebar', 92, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.reports', 'Laporan Gym', '/dashboard/gym/reports', 'chart-bar', 'sidebar', 95, '{"actions":["read"]}'::jsonb),
   ('gym.rules', 'Aturan Gym', '/dashboard/gym/rules', 'settings', 'sidebar', 100, '{"actions":["read","update"]}'::jsonb)
 ON CONFLICT (code) DO UPDATE SET
@@ -344,6 +345,8 @@ WHERE deleted_at IS NULL
     -- assessments, coach portal, gate devices, referrals):
     'gym.members', 'gym.reports', 'gym.schedule.templates', 'gym.pt', 'gym.assessments',
     'gym.my-classes', 'gym.gate-devices', 'gym.referrals',
+    -- Membership tiers and attendance progress (28 Oct 2026):
+    'gym.loyalty',
     'items.raw-material.inventory.expiry', 'items.raw-material.inventory.movements',
     'items.raw-material.inventory.scrap', 'pos.catalog.channel-prices',
     'pos.loyalty.wallet', 'pos.loyalty.wallet.packages', 'pos.loyalty.wallet.payments',
