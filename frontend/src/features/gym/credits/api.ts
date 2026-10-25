@@ -79,6 +79,8 @@ export interface GymRules {
   changeFreeCancelHours: number;
   /** Perubahan jadwal yang dikabarkan kurang dari ini (jam) sebelum kelas ditandai terlambat di laporan. */
   changeNoticeMinHours: number;
+  /** Booking butuh deklarasi kesehatan PAR-Q yang diisi dalam 12 bulan terakhir. */
+  requireParq: boolean;
 }
 
 /** credits: a batch of class credits; pass: unlimited bookings for validity_days. */

@@ -12,6 +12,7 @@ import { classImage } from "../lib/images";
 import { asset, m } from "../lib/links";
 import { useAccount, useHomeFeed, useMyBookings, usePromos } from "../lib/queries-home";
 import { Spinner, formatDay, formatDayTime, formatDuration, formatTime } from "../ui";
+import { HealthBanner } from "./health-banner";
 import { PasswordPrompt } from "./password-prompt";
 
 
@@ -51,6 +52,7 @@ export function HomePage() {
       </div>
 
       <PasswordPrompt />
+      <HealthBanner />
 
       {/* Saldo kredit - "kartu hitam"; ketuk membuka kartu member digital */}
       <div className="nh-card nh-surface-ink relative block w-full overflow-hidden !border-0 !p-6 text-left text-white">

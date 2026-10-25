@@ -1810,6 +1810,31 @@
     "path": "/api/gym/coach-leave/warnings/{id}"
   },
   {
+    "module": "gym-care",
+    "method": "GET",
+    "path": "/api/gym/coach-notes"
+  },
+  {
+    "module": "gym-care",
+    "method": "POST",
+    "path": "/api/gym/coach-notes"
+  },
+  {
+    "module": "gym-care",
+    "method": "GET",
+    "path": "/api/gym/coach-notes/members/{id}"
+  },
+  {
+    "module": "gym-care",
+    "method": "DELETE",
+    "path": "/api/gym/coach-notes/{id}"
+  },
+  {
+    "module": "gym-care",
+    "method": "POST",
+    "path": "/api/gym/coach-notes/{id}/release"
+  },
+  {
     "module": "gym-scheduling",
     "method": "GET",
     "path": "/api/gym/coaches"
@@ -2045,6 +2070,11 @@
     "path": "/api/gym/gate/devices/scan"
   },
   {
+    "module": "gym-care",
+    "method": "GET",
+    "path": "/api/gym/health-declarations/{customerId}"
+  },
+  {
     "module": "gym-training",
     "method": "GET",
     "path": "/api/gym/incentives/payouts"
@@ -2123,6 +2153,51 @@
     "module": "gym-loyalty",
     "method": "PATCH",
     "path": "/api/gym/loyalty/tiers/{id}"
+  },
+  {
+    "module": "gym-care",
+    "method": "GET",
+    "path": "/api/gym/member-flag-types"
+  },
+  {
+    "module": "gym-care",
+    "method": "POST",
+    "path": "/api/gym/member-flag-types"
+  },
+  {
+    "module": "gym-care",
+    "method": "PATCH",
+    "path": "/api/gym/member-flag-types/{id}"
+  },
+  {
+    "module": "gym-care",
+    "method": "GET",
+    "path": "/api/gym/member-flags"
+  },
+  {
+    "module": "gym-care",
+    "method": "POST",
+    "path": "/api/gym/member-flags"
+  },
+  {
+    "module": "gym-care",
+    "method": "GET",
+    "path": "/api/gym/member-flags/members"
+  },
+  {
+    "module": "gym-care",
+    "method": "DELETE",
+    "path": "/api/gym/member-flags/{id}"
+  },
+  {
+    "module": "gym-care",
+    "method": "PATCH",
+    "path": "/api/gym/member-flags/{id}"
+  },
+  {
+    "module": "gym-care",
+    "method": "POST",
+    "path": "/api/gym/member-flags/{id}/review"
   },
   {
     "module": "gym-desk",
@@ -2223,6 +2298,16 @@
     "module": "gym-scheduling",
     "method": "GET",
     "path": "/api/gym/my-classes/sessions/{id}"
+  },
+  {
+    "module": "gym-sop",
+    "method": "GET",
+    "path": "/api/gym/my-classes/sop"
+  },
+  {
+    "module": "gym-sop",
+    "method": "POST",
+    "path": "/api/gym/my-classes/sop/{versionId}/ack"
   },
   {
     "module": "gym-scheduling",
@@ -2518,6 +2603,46 @@
     "module": "gym-scheduling",
     "method": "POST",
     "path": "/api/gym/sessions/{id}"
+  },
+  {
+    "module": "gym-sop",
+    "method": "GET",
+    "path": "/api/gym/sop"
+  },
+  {
+    "module": "gym-sop",
+    "method": "POST",
+    "path": "/api/gym/sop"
+  },
+  {
+    "module": "gym-sop",
+    "method": "GET",
+    "path": "/api/gym/sop/roles"
+  },
+  {
+    "module": "gym-sop",
+    "method": "GET",
+    "path": "/api/gym/sop/versions/{versionId}/file"
+  },
+  {
+    "module": "gym-sop",
+    "method": "GET",
+    "path": "/api/gym/sop/{id}"
+  },
+  {
+    "module": "gym-sop",
+    "method": "PATCH",
+    "path": "/api/gym/sop/{id}"
+  },
+  {
+    "module": "gym-sop",
+    "method": "POST",
+    "path": "/api/gym/sop/{id}/remind"
+  },
+  {
+    "module": "gym-sop",
+    "method": "POST",
+    "path": "/api/gym/sop/{id}/versions"
   },
   {
     "module": "hris",
@@ -4098,6 +4223,16 @@
     "module": "gym-complaints",
     "method": "POST",
     "path": "/api/member-portal/gym/feedback/{id}/reopen"
+  },
+  {
+    "module": "gym-care",
+    "method": "GET",
+    "path": "/api/member-portal/gym/health"
+  },
+  {
+    "module": "gym-care",
+    "method": "POST",
+    "path": "/api/member-portal/gym/health"
   },
   {
     "module": "gym-credits",

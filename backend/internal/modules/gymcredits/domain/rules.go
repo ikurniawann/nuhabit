@@ -93,6 +93,9 @@ type Rules struct {
 	// ChangeNoticeMinHours: a change announced less than this many hours
 	// before the start is flagged late in the change report.
 	ChangeNoticeMinHours int `json:"changeNoticeMinHours"`
+	// RequireParq: booking needs a PAR-Q health declaration filled in the
+	// last 12 months.
+	RequireParq bool `json:"requireParq"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
@@ -136,6 +139,7 @@ type RulesPatch struct {
 	PtRescheduleLimit          *int    `json:"ptRescheduleLimit,omitempty"`
 	ChangeFreeCancelHours      *int    `json:"changeFreeCancelHours,omitempty"`
 	ChangeNoticeMinHours       *int    `json:"changeNoticeMinHours,omitempty"`
+	RequireParq                *bool   `json:"requireParq,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -263,6 +267,7 @@ var ruleSpecs = []ruleSpec{
 	intRule("ptRescheduleLimit", 0, 20, "Batas ubah jadwal PT", func(p *RulesPatch) **int { return &p.PtRescheduleLimit }),
 	intRule("changeFreeCancelHours", 0, 168, "Batal gratis setelah perubahan jadwal", func(p *RulesPatch) **int { return &p.ChangeFreeCancelHours }),
 	intRule("changeNoticeMinHours", 0, 72, "Batas kabar perubahan jadwal", func(p *RulesPatch) **int { return &p.ChangeNoticeMinHours }),
+	boolRule("requireParq", "Wajib PAR-Q", func(p *RulesPatch) **bool { return &p.RequireParq }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -463,6 +468,7 @@ func (p RulesPatch) Over(base Rules) Rules {
 	setInt(&base.PtRescheduleLimit, p.PtRescheduleLimit)
 	setInt(&base.ChangeFreeCancelHours, p.ChangeFreeCancelHours)
 	setInt(&base.ChangeNoticeMinHours, p.ChangeNoticeMinHours)
+	setBool(&base.RequireParq, p.RequireParq)
 	return base
 }
 

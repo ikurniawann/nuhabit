@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"nuhabit/backend/internal/modules/gymcare"
 	"nuhabit/backend/internal/modules/gymcoaching"
 	"nuhabit/backend/internal/modules/gymcredits"
 	creditsdomain "nuhabit/backend/internal/modules/gymcredits/domain"
@@ -58,6 +59,7 @@ func schedulingPortsOn(d module.Deps, db gymcredits.DB) gymscheduling.Ports {
 		Notifier:      gymscheduling.NotificationsSQL{},
 		PT:            schedulingPT{svc: gymcoaching.NewService(db, coachingPortsOn(d, db), d.Now, d.Log)},
 		Perks:         schedulingPerks{svc: gymloyalty.NewService(db, gymloyalty.Ports{}, d.Now, d.Log)},
+		Health:        schedulingHealth{},
 		WaiverVersion: memberdomain.WaiverVersion,
 	}
 }
@@ -186,6 +188,7 @@ func schedulingRules(r creditsdomain.Rules) scheddomain.Rules {
 		ClassReminderMinutes:      r.ClassReminderMinutes,
 		ScheduleHorizonDays:       r.ScheduleHorizonDays,
 		RequireWaiver:             r.RequireWaiver,
+		RequireParq:               r.RequireParq,
 		CheckinOpensMinBefore:     r.CheckinOpensMinBefore,
 		CheckinClosesMinAfter:     r.CheckinClosesMinAfter,
 		OpenGymEnabled:            r.OpenGymEnabled,
@@ -194,4 +197,13 @@ func schedulingRules(r creditsdomain.Rules) scheddomain.Rules {
 		ChangeFreeCancelHours:     r.ChangeFreeCancelHours,
 		ChangeNoticeMinHours:      r.ChangeNoticeMinHours,
 	}
+}
+
+// schedulingHealth answers requireParq from the gym-care declarations.
+type schedulingHealth struct{}
+
+var _ gymscheduling.Health = schedulingHealth{}
+
+func (schedulingHealth) ParqCurrent(ctx context.Context, q database.Querier, customerID string, at time.Time) (bool, error) {
+	return gymcare.ParqCurrent(ctx, q, customerID, at)
 }

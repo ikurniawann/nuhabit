@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatNumber } from "@/lib/format";
+import { SopBanner } from "@/features/gym/care/components/sop-reader";
 import { MY_CLASSES_KEYS, myClassesApi } from "../api";
 import { CoachComplaints } from "@/features/gym/complaints/components/coach-complaints";
 import { MyIncentives } from "./my-incentives";
@@ -69,6 +70,9 @@ export function MyClassesPage() {
     return (
       <div className="space-y-4">
         <PageHeader kicker="Gym & Kelas" title="Kelas Saya" />
+        <Suspense fallback={null}>
+          <SopBanner />
+        </Suspense>
         <Card className="p-5 text-sm text-body">
           Akun ini belum tertaut ke profil coach. Minta manajer gym menautkan akunmu di menu Coach, lalu muat ulang halaman ini.
         </Card>
@@ -88,6 +92,9 @@ export function MyClassesPage() {
         title="Kelas Saya"
         description="Kelas yang kamu latih. Buka kelas untuk check-in member dan menandai yang tidak hadir."
       />
+      <Suspense fallback={null}>
+        <SopBanner />
+      </Suspense>
       <div className="flex items-center gap-3">
         <CoachAvatar name={coach.name} url={coach.photo_url} className="size-12" />
         <div className="min-w-0">

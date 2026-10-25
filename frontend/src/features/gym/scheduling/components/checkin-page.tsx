@@ -18,6 +18,7 @@ import { defaultBranchId, useGymBranches } from "@/features/gym/branches";
 import { formatNumber } from "@/lib/format";
 import { GYM_KEYS, schedulingApi, type CheckInResult } from "../api";
 import { DeskMemberSearch } from "./desk-member-search";
+import { FlagBadges, useMemberFlags } from "@/features/gym/care/components/flag-badges";
 import { DropInPanel } from "./drop-in-panel";
 import { QrCamera } from "./qr-camera";
 
@@ -145,6 +146,7 @@ export function CheckinPage() {
 }
 
 function ScanResult({ result }: { result: CheckInResult | null }) {
+  const flags = useMemberFlags(result?.customerId ? [result.customerId] : []);
   if (!result) {
     return (
       <Card variant="soft">
@@ -162,6 +164,7 @@ function ScanResult({ result }: { result: CheckInResult | null }) {
         {allowed ? "Masuk" : "Ditolak"}
       </p>
       <p className={allowed ? "text-sm text-on-ink" : "text-sm text-foreground"}>{result.message}</p>
+      {result.customerId && <FlagBadges entry={flags.get(result.customerId)} className="flex flex-wrap gap-1" />}
     </Card>
   );
 }

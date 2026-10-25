@@ -44,6 +44,7 @@ import { DESK_MENUS, SCHEDULE_MENUS, useBookingActions } from "@/features/gym/pe
 import { BookingActionConfirm, type PendingBookingAction } from "./booking-action-confirm";
 import { CorrectionDialog, type PendingCorrection } from "./correction-dialog";
 import { SessionDialog } from "./session-dialog";
+import { FlagBadges, useMemberFlags } from "@/features/gym/care/components/flag-badges";
 
 type SessionAction = "publish" | "cancel" | "complete" | "delete";
 type BookingAction = "cancel" | "no_show" | "check_in";
@@ -284,6 +285,7 @@ function RosterTable({
   onAction: (booking: RosterEntry, action: RosterAction) => void;
 }) {
   const can = useBookingActions();
+  const flags = useMemberFlags(rows.map((b) => b.customer_id));
   if (rows.length === 0) return <TableNote>{empty}</TableNote>;
   return (
     <Table>
@@ -302,6 +304,7 @@ function RosterTable({
               <TableCell>
                 <MemberLink id={b.customer_id} name={b.name} />
                 <p className="font-mono text-xs text-muted-foreground">{b.phone}</p>
+                <FlagBadges entry={flags.get(b.customer_id)} />
               </TableCell>
               <TableCell className="whitespace-normal">
                 <Badge variant={badge.variant}>

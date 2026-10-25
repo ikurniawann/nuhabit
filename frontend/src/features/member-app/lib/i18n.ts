@@ -7,6 +7,7 @@ import { CLASSES_ID } from "./i18n-classes";
 import { COACHING_ID } from "./i18n-coaching";
 import { ERRORS_ID } from "./i18n-errors";
 import { FEEDBACK_ID } from "./i18n-feedback";
+import { HEALTH_ID } from "./i18n-health";
 import { HOME_ID } from "./i18n-home";
 import { LOYALTY_ID } from "./i18n-loyalty";
 import { RACES_ID } from "./i18n-races";
@@ -174,6 +175,7 @@ export const ID: Record<string, string> = {
   ...REFERRAL_ID,
   ...FEEDBACK_ID,
   ...PROGRESS_ID,
+  ...HEALTH_ID,
 };
 
 /** Isi placeholder `{name}` pada teks yang sudah diterjemahkan; yang tak berisi dibiarkan. */

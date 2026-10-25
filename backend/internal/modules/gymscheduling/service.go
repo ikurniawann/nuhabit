@@ -171,6 +171,13 @@ type TierPerks interface {
 	TierPerks(ctx context.Context, q database.Querier, customerID string) (domain.MemberPerks, error)
 }
 
+// Health reads the member's PAR-Q declaration (owned by gym-care).
+type Health interface {
+	// ParqCurrent: a declaration of the current version that has not
+	// expired at at.
+	ParqCurrent(ctx context.Context, q database.Querier, customerID string, at time.Time) (bool, error)
+}
+
 // Notifier delivers member notifications (owned by CRM).
 type Notifier interface {
 	NotifyMember(ctx context.Context, q database.Querier, customerID string, n Notification) error
@@ -194,6 +201,9 @@ type Ports struct {
 	Notifier Notifier
 	PT       PersonalTraining
 	Perks    TierPerks
+	// Health answers the requireParq rule; nil treats every member as
+	// declared.
+	Health Health
 	// WaiverVersion is the waiver text members accept today; "" accepts
 	// any version on record.
 	WaiverVersion string

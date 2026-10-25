@@ -193,6 +193,7 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('gym', 'Gym & Kelas', NULL, 'calendar', 'group', 3, '{"actions":["read"]}'::jsonb),
   ('gym.my-classes', 'Kelas Saya', '/dashboard/gym/my-classes', 'clipboard-document-check', 'sidebar', 2, '{"actions":["read","update"]}'::jsonb),
   ('gym.members', 'Member', '/dashboard/gym/members', 'users', 'sidebar', 5, '{"actions":["read","create","update"]}'::jsonb),
+  ('gym.member-flags', 'Member Perhatian Khusus', '/dashboard/gym/member-flags', 'identification', 'sidebar', 6, '{"actions":["read","create","update","delete","read_medical"]}'::jsonb),
   ('gym.schedule', 'Jadwal Kelas', '/dashboard/gym/schedule', 'calendar', 'sidebar', 10, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.schedule.templates', 'Template Jadwal', '/dashboard/gym/schedule-templates', 'file-text', 'sidebar', 15, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.sessions', 'Sesi & Absensi', '/dashboard/gym/sessions', 'clock', 'sidebar', 20, '{"actions":["read","create","update","delete","read_own"]}'::jsonb),
@@ -204,6 +205,7 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('gym.class-types', 'Jenis Kelas', '/dashboard/gym/class-types', 'clipboard', 'sidebar', 50, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.coaches', 'Coach', '/dashboard/gym/coaches', 'identification', 'sidebar', 60, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.coach-leave', 'Cuti & Pengganti Coach', '/dashboard/gym/coach-leave', 'calendar', 'sidebar', 65, '{"actions":["read","update"]}'::jsonb),
+  ('gym.sop', 'SOP Coach', '/dashboard/gym/sop', 'document-text', 'sidebar', 62, '{"actions":["read","read_own","create","update","delete"]}'::jsonb),
   ('gym.packages', 'Paket Kredit', '/dashboard/gym/packages', 'package', 'sidebar', 70, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.credits', 'Kredit Member', '/dashboard/gym/credits', 'banknotes', 'sidebar', 80, '{"actions":["read","create","update"]}'::jsonb),
   ('gym.exercises', 'Stasiun & Latihan', '/dashboard/gym/exercises', 'video', 'sidebar', 85, '{"actions":["read","create","update","delete"]}'::jsonb),
@@ -370,6 +372,8 @@ WHERE deleted_at IS NULL
     'tasks', 'tasks.team', 'tasks.kpi',
     -- Membership tiers and attendance progress (28 Oct 2026):
     'gym.loyalty',
+    -- Member care and coach SOP (28 Oct 2026):
+    'gym.member-flags', 'gym.sop',
     'items.raw-material.inventory.expiry', 'items.raw-material.inventory.movements',
     'items.raw-material.inventory.scrap', 'pos.catalog.channel-prices',
     'pos.loyalty.wallet', 'pos.loyalty.wallet.packages', 'pos.loyalty.wallet.payments',

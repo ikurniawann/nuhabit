@@ -133,6 +133,10 @@ export const IAM = {
   tasksKpi: ["tasks.kpi"],
   /** Gym → Membership & Progres (tier dari belanja, XP kehadiran, status member). */
   gymLoyalty: ["gym.loyalty"],
+  /** Gym → Member Perhatian Khusus (penanda member; read_medical = detail medis). */
+  gymMemberFlags: ["gym.member-flags"],
+  /** Gym → SOP Coach (dokumen SOP berversi; read_own = baca dan konfirmasi sendiri). */
+  gymSop: ["gym.sop"],
   /** HRIS → Master Data (departemen, jabatan, status kepegawaian). */
   hrisMaster: ["hris.master"],
   /** HRIS → Organisasi (struktur organisasi, seksi). */

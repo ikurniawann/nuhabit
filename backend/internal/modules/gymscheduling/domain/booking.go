@@ -50,6 +50,8 @@ type Rules struct {
 	ScheduleHorizonDays int
 	// RequireWaiver: booking and gate entry need the current waiver.
 	RequireWaiver bool
+	// RequireParq: booking needs a current PAR-Q health declaration.
+	RequireParq bool
 	// The gate admits a booking from CheckinOpensMinBefore before the start
 	// until CheckinClosesMinAfter after the end (minutes).
 	CheckinOpensMinBefore int
@@ -150,6 +152,7 @@ const (
 	DenyMemberNotActive     BookingDenialReason = "member_not_active"
 	DenyMemberBanned        BookingDenialReason = "member_banned"
 	DenyWaiverRequired      BookingDenialReason = "waiver_required"
+	DenyParqRequired        BookingDenialReason = "parq_required"
 	DenySessionNotBookable  BookingDenialReason = "session_not_bookable"
 	DenyBookingNotOpenYet   BookingDenialReason = "booking_not_open_yet"
 	DenyBookingWindowClosed BookingDenialReason = "booking_window_closed"
@@ -168,6 +171,7 @@ var BookingDenialLabel = map[BookingDenialReason]string{
 	DenyMemberNotActive:     "Keanggotaan ini belum bisa booking kelas",
 	DenyMemberBanned:        "Akun member ini diblokir. Hubungi front desk",
 	DenyWaiverRequired:      "Waiver belum disetujui. Setujui waiver digital terlebih dulu untuk booking kelas",
+	DenyParqRequired:        "Deklarasi kesehatan (PAR-Q) belum diisi atau sudah lewat 12 bulan. Isi dulu di aplikasi member untuk booking kelas",
 	DenySessionNotBookable:  "Kelas ini tidak dibuka untuk booking",
 	DenyBookingNotOpenYet:   "Booking kelas ini belum dibuka",
 	DenyBookingWindowClosed: "Booking kelas ini sudah ditutup",
@@ -215,8 +219,11 @@ type EligibilityInput struct {
 	Banned bool
 	// WaiverMissing: the rules require a waiver the member has not accepted.
 	WaiverMissing bool
-	Session       BookableSession
-	Balance       int
+	// ParqMissing: the rules require a current PAR-Q declaration the member
+	// does not have.
+	ParqMissing bool
+	Session     BookableSession
+	Balance     int
 	// Reserved is the credit cost of the member's other confirmed bookings
 	// for classes not started yet and not covered by a pass. Those credits
 	// are spoken for, so only Balance - Reserved is available.
@@ -303,6 +310,8 @@ func EvaluateMemberEligibility(in EligibilityInput) BookingDenialReason {
 		return DenyMemberBanned
 	case in.WaiverMissing:
 		return DenyWaiverRequired
+	case in.ParqMissing:
+		return DenyParqRequired
 	case in.SuspendedUntil != nil && in.Now.Before(*in.SuspendedUntil):
 		return DenyPassSuspended
 	case in.MaxConcurrent > 0 && in.UpcomingConfirmed >= in.MaxConcurrent:

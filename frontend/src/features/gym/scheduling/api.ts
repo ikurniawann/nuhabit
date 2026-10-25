@@ -250,6 +250,7 @@ export interface CheckInResult {
   reason: GateDenialReason | null;
   entryKind: GateEntryKind | null;
   message: string;
+  customerId?: string | null;
   memberName: string | null;
   creditsDeducted: number;
   balanceAfter: number | null;
