@@ -87,8 +87,8 @@ func (s *Service) notifyMember(ctx context.Context, q Q, customerID *string, n m
 func ticketLink(id string) string { return "/dashboard/gym/complaints/" + id }
 
 // staffNotice writes the dashboard inbox (public.notifications) of each
-// distinct user.
-func staffNotice(ctx context.Context, q Q, userIDs []string, kind, title, message, link string, meta map[string]any) error {
+// distinct non-empty user id and returns how many it wrote.
+func staffNotice(ctx context.Context, q Q, userIDs []string, kind, title, message, link string, meta map[string]any) (int, error) {
 	seen := map[string]bool{}
 	for _, id := range userIDs {
 		if id == "" || seen[id] {
@@ -97,10 +97,10 @@ func staffNotice(ctx context.Context, q Q, userIDs []string, kind, title, messag
 		seen[id] = true
 		if _, err := q.Exec(ctx, `INSERT INTO public.notifications (user_id, title, message, type, link, metadata)
 			VALUES ($1, $2, $3, $4, $5, $6)`, id, title, message, kind, link, meta); err != nil {
-			return err
+			return 0, err
 		}
 	}
-	return nil
+	return len(seen), nil
 }
 
 // ── Settings ─────────────────────────────────────────────────────────────────

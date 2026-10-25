@@ -102,17 +102,8 @@ const (
 	SourceStaff     Source = "staff"
 )
 
-// Sources lists every source.
-var Sources = []Source{SourceInbox, SourceDesk, SourceMemberApp, SourceStaff}
-
-// SourceLabel is the Indonesian name.
-var SourceLabel = map[Source]string{
-	SourceInbox: "WhatsApp inbox", SourceDesk: "Front desk", SourceMemberApp: "Member app", SourceStaff: "Staf",
-}
-
-// ValidPriority and ValidSource check request values.
+// ValidPriority and ValidStatus check request values.
 func ValidPriority(p string) bool { return slices.Contains(Priorities, Priority(p)) }
-func ValidSource(s string) bool   { return slices.Contains(Sources, Source(s)) }
 func ValidStatus(s string) bool   { return slices.Contains(Statuses, Status(s)) }
 
 // ── SLA ──────────────────────────────────────────────────────────────────────

@@ -3,11 +3,13 @@ package gymcomplaints
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/gymcomplaints/domain"
+	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/whatsapp"
 )
@@ -129,10 +131,11 @@ func (s *Service) claim(ctx context.Context, q Q, o overdue, kind domain.Escalat
 		deadline = o.clock.ResolveBy
 	}
 	var id string
-	if err := q.QueryRow(ctx, sql, o.id, now).Scan(&id); err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, nil
-		}
+	err := q.QueryRow(ctx, sql, o.id, now).Scan(&id)
+	if database.IsNoRows(err) {
+		return nil, nil
+	}
+	if err != nil {
 		return nil, err
 	}
 
@@ -142,8 +145,9 @@ func (s *Service) claim(ctx context.Context, q Q, o overdue, kind domain.Escalat
 		Deadline: deadline, Zone: zone, Link: s.ports.AppOrigin + link})
 	users := []string{deref(st.EscalationUserID), deref(o.ownerID)}
 	title := domain.AlertTitle(kind, o.code)
-	if err := staffNotice(ctx, q, users, "alert", title, o.title, link,
-		map[string]any{"gym_type": "gym_complaint_sla", "complaint_id": o.id, "kind": string(kind)}); err != nil {
+	notified, err := staffNotice(ctx, q, users, "alert", title, o.title, link,
+		map[string]any{"gym_type": "gym_complaint_sla", "complaint_id": o.id, "kind": string(kind)})
+	if err != nil {
 		return nil, err
 	}
 
@@ -151,14 +155,14 @@ func (s *Service) claim(ctx context.Context, q Q, o overdue, kind domain.Escalat
 	if escalationPhone == nil && st.EscalationUserID != nil {
 		var phone *string
 		if err := q.QueryRow(ctx, `SELECT phone FROM hris.employees WHERE user_id = $1 AND is_active LIMIT 1`,
-			*st.EscalationUserID).Scan(&phone); err != nil && err != pgx.ErrNoRows {
+			*st.EscalationUserID).Scan(&phone); err != nil && !database.IsNoRows(err) {
 			return nil, err
 		}
 		escalationPhone = phone
 	}
 	var phones []string
 	for _, p := range []*string{escalationPhone, o.ownerPhone} {
-		if n := whatsapp.NormalizeRecipient(deref(p)); n != "" && !contains(phones, n) {
+		if n := whatsapp.NormalizeRecipient(deref(p)); n != "" && !slices.Contains(phones, n) {
 			phones = append(phones, n)
 		}
 	}
@@ -169,29 +173,9 @@ func (s *Service) claim(ctx context.Context, q Q, o overdue, kind domain.Escalat
 	if kind == domain.EscalateResolve {
 		limit = "selesai"
 	}
-	body := fmt.Sprintf("Lewat batas %s. Notifikasi ke %d staf, WhatsApp ke %d nomor.", limit, countIDs(users), len(phones))
+	body := fmt.Sprintf("Lewat batas %s. Notifikasi ke %d staf, WhatsApp ke %d nomor.", limit, notified, len(phones))
 	if err := addEvent(ctx, q, o.id, "escalated", nil, nil, &body, false, actor{}); err != nil {
 		return nil, err
 	}
 	return &alert{phones: phones, text: text}, nil
-}
-
-func contains(list []string, v string) bool {
-	for _, x := range list {
-		if x == v {
-			return true
-		}
-	}
-	return false
-}
-
-// countIDs counts the distinct non-empty ids.
-func countIDs(ids []string) int {
-	var seen []string
-	for _, id := range ids {
-		if id != "" && !contains(seen, id) {
-			seen = append(seen, id)
-		}
-	}
-	return len(seen)
 }

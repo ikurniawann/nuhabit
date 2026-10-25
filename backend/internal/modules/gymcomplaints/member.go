@@ -120,26 +120,32 @@ func (s *Service) MemberOptions(ctx context.Context, customerID string) (MemberO
 		return MemberOptions{}, err
 	}
 	now := s.now()
+	classes, err := s.bookedClasses(ctx, customerID, now.AddDate(0, 0, -30), now.Add(24*time.Hour), false)
+	return MemberOptions{Categories: cats, Classes: classes}, err
+}
+
+// bookedClasses lists the classes a member booked that start in [from, to],
+// newest first. Unless all is set, cancelled and waitlist bookings are left out.
+func (s *Service) bookedClasses(ctx context.Context, customerID string, from, to time.Time, all bool) ([]RecentClass, error) {
 	rows, err := s.db.Query(ctx, `SELECT s.id::text, ct.name, s.starts_at, COALESCE(br.timezone, 'Asia/Jakarta'), s.coach_id::text, co.name
 	  FROM gym.bookings b
 	  JOIN gym.class_sessions s ON s.id = b.session_id
 	  JOIN gym.class_types ct ON ct.id = s.class_type_id
 	  LEFT JOIN gym.coaches co ON co.id = s.coach_id
 	  LEFT JOIN configuration.branches br ON br.id = s.branch_id
-	 WHERE b.customer_id = $1 AND b.status IN ('confirmed', 'checked_in', 'completed', 'no_show')
-	   AND s.starts_at BETWEEN $2 AND $3
-	 ORDER BY s.starts_at DESC LIMIT 30`, customerID, now.AddDate(0, 0, -30), now.Add(24*time.Hour))
+	 WHERE b.customer_id = $1 AND s.starts_at BETWEEN $2 AND $3
+	   AND ($4 OR b.status IN ('confirmed', 'checked_in', 'completed', 'no_show'))
+	 ORDER BY s.starts_at DESC LIMIT 40`, customerID, from, to, all)
 	if err != nil {
-		return MemberOptions{}, err
+		return nil, err
 	}
-	classes, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (RecentClass, error) {
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (RecentClass, error) {
 		var c RecentClass
 		var at time.Time
 		err := r.Scan(&c.SessionID, &c.Name, &at, &c.Timezone, &c.CoachID, &c.CoachName)
 		c.StartsAt = httpx.JSTime(at)
 		return c, err
 	})
-	return MemberOptions{Categories: cats, Classes: classes}, err
 }
 
 // MemberReport is the member app form. Kind "feedback" (a suggestion) is
@@ -230,19 +236,20 @@ func (s *Service) newReportNotice(ctx context.Context, q Q, c Created) error {
 	if err != nil || st.EscalationUserID == nil {
 		return err
 	}
-	return staffNotice(ctx, q, []string{*st.EscalationUserID}, "alert", "Laporan baru dari member app: "+c.Code, title,
+	_, err = staffNotice(ctx, q, []string{*st.EscalationUserID}, "alert", "Laporan baru dari member app: "+c.Code, title,
 		ticketLink(c.ID), map[string]any{"gym_type": "gym_complaint_new", "complaint_id": c.ID})
+	return err
 }
 
 // MemberMove confirms or reopens a resolved ticket from the member app.
 func (s *Service) MemberMove(ctx context.Context, customerID, id string, to domain.Status, reason string) error {
 	return s.inTx(ctx, func(q Q) error {
-		if _, err := s.memberTicket(ctx, q, customerID, id); err != nil {
-			return err
-		}
 		t, err := s.lockTicket(ctx, q, id)
 		if err != nil {
 			return err
+		}
+		if !sameID(t.CustomerID, &customerID) {
+			return httpx.Coded(404, "COMPLAINT_NOT_FOUND", "Laporan tidak ditemukan", nil)
 		}
 		if domain.Status(t.Status) != domain.Resolved {
 			return httpx.Coded(409, "FEEDBACK_NOT_RESOLVED", "Laporan ini belum ditandai selesai", nil)

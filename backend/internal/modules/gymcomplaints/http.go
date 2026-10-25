@@ -2,7 +2,6 @@ package gymcomplaints
 
 import (
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -207,8 +206,6 @@ func (h *handler) memberClasses(w http.ResponseWriter, r *http.Request, _ *auth.
 	return httpx.OK(w, out)
 }
 
-var isoDate = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
-
 // maxReportDays caps a report at a year.
 const maxReportDays = 366
 
@@ -224,7 +221,7 @@ func (h *handler) report(w http.ResponseWriter, r *http.Request, _ *auth.User) e
 	}
 	f, errF := time.Parse(time.DateOnly, from)
 	t, errT := time.Parse(time.DateOnly, to)
-	if !isoDate.MatchString(from) || !isoDate.MatchString(to) || errF != nil || errT != nil || t.Before(f) {
+	if errF != nil || errT != nil || t.Before(f) {
 		return httpx.BadRequest("Rentang tanggal tidak valid")
 	}
 	if t.Sub(f) >= maxReportDays*24*time.Hour {

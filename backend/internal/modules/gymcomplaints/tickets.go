@@ -643,8 +643,9 @@ func (s *Service) move(ctx context.Context, q Q, t *locked, to domain.Status, no
 			return err
 		}
 		users := []string{deref(t.OwnerUserID), deref(st.EscalationUserID)}
-		return staffNotice(ctx, q, users, "alert", "Member membuka lagi keluhan "+t.Code, note, ticketLink(t.ID),
+		_, err = staffNotice(ctx, q, users, "alert", "Member membuka lagi keluhan "+t.Code, note, ticketLink(t.ID),
 			map[string]any{"gym_type": "gym_complaint_reopened", "complaint_id": t.ID})
+		return err
 	}
 	return nil
 }
@@ -699,8 +700,9 @@ func (s *Service) assignNotice(ctx context.Context, q Q, id, code, owner string,
 	if by.userID != nil && *by.userID == owner {
 		return nil
 	}
-	return staffNotice(ctx, q, []string{owner}, "status_change", "Keluhan "+code+" ditugaskan ke kamu",
+	_, err := staffNotice(ctx, q, []string{owner}, "status_change", "Keluhan "+code+" ditugaskan ke kamu",
 		"Buka tiket untuk menindaklanjuti.", ticketLink(id), map[string]any{"gym_type": "gym_complaint_assigned", "complaint_id": id})
+	return err
 }
 
 // Note adds an internal note, or with public a reply the member reads in

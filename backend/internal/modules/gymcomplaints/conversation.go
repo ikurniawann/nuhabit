@@ -84,7 +84,7 @@ func (s *Service) ForConversation(ctx context.Context, id string) (ConversationV
 
 // conversationTaken is the 409 for a conversation that already has an
 // unconfirmed ticket; the params name it for the inbox to open.
-func (s *Service) conversationTaken(ctx context.Context, q Q, conversationID string) error {
+func conversationTaken(ctx context.Context, q Q, conversationID string) error {
 	var id, code string
 	err := q.QueryRow(ctx, `SELECT id::text, code FROM gym.complaints WHERE conversation_id = $1 AND status <> 'confirmed'
 	  ORDER BY created_at DESC LIMIT 1`, conversationID).Scan(&id, &code)
@@ -112,7 +112,7 @@ func (s *Service) FromConversation(ctx context.Context, userID, conversationID s
 			return err
 		}
 		if taken {
-			return s.conversationTaken(ctx, q, conversationID)
+			return conversationTaken(ctx, q, conversationID)
 		}
 		sug := c.suggestion()
 		in.Source, in.ConversationID, in.by = domain.SourceInbox, &c.ID, staffActor(userID)

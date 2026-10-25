@@ -2,11 +2,8 @@ package gymcomplaints
 
 import (
 	"context"
-	"time"
 
 	"github.com/jackc/pgx/v5"
-
-	"nuhabit/backend/internal/platform/httpx"
 )
 
 // Ref is an id and a name for a picker.
@@ -74,29 +71,9 @@ func (s *Service) Options(ctx context.Context) (Options, error) {
 	return out, err
 }
 
-// MemberClass is a class of the member around now, to link a desk ticket to.
-type MemberClass = RecentClass
-
-// MemberClasses lists a member's booked classes from 30 days back to 7
-// days ahead, for the desk form.
-func (s *Service) MemberClasses(ctx context.Context, customerID string) ([]MemberClass, error) {
+// MemberClasses lists every class a member booked from 30 days back to 7
+// days ahead, cancelled ones too, for the desk form.
+func (s *Service) MemberClasses(ctx context.Context, customerID string) ([]RecentClass, error) {
 	now := s.now()
-	rows, err := s.db.Query(ctx, `SELECT s.id::text, ct.name, s.starts_at, COALESCE(br.timezone, 'Asia/Jakarta'), s.coach_id::text, co.name
-	  FROM gym.bookings b
-	  JOIN gym.class_sessions s ON s.id = b.session_id
-	  JOIN gym.class_types ct ON ct.id = s.class_type_id
-	  LEFT JOIN gym.coaches co ON co.id = s.coach_id
-	  LEFT JOIN configuration.branches br ON br.id = s.branch_id
-	 WHERE b.customer_id = $1 AND s.starts_at BETWEEN $2 AND $3
-	 ORDER BY s.starts_at DESC LIMIT 40`, customerID, now.AddDate(0, 0, -30), now.AddDate(0, 0, 7))
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (MemberClass, error) {
-		var c MemberClass
-		var at time.Time
-		err := r.Scan(&c.SessionID, &c.Name, &at, &c.Timezone, &c.CoachID, &c.CoachName)
-		c.StartsAt = httpx.JSTime(at)
-		return c, err
-	})
+	return s.bookedClasses(ctx, customerID, now.AddDate(0, 0, -30), now.AddDate(0, 0, 7), true)
 }
