@@ -10,6 +10,7 @@ import (
 
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/importer"
 )
 
@@ -74,8 +75,8 @@ var templateSpec = importer.Spec{
 }
 
 // importOptions are the run options of one upload by user.
-func importOptions(r *http.Request, user *auth.User, spec importer.Spec, dryRun bool) importer.Options {
-	return importer.Options{DryRun: dryRun, Entity: spec.Entity, ActorID: user.ID, ActorName: user.FullName, Request: r}
+func (h *handler) importOptions(r *http.Request, user *auth.User, spec importer.Spec, dryRun bool) importer.Options {
+	return importer.Options{DryRun: dryRun, Entity: spec.Entity, ActorID: user.ID, ActorName: user.FullName, Request: r, Log: h.log}
 }
 
 func (h *handler) classTypeTemplate(w http.ResponseWriter, _ *http.Request, _ *auth.User) error {
@@ -95,13 +96,11 @@ func (h *handler) importClassTypes(w http.ResponseWriter, r *http.Request, user 
 	if err != nil {
 		return err
 	}
-	opts := importOptions(r, user, classTypeSpec, up.DryRun)
-	opts.Log = h.log
-	report, err := importer.Run(r.Context(), h.svc.db, opts, up.Rows, h.svc.importClassType)
+	report, err := importer.Run(r.Context(), h.svc.db, h.importOptions(r, user, classTypeSpec, up.DryRun), up.Rows, h.svc.importClassType)
 	if err != nil {
 		return err
 	}
-	return importer.Respond(w, report)
+	return httpx.OK(w, report)
 }
 
 func (h *handler) importCoaches(w http.ResponseWriter, r *http.Request, user *auth.User) error {
@@ -109,13 +108,11 @@ func (h *handler) importCoaches(w http.ResponseWriter, r *http.Request, user *au
 	if err != nil {
 		return err
 	}
-	opts := importOptions(r, user, coachSpec, up.DryRun)
-	opts.Log = h.log
-	report, err := importer.Run(r.Context(), h.svc.db, opts, up.Rows, h.svc.importCoach)
+	report, err := importer.Run(r.Context(), h.svc.db, h.importOptions(r, user, coachSpec, up.DryRun), up.Rows, h.svc.importCoach)
 	if err != nil {
 		return err
 	}
-	return importer.Respond(w, report)
+	return httpx.OK(w, report)
 }
 
 func (h *handler) importScheduleTemplates(w http.ResponseWriter, r *http.Request, user *auth.User) error {
@@ -123,15 +120,14 @@ func (h *handler) importScheduleTemplates(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return err
 	}
-	opts := importOptions(r, user, templateSpec, up.DryRun)
-	opts.Log = h.log
-	report, err := importer.Run(r.Context(), h.svc.db, opts, up.Rows, func(ctx context.Context, tx pgx.Tx, row importer.Row) (importer.Result, error) {
-		return h.svc.importTemplate(ctx, tx, row, &user.ID)
-	})
+	report, err := importer.Run(r.Context(), h.svc.db, h.importOptions(r, user, templateSpec, up.DryRun), up.Rows,
+		func(ctx context.Context, tx pgx.Tx, row importer.Row) (importer.Result, error) {
+			return h.svc.importTemplate(ctx, tx, row, &user.ID)
+		})
 	if err != nil {
 		return err
 	}
-	return importer.Respond(w, report)
+	return httpx.OK(w, report)
 }
 
 // storedClassType is the class type row the import compares against.
@@ -231,28 +227,6 @@ func (s *Service) coachByName(ctx context.Context, q Q, name string) (*storedCoa
 	return &c, err
 }
 
-// branchByCode resolves an active branch by code (or name); "" when none.
-func branchByCode(ctx context.Context, q Q, code string) (string, error) {
-	var id string
-	err := q.QueryRow(ctx, `SELECT id::text FROM configuration.branches
-		WHERE is_active AND (upper(code) = upper($1) OR lower(name) = lower($1))
-		ORDER BY (upper(code) = upper($1)) DESC, created_at LIMIT 1`, code).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
-	}
-	return id, err
-}
-
-// staffByEmail resolves a staff account by email; "" when none.
-func staffByEmail(ctx context.Context, q Q, email string) (string, error) {
-	var id string
-	err := q.QueryRow(ctx, `SELECT id::text FROM configuration.users WHERE lower(email) = lower($1) ORDER BY created_at LIMIT 1`, email).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
-	}
-	return id, err
-}
-
 // optionalBranch reads the cabang column into a branch id; a code that
 // matches no active branch fails the row.
 func optionalBranch(ctx context.Context, q Q, f *importer.Fields) (*string, error) {
@@ -260,7 +234,7 @@ func optionalBranch(ctx context.Context, q Q, f *importer.Fields) (*string, erro
 	if code == "" {
 		return nil, nil
 	}
-	id, err := branchByCode(ctx, q, code)
+	id, err := importer.BranchID(ctx, q, code)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +257,7 @@ func (s *Service) importCoach(ctx context.Context, tx pgx.Tx, row importer.Row) 
 	}
 	in.BranchID = branchID
 	if email, ok := f.Email("email_user"); ok {
-		userID, err := staffByEmail(ctx, tx, email)
+		userID, err := importer.StaffUserID(ctx, tx, email)
 		if err != nil {
 			return importer.Result{}, err
 		}

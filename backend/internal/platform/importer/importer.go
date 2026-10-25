@@ -329,6 +329,3 @@ func rowMessage(err error, log *slog.Logger, row int) string {
 	}
 	return "Gagal menyimpan baris"
 }
-
-// Respond writes the report as the data of a success envelope.
-func Respond(w http.ResponseWriter, report *Report) error { return httpx.OK(w, report) }

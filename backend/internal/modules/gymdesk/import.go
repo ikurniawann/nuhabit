@@ -11,6 +11,7 @@ import (
 
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/importer"
 )
 
@@ -57,7 +58,7 @@ func (h *handler) importMembers(w http.ResponseWriter, r *http.Request, user *au
 	if err != nil {
 		return err
 	}
-	return importer.Respond(w, report)
+	return httpx.OK(w, report)
 }
 
 // memberRow is the existing member a row matches.

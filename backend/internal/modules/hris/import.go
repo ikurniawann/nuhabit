@@ -10,6 +10,7 @@ import (
 
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/importer"
 	"nuhabit/backend/internal/platform/module"
@@ -116,7 +117,7 @@ func (h handlers) runImport(spec importer.Spec, fn rowImporter) func(w http.Resp
 		if err != nil {
 			return err
 		}
-		return importer.Respond(w, report)
+		return httpx.OK(w, report)
 	}
 }
 
@@ -301,7 +302,7 @@ func (s *Service) importEmployee(ctx context.Context, row importer.Row) (importe
 		}
 	}
 	if login, ok := f.Email("email_user"); ok {
-		id, err := scalarText(ctx, q, `SELECT id::text FROM configuration.users WHERE lower(email) = $1 ORDER BY created_at LIMIT 1`, login)
+		id, err := importer.StaffUserID(ctx, q, login)
 		if err != nil {
 			return importer.Result{}, err
 		}

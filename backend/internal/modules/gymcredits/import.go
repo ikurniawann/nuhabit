@@ -12,6 +12,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/importer"
 	"nuhabit/backend/internal/platform/localtime"
@@ -71,7 +72,7 @@ func (h *Handler) importPackages(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return importer.Respond(w, report)
+	return httpx.OK(w, report)
 }
 
 // storedPackage is the package row the import compares against.
@@ -107,18 +108,6 @@ func (s *Service) packageByName(ctx context.Context, q database.Querier, name st
 	return &p, err
 }
 
-// importBranch resolves an active branch by code or name; "" when none.
-func importBranch(ctx context.Context, q database.Querier, code string) (string, error) {
-	var id string
-	err := q.QueryRow(ctx, `SELECT id::text FROM configuration.branches
-		WHERE is_active AND (upper(code) = upper($1) OR lower(name) = lower($1))
-		ORDER BY (upper(code) = upper($1)) DESC, created_at LIMIT 1`, code).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
-	}
-	return id, err
-}
-
 func (s *Service) importPackage(ctx context.Context, tx pgx.Tx, row importer.Row, actorID string) (importer.Result, error) {
 	f := packageSpec.Fields(row)
 	p := PackageInput{Name: f.Text("nama", 120), Description: f.Text("deskripsi", 1000), Kind: KindCredits, IsPublic: f.Bool("publik", true)}
@@ -148,7 +137,7 @@ func (s *Service) importPackage(ctx context.Context, tx pgx.Tx, row importer.Row
 	}
 	p.SortOrder, _ = f.Int("urutan", 0, 10_000)
 	if code := f.Text("cabang", 80); code != "" {
-		id, err := importBranch(ctx, tx, code)
+		id, err := importer.BranchID(ctx, tx, code)
 		if err != nil {
 			return importer.Result{}, err
 		}
@@ -164,7 +153,7 @@ func (s *Service) importPackage(ctx context.Context, tx pgx.Tx, row importer.Row
 			f.Fail("harga_cabang", "harus KODE=harga dipisah titik koma")
 		}
 		for _, pair := range pairs {
-			id, err := importBranch(ctx, tx, pair.Key)
+			id, err := importer.BranchID(ctx, tx, pair.Key)
 			if err != nil {
 				return importer.Result{}, err
 			}
