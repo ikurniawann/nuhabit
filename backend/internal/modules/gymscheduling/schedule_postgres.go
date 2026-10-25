@@ -74,8 +74,10 @@ type SessionTemplate struct {
 	ValidFrom     string // YYYY-MM-DD
 	ValidUntil    *string
 	Active        bool
-	CreatedBy     *string
-	Zone          *time.Location // read only: the branch zone
+	// SkipHolidays leaves HRIS public holidays out when generating.
+	SkipHolidays bool
+	CreatedBy    *string
+	Zone         *time.Location // read only: the branch zone
 }
 
 func (t SessionTemplate) weeklySlot() domain.WeeklySlot {
@@ -200,7 +202,7 @@ func (Postgres) ListTemplates(ctx context.Context, q Q) ([]*Row, error) {
             st.branch_id, b.name AS branch_name, COALESCE(b.timezone, 'Asia/Jakarta') AS timezone,
             st.area, st.weekday::int AS weekday,
             to_char(st.start_time, 'HH24:MI') AS start_time, st.duration_min, st.capacity, st.credit_cost,
-            st.valid_from::text AS valid_from, st.valid_until::text AS valid_until, st.active,
+            st.valid_from::text AS valid_from, st.valid_until::text AS valid_until, st.active, st.skip_holidays,
             (SELECT count(*)::int FROM gym.class_sessions s
               WHERE s.template_id = st.id AND s.starts_at > now() AND s.status IN ('draft', 'published', 'full'))
               AS upcoming_sessions,
@@ -228,14 +230,14 @@ func (Postgres) Branches(ctx context.Context, q Q) ([]*Row, error) {
 
 const templateColumns = `id, class_type_id, (SELECT name FROM gym.class_types WHERE id = class_type_id),
        coach_id, branch_id, area, weekday, to_char(start_time, 'HH24:MI'),
-       duration_min, capacity, credit_cost, valid_from::text, valid_until::text, active, created_by,
+       duration_min, capacity, credit_cost, valid_from::text, valid_until::text, active, skip_holidays, created_by,
        COALESCE((SELECT timezone FROM configuration.branches WHERE id = branch_id), 'Asia/Jakarta')`
 
 func scanTemplate(r pgx.CollectableRow) (SessionTemplate, error) {
 	var t SessionTemplate
 	var zone string
 	err := r.Scan(&t.ID, &t.ClassTypeID, &t.ClassTypeName, &t.CoachID, &t.BranchID, &t.Area, &t.Weekday, &t.StartTime,
-		&t.DurationMin, &t.Capacity, &t.CreditCost, &t.ValidFrom, &t.ValidUntil, &t.Active, &t.CreatedBy, &zone)
+		&t.DurationMin, &t.Capacity, &t.CreditCost, &t.ValidFrom, &t.ValidUntil, &t.Active, &t.SkipHolidays, &t.CreatedBy, &zone)
 	t.Zone = localtime.Zone(zone)
 	return t, err
 }
@@ -254,21 +256,21 @@ func (Postgres) GetTemplate(ctx context.Context, q Q, id string) (*SessionTempla
 
 func (Postgres) InsertTemplate(ctx context.Context, q Q, t SessionTemplate) (string, error) {
 	return returningID(ctx, q, `INSERT INTO gym.session_templates (class_type_id, coach_id, branch_id, area, weekday, start_time,
-            duration_min, capacity, credit_cost, valid_from, valid_until, active, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6::time, $7, $8, $9, $10::date, $11::date, $12, $13)
+            duration_min, capacity, credit_cost, valid_from, valid_until, active, skip_holidays, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6::time, $7, $8, $9, $10::date, $11::date, $12, $13, $14)
      RETURNING id`,
 		t.ClassTypeID, t.CoachID, t.BranchID, t.Area, t.Weekday, t.StartTime,
-		t.DurationMin, t.Capacity, t.CreditCost, t.ValidFrom, t.ValidUntil, t.Active, t.CreatedBy)
+		t.DurationMin, t.Capacity, t.CreditCost, t.ValidFrom, t.ValidUntil, t.Active, t.SkipHolidays, t.CreatedBy)
 }
 
 func (Postgres) UpdateTemplate(ctx context.Context, q Q, t SessionTemplate) error {
 	_, err := q.Exec(ctx, `UPDATE gym.session_templates
         SET class_type_id = $2, coach_id = $3, branch_id = $4, area = $5, weekday = $6, start_time = $7::time,
             duration_min = $8, capacity = $9, credit_cost = $10, valid_from = $11::date, valid_until = $12::date,
-            active = $13, updated_at = now()
+            active = $13, skip_holidays = $14, updated_at = now()
       WHERE id = $1`,
 		t.ID, t.ClassTypeID, t.CoachID, t.BranchID, t.Area, t.Weekday, t.StartTime,
-		t.DurationMin, t.Capacity, t.CreditCost, t.ValidFrom, t.ValidUntil, t.Active)
+		t.DurationMin, t.Capacity, t.CreditCost, t.ValidFrom, t.ValidUntil, t.Active, t.SkipHolidays)
 	return err
 }
 

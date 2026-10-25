@@ -137,6 +137,10 @@ export const IAM = {
   gymMemberFlags: ["gym.member-flags"],
   /** Gym → SOP Coach (dokumen SOP berversi; read_own = baca dan konfirmasi sendiri). */
   gymSop: ["gym.sop"],
+  /** Gym → Otomasi & Pengingat (job latar, sakelar, jalankan sekarang, log notifikasi member). */
+  gymAutomation: ["gym.automation"],
+  /** Gym → News Member (berita, event, tips dan promo di aplikasi member). */
+  gymNews: ["gym.news"],
   /** HRIS → Master Data (departemen, jabatan, status kepegawaian). */
   hrisMaster: ["hris.master"],
   /** HRIS → Organisasi (struktur organisasi, seksi). */

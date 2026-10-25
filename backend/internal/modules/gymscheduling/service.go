@@ -178,6 +178,12 @@ type Health interface {
 	ParqCurrent(ctx context.Context, q database.Querier, customerID string, at time.Time) (bool, error)
 }
 
+// HolidayCalendar is the public holiday calendar (owned by HRIS).
+type HolidayCalendar interface {
+	// Holidays maps each holiday date (YYYY-MM-DD) in [from, to] to its name.
+	Holidays(ctx context.Context, q database.Querier, from, to string) (map[string]string, error)
+}
+
 // Notifier delivers member notifications (owned by CRM).
 type Notifier interface {
 	NotifyMember(ctx context.Context, q database.Querier, customerID string, n Notification) error
@@ -204,6 +210,9 @@ type Ports struct {
 	// Health answers the requireParq rule; nil treats every member as
 	// declared.
 	Health Health
+	// Holidays is the public holiday calendar template generation skips;
+	// nil skips none.
+	Holidays HolidayCalendar
 	// WaiverVersion is the waiver text members accept today; "" accepts
 	// any version on record.
 	WaiverVersion string

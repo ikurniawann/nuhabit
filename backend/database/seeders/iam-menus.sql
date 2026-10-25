@@ -229,6 +229,10 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('tasks', 'Tugas Saya', '/dashboard/tasks', 'clipboard-document-check', 'sidebar', 4, '{"actions":["read","create","update"]}'::jsonb),
   ('tasks.team', 'Papan Tim', '/dashboard/tasks/team', 'users', 'sidebar', 10, '{"actions":["read","create","update","delete","assign"]}'::jsonb),
   ('tasks.kpi', 'KPI & Tugas', '/dashboard/tasks/kpi', 'chart', 'sidebar', 20, '{"actions":["read"]}'::jsonb)
+  ('gym.news', 'News Member', '/dashboard/gym/news', 'megaphone', 'sidebar', 92, '{"actions":["read","create","update","delete"]}'::jsonb),
+  ('gym.reports', 'Laporan Gym', '/dashboard/gym/reports', 'chart-bar', 'sidebar', 95, '{"actions":["read"]}'::jsonb),
+  ('gym.automation', 'Otomasi & Pengingat', '/dashboard/gym/automation', 'clock', 'sidebar', 98, '{"actions":["read","update"]}'::jsonb),
+  ('gym.rules', 'Aturan Gym', '/dashboard/gym/rules', 'settings', 'sidebar', 100, '{"actions":["read","update"]}'::jsonb)
 ON CONFLICT (code) DO UPDATE SET
   menu_name            = EXCLUDED.menu_name,
   route_path           = EXCLUDED.route_path,
@@ -374,6 +378,8 @@ WHERE deleted_at IS NULL
     'gym.loyalty',
     -- Member care and coach SOP (28 Oct 2026):
     'gym.member-flags', 'gym.sop',
+    -- Gym menus added 28 Oct 2026 (automation, member news):
+    'gym.automation', 'gym.news',
     'items.raw-material.inventory.expiry', 'items.raw-material.inventory.movements',
     'items.raw-material.inventory.scrap', 'pos.catalog.channel-prices',
     'pos.loyalty.wallet', 'pos.loyalty.wallet.packages', 'pos.loyalty.wallet.payments',

@@ -90,6 +90,8 @@ var (
 	GymLoyalty              = []string{"gym.loyalty"}
 	GymMemberFlags          = []string{"gym.member-flags"}
 	GymSop                  = []string{"gym.sop"}
+	GymAutomation           = []string{"gym.automation"}
+	GymNews                 = []string{"gym.news"}
 	HrisMaster              = []string{"hris.master"}
 	HrisOrganization        = []string{"hris.organization"}
 	HrisInsights            = []string{"hris.insights"}
@@ -194,6 +196,8 @@ var ByKey = map[string][]string{
 	"gymLoyalty":              GymLoyalty,
 	"gymMemberFlags":          GymMemberFlags,
 	"gymSop":                  GymSop,
+	"gymAutomation":           GymAutomation,
+	"gymNews":                 GymNews,
 	"hrisMaster":              HrisMaster,
 	"hrisOrganization":        HrisOrganization,
 	"hrisInsights":            HrisInsights,

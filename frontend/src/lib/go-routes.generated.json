@@ -1655,6 +1655,31 @@
     "path": "/api/gym/assessments/{id}"
   },
   {
+    "module": "gym-automation",
+    "method": "GET",
+    "path": "/api/gym/automation/jobs"
+  },
+  {
+    "module": "gym-automation",
+    "method": "PATCH",
+    "path": "/api/gym/automation/jobs/{name}"
+  },
+  {
+    "module": "gym-automation",
+    "method": "POST",
+    "path": "/api/gym/automation/jobs/{name}/run"
+  },
+  {
+    "module": "gym-automation",
+    "method": "GET",
+    "path": "/api/gym/automation/members"
+  },
+  {
+    "module": "gym-automation",
+    "method": "GET",
+    "path": "/api/gym/automation/members/{id}/notifications"
+  },
+  {
     "module": "gym-scheduling",
     "method": "GET",
     "path": "/api/gym/bookings"
@@ -2077,6 +2102,41 @@
   {
     "module": "gym-training",
     "method": "GET",
+    "path": "/api/gym/incentives/commission"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/incentives/commission"
+  },
+  {
+    "module": "gym-training",
+    "method": "PUT",
+    "path": "/api/gym/incentives/commission/coaches/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/incentives/commission/lines/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "DELETE",
+    "path": "/api/gym/incentives/commission/settings"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/incentives/commission/settings"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/incentives/commission/settings"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
     "path": "/api/gym/incentives/payouts"
   },
   {
@@ -2255,6 +2315,11 @@
     "path": "/api/gym/my-classes"
   },
   {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/my-classes/commission"
+  },
+  {
     "module": "gym-complaints",
     "method": "GET",
     "path": "/api/gym/my-classes/complaints"
@@ -2308,6 +2373,31 @@
     "module": "gym-sop",
     "method": "POST",
     "path": "/api/gym/my-classes/sop/{versionId}/ack"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/gym/news"
+  },
+  {
+    "module": "site",
+    "method": "POST",
+    "path": "/api/gym/news"
+  },
+  {
+    "module": "site",
+    "method": "POST",
+    "path": "/api/gym/news/uploads"
+  },
+  {
+    "module": "site",
+    "method": "DELETE",
+    "path": "/api/gym/news/{id}"
+  },
+  {
+    "module": "site",
+    "method": "PATCH",
+    "path": "/api/gym/news/{id}"
   },
   {
     "module": "gym-scheduling",
@@ -3858,6 +3948,16 @@
     "module": "gym-loyalty",
     "method": "GET",
     "path": "/api/member-portal/app/membership"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/member-portal/app/news"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/member-portal/app/news/{id}"
   },
   {
     "module": "gym-loyalty",

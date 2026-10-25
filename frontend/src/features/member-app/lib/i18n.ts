@@ -10,6 +10,7 @@ import { FEEDBACK_ID } from "./i18n-feedback";
 import { HEALTH_ID } from "./i18n-health";
 import { HOME_ID } from "./i18n-home";
 import { LOYALTY_ID } from "./i18n-loyalty";
+import { NEWS_ID } from "./i18n-news";
 import { RACES_ID } from "./i18n-races";
 import { PROGRESS_ID } from "./i18n-progress";
 import { REFERRAL_ID } from "./i18n-referral";
@@ -162,6 +163,7 @@ const BASE_ID: Record<string, string> = {
 };
 
 export const ID: Record<string, string> = {
+  ...NEWS_ID,
   ...LOYALTY_ID,
   ...TRAIN_ID,
   ...BASE_ID,

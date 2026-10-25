@@ -343,7 +343,7 @@ func (s *Service) importTemplate(ctx context.Context, tx pgx.Tx, row importer.Ro
 	}
 	weekday, _ := f.Weekday("hari")
 	start, _ := f.Clock("jam_mulai")
-	in := TemplateInput{BranchID: branchID, Weekday: weekday, StartTime: start, Active: f.Bool("aktif", true)}
+	in := TemplateInput{BranchID: branchID, Weekday: weekday, StartTime: start, Active: f.Bool("aktif", true), SkipHolidays: true}
 	if v, ok := f.Int("durasi_menit", 15, 240); ok {
 		in.DurationMin = &v
 	}

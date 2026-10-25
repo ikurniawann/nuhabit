@@ -20,11 +20,17 @@ import (
 type pgRepo struct {
 	db   database.Querier
 	pool *pgxpool.Pool // nil inside a transaction
+	// outer is the caller's transaction a test runs the module in: InTx
+	// opens a savepoint on it, so a failed statement does not abort it.
+	outer database.DB
 }
 
 func newPgRepo(pool *pgxpool.Pool) *pgRepo { return &pgRepo{db: pool, pool: pool} }
 
 func (r *pgRepo) InTx(ctx context.Context, fn func(Repository) error) error {
+	if r.outer != nil {
+		return database.WithTx(ctx, r.outer, func(tx pgx.Tx) error { return fn(&pgRepo{db: tx}) })
+	}
 	if r.pool == nil {
 		return fn(r)
 	}

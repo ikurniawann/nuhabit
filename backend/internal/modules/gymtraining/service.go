@@ -52,6 +52,10 @@ type IncentivePosting struct {
 	// FromMonth is the first payroll period (YYYY-MM) that may take it.
 	FromMonth string
 	ActorID   string
+	// SourceType and Label mark the payroll addition; empty is a coach
+	// payout ("Insentif coach <month>").
+	SourceType string
+	Label      string
 }
 
 // Payroll is HRIS payroll: a paid incentive becomes a one-off earning of
@@ -88,6 +92,7 @@ type Repository interface {
 	// InTx runs fn with a repository bound to one transaction.
 	InTx(ctx context.Context, fn func(Repository) error) error
 	resultsRepository
+	commissionRepository
 
 	Library(ctx context.Context) (library, error)
 	ExerciseAdmin(ctx context.Context) (exerciseAdmin, error)
@@ -146,9 +151,11 @@ type Service struct {
 	customers Customers
 	payroll   Payroll
 	// notifier sends PR notifications; nil sends none.
-	notifier Notifier
-	now      func() time.Time
-	pick     func(n int) int
+	notifier   Notifier
+	commission CommissionSources
+	discipline Discipline
+	now        func() time.Time
+	pick       func(n int) int
 }
 
 // NewService wires the use cases. now may be nil.
@@ -156,7 +163,12 @@ func NewService(repo Repository, ports Ports, now func() time.Time) *Service {
 	if now == nil {
 		now = time.Now
 	}
-	return &Service{repo: repo, sched: ports.Scheduling, customers: ports.Customers, payroll: ports.Payroll, notifier: ports.Notifier, now: now, pick: randomPick}
+	discipline := ports.Discipline
+	if discipline == nil {
+		discipline = NoDiscipline{}
+	}
+	return &Service{repo: repo, sched: ports.Scheduling, customers: ports.Customers, payroll: ports.Payroll, notifier: ports.Notifier,
+		commission: ports.Commission, discipline: discipline, now: now, pick: randomPick}
 }
 
 func randomPick(n int) int {

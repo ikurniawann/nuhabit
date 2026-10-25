@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { PAYOUT_STATUS_LABELS } from "@/lib/gym/incentive";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import { MY_CLASSES_KEYS, myClassesApi } from "../api";
+import { MyCommission } from "./my-commission";
 
 /** Insentif coach yang login: statement berjalan satu bulan dan riwayat payout. Hanya baca. */
 export function MyIncentives() {
@@ -93,6 +94,8 @@ export function MyIncentives() {
           </Card>
         )}
       </section>
+
+      <MyCommission month={month} />
     </div>
   );
 }

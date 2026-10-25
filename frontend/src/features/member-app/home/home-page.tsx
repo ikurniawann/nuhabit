@@ -11,6 +11,7 @@ import { useT } from "../lib/i18n";
 import { classImage } from "../lib/images";
 import { asset, m } from "../lib/links";
 import { useAccount, useHomeFeed, useMyBookings, usePromos } from "../lib/queries-home";
+import { NewsSection } from "../news/news-section";
 import { Spinner, formatDay, formatDayTime, formatDuration, formatTime } from "../ui";
 import { HealthBanner } from "./health-banner";
 import { PasswordPrompt } from "./password-prompt";
@@ -177,6 +178,8 @@ export function HomePage() {
           </div>
         </section>
       ) : null}
+
+      <NewsSection />
 
       {/* Pengumuman - satu kartu tenang, baris dipisah garis tipis */}
       {home && home.announcements.length > 0 ? (

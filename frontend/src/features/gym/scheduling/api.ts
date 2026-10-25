@@ -108,6 +108,8 @@ export interface SessionTemplate {
   valid_from: string;
   valid_until: string | null;
   active: boolean;
+  /** Lewati hari libur HRIS saat generate. */
+  skip_holidays: boolean;
   upcoming_sessions: number;
   /** Tanggal terakhir yang sudah dibuat sesinya ("YYYY-MM-DD"). */
   generated_until: string | null;
@@ -126,12 +128,15 @@ export interface SessionTemplateInput {
   valid_from: string;
   valid_until: string | null;
   active: boolean;
+  skip_holidays: boolean;
 }
 
 export interface GenerateResult {
   created: number;
   skipped: number;
   conflicts: string[];
+  /** Tanggal libur yang dilewati, dengan jumlah sesi yang tidak dibuat. */
+  holidays: { date: string; name: string; sessions: number }[];
 }
 
 export interface SessionInput {

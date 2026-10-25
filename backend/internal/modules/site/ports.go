@@ -88,4 +88,6 @@ type Ports struct {
 	// Calendar checks an event against the gym timetable and other events
 	// and tells the involved staff about changes; nil skips both.
 	Calendar eventsc.Calendar
+	// News says which members see which news.
+	News NewsAudience
 }

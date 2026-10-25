@@ -39,6 +39,7 @@ func templateFields(f *validate.Form, partial bool) TemplatePatch {
 	p.ValidFrom = f.Str("valid_from", optional, dateOpts)
 	p.ValidUntil = optionalField(f, "valid_until", f.Str("valid_until", nullableOptional, dateOpts))
 	p.Active = f.Bool("active", optional)
+	p.SkipHolidays = f.Bool("skip_holidays", optional)
 	return p
 }
 
@@ -60,6 +61,7 @@ func (h *handler) createTemplate(w http.ResponseWriter, r *http.Request, user *a
 		ClassTypeID: *p.ClassTypeID, CoachID: p.CoachID.Value, BranchID: p.BranchID.Value, Area: p.Area.Value,
 		Weekday: *p.Weekday, StartTime: *p.StartTime, DurationMin: p.DurationMin, Capacity: p.Capacity,
 		CreditCost: p.CreditCost, ValidUntil: p.ValidUntil.Value, Active: p.Active == nil || *p.Active,
+		SkipHolidays: p.SkipHolidays == nil || *p.SkipHolidays,
 	}
 	if p.ValidFrom != nil {
 		in.ValidFrom = *p.ValidFrom

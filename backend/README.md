@@ -85,6 +85,8 @@ docs/ARCHITECTURE.md
 | `gym-complaints` | 24 | complaint tickets from the inbox, front desk and member app, SLA settings, escalation job, complaint report |
 | `gym-loyalty` | 13 | membership tiers from 12-month spending and their perks, attendance XP and streaks, member status, attendance leaderboard |
 | `gym-training` | 30 | exercises, HYROX workouts and sessions, races, coach incentives and payouts |
+| `gym-training` | 38 | exercises, HYROX workouts and sessions, races, coach incentives and payouts, revenue-share commission |
+| `gym-automation` | 5 | gym background job switches, job settings and manual runs, member notification log |
 | `athlete` | 30 | member app train tab (activities, feed, clubs, challenges, gear) and home settings |
 | `member-portal` | 46 | member OTP sign-in, profile, inbox, push, top-up, engagement, collectibles, app home |
 | `pos-sales` | 39 | orders, multi-stall checkout, QRIS, KDS, print jobs, supervisor PIN, GoFood, table order |

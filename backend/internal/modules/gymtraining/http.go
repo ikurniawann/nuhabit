@@ -498,7 +498,7 @@ func (h handlers) raceDetail(w http.ResponseWriter, r *http.Request, customerID 
 // Routes lists the module's routes.
 func (h handlers) Routes() []module.Route {
 	ex, races, inc := iam.GymExercises, iam.GymRaces, iam.GymIncentives
-	return []module.Route{
+	return append(h.commissionRoutes(), []module.Route{
 		{Pattern: "GET /api/gym/exercises", Handler: auth.Staff(h.guard, h.listExercises, iam.Can(actRead, ex))},
 		{Pattern: "POST /api/gym/exercises", Handler: h.upsert(ex, h.saveExercise)},
 		{Pattern: "DELETE /api/gym/exercises", Handler: auth.Staff(h.guard, h.deleteExercise, iam.Can(actDelete, ex))},
@@ -543,5 +543,5 @@ func (h handlers) Routes() []module.Route {
 		{Pattern: "GET /api/member-portal/app/workout/leaderboard", Handler: h.member("Gagal memuat leaderboard", h.memberLeaderboard)},
 		{Pattern: "GET /api/member-portal/app/workout/workouts/{id}", Handler: h.member("Gagal memuat workout", h.getWorkout)},
 		{Pattern: "PATCH /api/member-portal/app/workout/workouts/{id}", Handler: h.member("Gagal mengganti latihan", h.replaceBlock)},
-	}
+	}...)
 }
