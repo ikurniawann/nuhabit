@@ -55,18 +55,28 @@ type Handler func(ctx context.Context, tx pgx.Tx, e Event) error
 // Publish records an event in the caller's transaction. key names the
 // aggregate (an order id, an employee id) for logs and ordering by handlers.
 func Publish(ctx context.Context, q database.Querier, topic, key string, payload any) error {
+	return PublishAt(ctx, q, topic, key, payload, time.Time{})
+}
+
+// PublishAt is Publish with the deliveries held until at; a zero at
+// delivers as soon as the transaction commits.
+func PublishAt(ctx context.Context, q database.Querier, topic, key string, payload any, at time.Time) error {
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("outbox: encode %s payload: %w", topic, err)
+	}
+	var due *time.Time
+	if !at.IsZero() {
+		due = &at
 	}
 	_, err = q.Exec(ctx, `
 WITH ev AS (
     INSERT INTO platform.outbox_events (topic, key, payload) VALUES ($1, $2, $3) RETURNING id
 ), deliveries AS (
-    INSERT INTO platform.outbox_deliveries (event_id, subscriber)
-    SELECT ev.id, s.subscriber FROM ev, platform.outbox_subscriptions s WHERE s.topic = $1
+    INSERT INTO platform.outbox_deliveries (event_id, subscriber, next_attempt_at)
+    SELECT ev.id, s.subscriber, COALESCE($5::timestamptz, now()) FROM ev, platform.outbox_subscriptions s WHERE s.topic = $1
 )
-SELECT pg_notify($4, $1)`, topic, key, raw, channel)
+SELECT pg_notify($4, $1)`, topic, key, raw, channel, due)
 	if err != nil {
 		return fmt.Errorf("outbox: publish %s: %w", topic, err)
 	}
