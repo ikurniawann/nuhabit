@@ -10,13 +10,6 @@ const (
 // IncidentKinds in display order.
 var IncidentKinds = []string{IncidentNoShow, IncidentShortNotice, IncidentLate}
 
-// IncidentLabel is the Indonesian label of each kind.
-var IncidentLabel = map[string]string{
-	IncidentNoShow:      "Tidak hadir tanpa kabar",
-	IncidentShortNotice: "Cuti mendadak",
-	IncidentLate:        "Terlambat",
-}
-
 // DefaultDeductionPercent is the commission deduction per incident.
 var DefaultDeductionPercent = map[string]float64{IncidentNoShow: 15, IncidentShortNotice: 5, IncidentLate: 5}
 

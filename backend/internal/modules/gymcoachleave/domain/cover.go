@@ -31,13 +31,6 @@ const (
 	CoverVoid      CoverStatus = "void"
 )
 
-// CoverLabel is the Indonesian label of each status.
-var CoverLabel = map[CoverStatus]string{
-	CoverOpen: "Butuh pengganti", CoverRequested: "Menunggu jawaban", CoverAccepted: "Pengganti menerima",
-	CoverDeclined: "Ditolak pengganti", CoverAssigned: "Ditunjuk Program Director", CoverCancelled: "Sesi dibatalkan",
-	CoverVoid: "Tidak berlaku",
-}
-
 // Resolved: the session has a substitute or will be cancelled.
 func (s CoverStatus) Resolved() bool {
 	return s == CoverAccepted || s == CoverAssigned || s == CoverCancelled

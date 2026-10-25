@@ -44,7 +44,7 @@ func (s *Service) Screen(ctx context.Context, q database.Querier, in LeaveReques
 	if err != nil {
 		return Screening{}, err
 	}
-	rule := domain.RuleFor(settings.NoticeRules, in.LeaveType)
+	rule := settings.NoticeRules[in.LeaveType]
 	verdict := domain.EvaluateNotice(rule, in.StartDate, localtime.DayKey(s.now(), zone), in.RecordedByHR)
 	out := Screening{Coach: true, ShortNotice: verdict.ShortNotice, NoticeDays: verdict.NoticeDays}
 	if !verdict.OK {
@@ -86,7 +86,7 @@ func (s *Service) Submitted(ctx context.Context, q database.Querier, leaveID str
 	if l.ShortNotice {
 		title, kind = "Cuti mendadak coach: "+l.Coach.Name, "alert"
 	}
-	body := label(l.LeaveType) + " " + dateRange(l) + ". "
+	body := domain.Label(l.LeaveType) + " " + dateRange(l) + ". "
 	if len(covers) > 0 {
 		body += itoa(len(covers)) + " sesi perlu pengganti."
 	} else {
@@ -139,7 +139,7 @@ func (s *Service) Decided(ctx context.Context, q database.Querier, in Decision) 
 			return err
 		}
 		return notifyCoach(ctx, q, l.Coach.ID, inboxNotice{
-			Title: "Cuti ditolak", Body: label(l.LeaveType) + " " + dateRange(l) + " ditolak.", Link: portalLink, Kind: "status_change",
+			Title: "Cuti ditolak", Body: domain.Label(l.LeaveType) + " " + dateRange(l) + " ditolak.", Link: portalLink, Kind: "status_change",
 		})
 	}
 	db, err := asDB(q)
@@ -166,7 +166,7 @@ func (s *Service) Decided(ctx context.Context, q database.Querier, in Decision) 
 		}
 	}
 	return notifyCoach(ctx, db, l.Coach.ID, inboxNotice{
-		Title: "Cuti disetujui", Body: label(l.LeaveType) + " " + dateRange(l) + " disetujui.", Link: portalLink, Kind: "status_change",
+		Title: "Cuti disetujui", Body: domain.Label(l.LeaveType) + " " + dateRange(l) + " disetujui.", Link: portalLink, Kind: "status_change",
 	})
 }
 
@@ -181,7 +181,7 @@ func (s *Service) checkBlackout(ctx context.Context, q database.Querier, l *Leav
 	if err != nil {
 		return err
 	}
-	hits := domain.BlackoutConflicts(domain.RuleFor(settings.NoticeRules, l.LeaveType), list, l.StartDate, l.EndDate)
+	hits := domain.BlackoutConflicts(settings.NoticeRules[l.LeaveType], list, l.StartDate, l.EndDate)
 	if len(hits) == 0 {
 		return nil
 	}
@@ -226,7 +226,7 @@ func syncTimeOff(ctx context.Context, db DB, l *Leave, actorID string) error {
 	_, err = db.Exec(ctx, `INSERT INTO gym.coach_availability_exceptions (coach_id, date, kind, note, created_by, leave_id)
 	    SELECT $1, d::date, 'off', $4, $5, $6 FROM generate_series($2::date, $3::date, interval '1 day') d
 	    ON CONFLICT (leave_id, date) WHERE leave_id IS NOT NULL DO NOTHING`,
-		l.Coach.ID, l.StartDate, l.EndDate, "Cuti: "+label(l.LeaveType), nullUUID(actorID), l.ID)
+		l.Coach.ID, l.StartDate, l.EndDate, "Cuti: "+domain.Label(l.LeaveType), nullUUID(actorID), l.ID)
 	return err
 }
 
@@ -241,13 +241,6 @@ func dateRange(l *Leave) string {
 		return l.StartDate
 	}
 	return l.StartDate + " s.d. " + l.EndDate
-}
-
-func label(leaveType string) string {
-	if v, ok := domain.LeaveTypeLabel[leaveType]; ok {
-		return v
-	}
-	return leaveType
 }
 
 func nullUUID(s string) *string {

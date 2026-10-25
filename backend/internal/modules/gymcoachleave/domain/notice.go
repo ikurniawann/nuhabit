@@ -67,9 +67,6 @@ func NormalizeNoticeRules(stored map[string]NoticeRule) map[string]NoticeRule {
 	return out
 }
 
-// RuleFor is the rule of a leave type; an unknown type has no rule.
-func RuleFor(rules map[string]NoticeRule, leaveType string) NoticeRule { return rules[leaveType] }
-
 // DaysBetween is to minus from in calendar days (both YYYY-MM-DD).
 func DaysBetween(from, to string) int {
 	a, errA := time.Parse(DateLayout, from)
@@ -123,10 +120,11 @@ func EvaluateNotice(rule NoticeRule, start, today string, recordedByHR bool) Not
 // NoticeRefusal is the message for a request below the minimum notice.
 func NoticeRefusal(leaveType string, rule NoticeRule, earliestStart string) string {
 	return fmt.Sprintf("%s untuk coach minimal diajukan H-%d. Tanggal mulai paling cepat %s.",
-		label(leaveType), rule.MinDays, earliestStart)
+		Label(leaveType), rule.MinDays, earliestStart)
 }
 
-func label(leaveType string) string {
+// Label is the Indonesian name of a leave type, the code when unknown.
+func Label(leaveType string) string {
 	if l, ok := LeaveTypeLabel[leaveType]; ok {
 		return l
 	}

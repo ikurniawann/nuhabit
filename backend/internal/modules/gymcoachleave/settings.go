@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/jackc/pgx/v5"
+
 	"nuhabit/backend/internal/modules/gymcoachleave/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
@@ -116,14 +118,9 @@ func (s *Service) StaffUsers(ctx context.Context) ([]StaffUser, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	out := []StaffUser{}
-	for rows.Next() {
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (StaffUser, error) {
 		var u StaffUser
-		if err := rows.Scan(&u.ID, &u.FullName, &u.Role); err != nil {
-			return nil, err
-		}
-		out = append(out, u)
-	}
-	return out, rows.Err()
+		err := r.Scan(&u.ID, &u.FullName, &u.Role)
+		return u, err
+	})
 }

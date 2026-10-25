@@ -68,6 +68,6 @@ func DescribeBlackouts(list []Blackout) string {
 // BlackoutRefusal is the message for a request on a blackout without an
 // exception request.
 func BlackoutRefusal(leaveType string, conflicts []Blackout) string {
-	return label(leaveType) + " tidak bisa diambil di tanggal blackout: " + DescribeBlackouts(conflicts) +
+	return Label(leaveType) + " tidak bisa diambil di tanggal blackout: " + DescribeBlackouts(conflicts) +
 		". Pilih tanggal lain, atau ajukan dengan permintaan pengecualian ke Program Director."
 }

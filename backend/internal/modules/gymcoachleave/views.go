@@ -61,7 +61,7 @@ func (s *Service) Queue(ctx context.Context, actorID, branchID string) ([]QueueL
 			if err != nil {
 				return err
 			}
-			q.Blackouts = domain.BlackoutConflicts(domain.RuleFor(settings.NoticeRules, l.LeaveType), list, l.StartDate, l.EndDate)
+			q.Blackouts = domain.BlackoutConflicts(settings.NoticeRules[l.LeaveType], list, l.StartDate, l.EndDate)
 			if q.Approvers, err = s.approvers(ctx, tx, l.RequesterUserID); err != nil {
 				return err
 			}
@@ -83,15 +83,13 @@ type MyLeave struct {
 
 // Portal is the Cuti tab of Kelas Saya.
 type Portal struct {
-	Coach            *Coach                        `json:"coach"`
-	Leaves           []MyLeave                     `json:"leaves"`
-	Incoming         []*Cover                      `json:"incoming"`
-	Blackouts        []domain.Blackout             `json:"blackouts"`
-	NoticeRules      map[string]domain.NoticeRule  `json:"notice_rules"`
-	HasEmployee      bool                          `json:"has_employee"`
-	ResponseHours    int                           `json:"substitute_response_hours"`
-	LeaveTypeLabels  map[string]string             `json:"leave_type_labels"`
-	CoverStatusLabel map[domain.CoverStatus]string `json:"cover_status_labels"`
+	Coach         *Coach                       `json:"coach"`
+	Leaves        []MyLeave                    `json:"leaves"`
+	Incoming      []*Cover                     `json:"incoming"`
+	Blackouts     []domain.Blackout            `json:"blackouts"`
+	NoticeRules   map[string]domain.NoticeRule `json:"notice_rules"`
+	HasEmployee   bool                         `json:"has_employee"`
+	ResponseHours int                          `json:"substitute_response_hours"`
 }
 
 // Portal is the coach's leaves of the last 60 days and ahead, the
@@ -106,8 +104,7 @@ func (s *Service) Portal(ctx context.Context, userID string) (*Portal, error) {
 		return nil, err
 	}
 	out := &Portal{Coach: coach, Leaves: []MyLeave{}, Incoming: []*Cover{}, Blackouts: []domain.Blackout{},
-		NoticeRules: settings.NoticeRules, ResponseHours: settings.SubstituteResponseHours,
-		LeaveTypeLabels: domain.LeaveTypeLabel, CoverStatusLabel: domain.CoverLabel}
+		NoticeRules: settings.NoticeRules, ResponseHours: settings.SubstituteResponseHours}
 	if coach == nil {
 		return out, nil
 	}
@@ -198,7 +195,7 @@ func (s *Service) Impact(ctx context.Context, coach *Coach, start, end, leaveTyp
 	if err != nil {
 		return nil, err
 	}
-	rule := domain.RuleFor(settings.NoticeRules, leaveType)
+	rule := settings.NoticeRules[leaveType]
 	v := domain.EvaluateNotice(rule, start, localtime.DayKey(s.now(), zone), false)
 	out.Notice = &ImpactNotice{OK: v.OK, ShortNotice: v.ShortNotice, NoticeDays: v.NoticeDays, MinDays: rule.MinDays, EarliestStart: v.EarliestStart}
 	if !v.OK {

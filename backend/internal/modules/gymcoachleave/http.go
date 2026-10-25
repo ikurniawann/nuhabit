@@ -160,8 +160,7 @@ func (h *handler) settings(w http.ResponseWriter, r *http.Request, _ *auth.User)
 	if err != nil {
 		return err
 	}
-	return httpx.OK(w, map[string]any{"settings": st, "users": users, "leave_type_labels": domain.LeaveTypeLabel,
-		"incident_labels": domain.IncidentLabel})
+	return httpx.OK(w, map[string]any{"settings": st, "users": users})
 }
 
 func (h *handler) saveSettings(w http.ResponseWriter, r *http.Request, u *auth.User) error {

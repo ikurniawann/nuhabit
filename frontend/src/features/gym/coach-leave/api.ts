@@ -13,9 +13,6 @@ export const COVER_BADGE: Record<CoverStatus, { label: string; variant: "warning
   void: { label: "Tidak berlaku", variant: "muted" },
 };
 
-/** Status yang masih menghalangi persetujuan cuti. */
-export const isBlocking = (s: CoverStatus) => s === "open" || s === "requested" || s === "declined";
-
 export const LEAVE_TYPE_LABEL: Record<string, string> = {
   annual: "Cuti tahunan",
   unpaid: "Cuti di luar tanggungan",

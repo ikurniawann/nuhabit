@@ -200,7 +200,7 @@ func candidates(ctx context.Context, q database.Querier, c *Cover) ([]domain.Can
 	})
 }
 
-// Suggestions are the free coaches for a cover, best first.
+// suggestions are the free coaches for a cover, best first.
 func suggestions(ctx context.Context, q database.Querier, c *Cover) ([]domain.Candidate, error) {
 	list, err := candidates(ctx, q, c)
 	if err != nil {

@@ -126,7 +126,7 @@ func (s *Service) recordShortNotice(ctx context.Context, q database.Querier, l *
 	if err != nil {
 		return err
 	}
-	note := label(l.LeaveType) + " " + dateRange(l)
+	note := domain.Label(l.LeaveType) + " " + dateRange(l)
 	if l.NoticeDays != nil {
 		note += ", diajukan H-" + itoa(*l.NoticeDays)
 	}
