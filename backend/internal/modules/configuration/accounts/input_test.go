@@ -53,7 +53,7 @@ func TestCreateEmployeeSchema(t *testing.T) {
 			"role custom Role is required for app access",
 		}},
 		{"invalid enum stops the refinement", `{` + validCore + `,"is_access_app":true,"role":"boss"}`, []string{
-			`role invalid_value Invalid option: expected one of "super_admin"|"admin"|"hrd"|"hiring_manager"|"direksi"|"purchasing_admin"|"purchasing_manager"|"purchasing_staff"|"finance_staff"|"warehouse_staff"|"warehouse_admin"|"pos"|"pos_supervisor"|"qc_staff"|"employee"|"sales"|"marketing"`,
+			`role invalid_value Invalid option: expected one of "super_admin"|"admin"|"hrd"|"hiring_manager"|"direksi"|"purchasing_admin"|"purchasing_manager"|"purchasing_staff"|"finance_staff"|"warehouse_staff"|"warehouse_admin"|"pos"|"pos_supervisor"|"qc_staff"|"employee"|"sales"|"marketing"|"investor"`,
 		}},
 		{"branch scope needs a stall", `{` + validCore + `,"is_access_app":true,"password":"rahasia123","role":"pos","business_scope":"branch",
 			"holding_id":"11111111-1111-4111-8111-111111111111","company_id":"11111111-1111-4111-8111-111111111111","branch_id":"11111111-1111-4111-8111-111111111111"}`, []string{

@@ -18,6 +18,7 @@ var AdminUserRoles = []string{
 	"super_admin", "admin", "hrd", "hiring_manager", "direksi", "purchasing_admin",
 	"purchasing_manager", "purchasing_staff", "finance_staff", "warehouse_staff",
 	"warehouse_admin", "pos", "pos_supervisor", "qc_staff", "employee", "sales", "marketing",
+	"investor",
 }
 
 // ApprovalModules, ApprovalWorkflows and ApprovalLevels are the enums of

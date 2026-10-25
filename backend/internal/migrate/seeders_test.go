@@ -11,14 +11,14 @@ import (
 
 var (
 	menuInsert = regexp.MustCompile(`(?is)INSERT INTO iam\.menus\s*\([^)]*\)\s*VALUES(.*?)(?:ON CONFLICT|;)`)
-	gymMenuRow = regexp.MustCompile(`\(\s*'(gym(?:\.[a-z0-9-]+)*)'`)
+	gymMenuRow = regexp.MustCompile(`\(\s*'((?:gym|investor)(?:\.[a-z0-9-]+)*)'`)
 	seederRow  = regexp.MustCompile(`(?m)^\s*\('([a-z0-9._-]+)',`)
 	keepCode   = regexp.MustCompile(`'([a-z0-9._-]+)'`)
 )
 
-// Every gym menu a migration creates must be in the IAM menu seeder, both
-// as an upserted row and in the keep list, or re-running the seeder retires
-// it.
+// Every gym and investor menu a migration creates must be in the IAM menu
+// seeder, both as an upserted row and in the keep list, or re-running the
+// seeder retires it.
 func TestIAMMenuSeederHasGymMenus(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	db := filepath.Join(filepath.Dir(file), "../../database")
@@ -40,7 +40,7 @@ func TestIAMMenuSeederHasGymMenus(t *testing.T) {
 		}
 	}
 	if len(migrated) < 20 {
-		t.Fatalf("found only %d gym menus in the migrations: %v", len(migrated), migrated)
+		t.Fatalf("found only %d gym and investor menus in the migrations: %v", len(migrated), migrated)
 	}
 
 	raw, err := os.ReadFile(filepath.Join(db, "seeders", "iam-menus.sql"))
