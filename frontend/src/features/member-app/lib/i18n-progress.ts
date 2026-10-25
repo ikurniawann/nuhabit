@@ -1,0 +1,71 @@
+/**
+ * Kamus ID layar Membership (tier dari belanja 12 bulan) dan Progres (XP
+ * kehadiran, streak, leaderboard). Digabung ke kamus ID di i18n.ts.
+ */
+export const PROGRESS_ID: Record<string, string> = {
+  // Membership
+  "Loading membership…": "Memuat membership…",
+  "Could not load your membership": "Membership gagal dimuat",
+  "Your tier follows what you spent in the last 12 months at the gym, café and shop.":
+    "Tier mengikuti belanjamu 12 bulan terakhir di gym, kafe dan toko.",
+  "Membership tiers are coming soon": "Tier membership segera hadir",
+  "Tier history": "Riwayat tier",
+  "Moved up to {tier}": "Naik ke {tier}",
+  "Moved down to {tier}": "Turun ke {tier}",
+  "No tier": "Tanpa tier",
+  "Your tier": "Tier kamu",
+  "No tier yet": "Belum ada tier",
+  "{amount} spent in the last 12 months": "{amount} belanja 12 bulan terakhir",
+  "{amount} more to {tier}": "{amount} lagi ke {tier}",
+  "Tier held until {date}": "Tier bertahan sampai {date}",
+  "Spend {amount} more to keep it after that": "Belanja {amount} lagi agar tetap bertahan setelahnya",
+  "Your perks": "Perks kamu",
+  "Your perks are paused while your account is suspended or blocked.":
+    "Perks berhenti sementara selama akunmu ditangguhkan atau diblokir.",
+  "No perks on this tier yet": "Tier ini belum punya perks",
+  "All tiers": "Semua tier",
+  "From {amount}": "Mulai {amount}",
+  "Membership is separate from Progress: XP from training keeps its own tier. Where both give a discount you get the higher one.":
+    "Membership terpisah dari Progres: XP dari latihan punya tier sendiri. Bila keduanya memberi diskon, kamu dapat yang lebih besar.",
+  "{n}% off at the café and POS": "Diskon {n}% di kafe dan kasir",
+  "Book classes {n} days earlier": "Booking kelas {n} hari lebih awal",
+  "Free cancel up to {n} hours before class": "Batal gratis sampai {n} jam sebelum kelas",
+  "Priority on the waitlist": "Prioritas di waitlist",
+  "Membership & tier": "Membership & tier",
+  "Perks from what you spend": "Perks dari belanjamu",
+
+  // Progress
+  "Loading progress…": "Memuat progres…",
+  "Could not load your progress": "Progres gagal dimuat",
+  "Earn XP by showing up. Your XP tier never drops.": "Dapat XP dengan rajin datang. Tier XP tidak pernah turun.",
+  "XP and the leaderboard are paused while your account is suspended or blocked.":
+    "XP dan leaderboard berhenti sementara selama akunmu ditangguhkan atau diblokir.",
+  "Recent XP": "XP terbaru",
+  "Sessions this week": "Sesi minggu ini",
+  "{n} this month": "{n} bulan ini",
+  "How to earn XP": "Cara dapat XP",
+  "Attend a class": "Hadir kelas",
+  "Attend a PT session": "Hadir sesi PT",
+  "Off-peak class bonus": "Bonus kelas jam sepi",
+  "Weekly streak ({n} sessions in a week)": "Streak mingguan ({n} sesi dalam seminggu)",
+  "Every 4 weeks in a row": "Setiap 4 minggu berturut-turut",
+  "Renew before your package runs out": "Perpanjang sebelum paket habis",
+  "Buy a package": "Beli paket",
+  "+{n} per {amount}": "+{n} per {amount}",
+  "Leaderboard this month": "Leaderboard bulan ini",
+  "Loading leaderboard…": "Memuat leaderboard…",
+  "No check-ins at this branch yet this month.": "Belum ada check-in di cabang ini bulan ini.",
+  "{n} sessions": "{n} sesi",
+  "You are #{rank} with {n} sessions.": "Kamu peringkat #{rank} dengan {n} sesi.",
+  "Check in to a class to join the board.": "Check-in ke kelas untuk masuk leaderboard.",
+  "You are hidden from the leaderboard.": "Kamu disembunyikan dari leaderboard.",
+  "Change in settings": "Ubah di pengaturan",
+  "XP, streaks, leaderboard": "XP, streak, leaderboard",
+  "Class attended": "Hadir kelas",
+  "PT session attended": "Hadir sesi PT",
+  "Off-peak bonus": "Bonus jam sepi",
+  "Weekly streak": "Streak mingguan",
+  "4-week streak": "Streak 4 minggu",
+  "Package purchase": "Beli paket",
+  "Early renewal bonus": "Bonus perpanjang lebih awal",
+};
