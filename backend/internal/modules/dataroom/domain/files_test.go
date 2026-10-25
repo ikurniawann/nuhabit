@@ -30,7 +30,8 @@ func TestFileTypes(t *testing.T) {
 	if !IsWatermarkable("image/png") || IsWatermarkable("image/gif") || !IsWatermarkable("application/pdf") {
 		t.Error("watermarkable")
 	}
-	if !IsPreviewable("image/gif") || !IsPreviewable("application/pdf") || IsPreviewable("image/svg+xml") || IsPreviewable("text/plain") {
+	if !IsPreviewable("image/gif") || !IsPreviewable("application/pdf") || IsPreviewable("image/svg+xml") || IsPreviewable("text/x-log") ||
+		!IsPreviewable("text/plain") || !IsPreviewable("video/mp4") || IsPreviewable("application/zip") {
 		t.Error("previewable")
 	}
 }

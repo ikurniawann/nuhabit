@@ -2,6 +2,7 @@ package payroll
 
 import (
 	"context"
+	"io"
 
 	"nuhabit/backend/internal/modules/payroll/domain"
 	"nuhabit/backend/internal/platform/database"
@@ -107,6 +108,16 @@ type Ports struct {
 	PayslipFrom   string
 	// KPI reads what the KPI snapshot measures in other contexts.
 	KPI KPISources
+	// DocumentFiler files an emailed payslip into the Data Room (nil skips
+	// the filing).
+	DocumentFiler DocumentFiler
+}
+
+// DocumentFiler is the Data Room port (dataroom.Filer.FileDocument): it
+// stores the bytes under folderPath, owned by ownerUserID, and returns the
+// node id.
+type DocumentFiler interface {
+	FileDocument(ctx context.Context, ownerUserID, folderPath, name, contentType string, r io.Reader, tags []string) (string, error)
 }
 
 // PayslipMailer sends a salary PDF only to the employee's registered email.

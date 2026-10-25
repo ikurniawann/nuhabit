@@ -23,6 +23,7 @@ export function UploadPanel({ tasks, onClear }: { tasks: UploadTask[]; onClear: 
                 : t.status === "error" ? <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
                 : <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
               <span className="flex-1 truncate font-medium" title={t.name}>{t.name}</span>
+              {t.chunked && t.status === "uploading" && <span className="rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground" title="Dikirim berpotongan; otomatis lanjut bila koneksi putus">berpotongan</span>}
               <span className="text-muted-foreground">{formatBytes(t.size)}</span>
             </div>
             {t.status === "uploading" && (

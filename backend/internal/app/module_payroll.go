@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 
+	"nuhabit/backend/internal/modules/dataroom"
 	"nuhabit/backend/internal/modules/payroll"
 	"nuhabit/backend/internal/platform/module"
 )
@@ -18,6 +19,9 @@ func init() {
 		ports := payrollPorts()
 		ports.PayslipFrom = strings.TrimSpace(firstNonEmptyStr(os.Getenv("PAYROLL_FROM_EMAIL"), os.Getenv("FROM_EMAIL")))
 		ports.PayslipMailer = mailPayslipMailer{svc: newMailService(d)}
+		if d.Config.ModuleEnabled(dataroom.Name) {
+			ports.DocumentFiler = dataroomFiler(d)
+		}
 		return payroll.New(d, ports)
 	})
 }

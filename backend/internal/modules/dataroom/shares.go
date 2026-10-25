@@ -29,6 +29,7 @@ type shareFields struct {
 	AccessType     string        `json:"access_type"`
 	AllowedEmails  []string      `json:"allowed_emails"`
 	Watermark      bool          `json:"watermark"`
+	AllowDownload  bool          `json:"allow_download"`
 	ExpiresAt      httpx.JSTime  `json:"expires_at"`
 	RevokedAt      *httpx.JSTime `json:"revoked_at"`
 	ViewCount      int           `json:"view_count"`
@@ -44,7 +45,7 @@ type Share struct {
 	PinHash *string
 }
 
-const shareCols = `s.id::text, s.token, s.node_id::text, s.access_type, s.allowed_emails, s.pin_hash, s.watermark, s.expires_at,
+const shareCols = `s.id::text, s.token, s.node_id::text, s.access_type, s.allowed_emails, s.pin_hash, s.watermark, s.allow_download, s.expires_at,
   s.revoked_at, s.view_count, s.last_accessed_at, s.created_by::text, s.created_by_name, s.created_at`
 
 // scanShare reads shareCols followed by extra destinations.
@@ -52,7 +53,7 @@ func scanShare(row pgx.Row, extra ...any) (*Share, error) {
 	var sh Share
 	var expires, created time.Time
 	var revoked, accessed *time.Time
-	dest := append([]any{&sh.ID, &sh.Token, &sh.NodeID, &sh.AccessType, &sh.AllowedEmails, &sh.PinHash, &sh.Watermark, &expires,
+	dest := append([]any{&sh.ID, &sh.Token, &sh.NodeID, &sh.AccessType, &sh.AllowedEmails, &sh.PinHash, &sh.Watermark, &sh.AllowDownload, &expires,
 		&revoked, &sh.ViewCount, &accessed, &sh.CreatedBy, &sh.CreatedByName, &created}, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return nil, err
@@ -121,7 +122,7 @@ func (s *Service) Shares(ctx context.Context, a *Access, nodeID *string) ([]List
 		if err != nil {
 			return nil, err
 		}
-		if !a.Allows(sh.NodeID, l.NodeParentID, l.NodeKind) {
+		if !a.AllowsNode(&Node{ID: sh.NodeID, ParentID: l.NodeParentID, Kind: l.NodeKind}) {
 			continue
 		}
 		l.shareFields, l.HasPin, l.URL = sh.shareFields, sh.PinHash != nil, s.shareURL(sh.Token)
@@ -136,6 +137,7 @@ type ShareInput struct {
 	Emails             []string
 	Pin                *string
 	Watermark          bool
+	AllowDownload      bool
 	ExpiresDays        int
 	SendEmail          bool
 }
@@ -164,11 +166,14 @@ func (s *Service) CreateShare(ctx context.Context, a *Access, userID, userName s
 	if err != nil {
 		return nil, err
 	}
-	if node == nil {
+	if node == nil || node.TrashedAt != nil {
 		return nil, httpx.NotFound("Item tidak ditemukan")
 	}
-	if !a.AllowsNode(node) {
+	switch level := a.Level(node); {
+	case level < LevelViewer:
 		return nil, httpx.Forbidden("Item ini tidak dibuka untuk departemen Anda")
+	case level < LevelEditor:
+		return nil, httpx.Forbidden("Hanya editor atau pemilik yang bisa membuat link berbagi")
 	}
 	emails := domain.NormalizeEmails(in.Emails)
 	if in.AccessType == "email" && len(emails) == 0 {
@@ -189,13 +194,15 @@ func (s *Service) CreateShare(ctx context.Context, a *Access, userID, userName s
 		pinHash = &h
 	}
 	sh, err := scanShare(s.db.QueryRow(ctx, `WITH s AS (
-	   INSERT INTO dataroom.shares (token, node_id, access_type, allowed_emails, pin_hash, watermark, expires_at, created_by, created_by_name)
-	   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *)
+	   INSERT INTO dataroom.shares (token, node_id, access_type, allowed_emails, pin_hash, watermark, allow_download, expires_at, created_by, created_by_name)
+	   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *)
 	 SELECT `+shareCols+` FROM s`,
-		domain.GenerateShareToken(), node.ID, in.AccessType, allowed, pinHash, in.Watermark, expiresAt, userID, userName))
+		domain.GenerateShareToken(), node.ID, in.AccessType, allowed, pinHash, in.Watermark, in.AllowDownload, expiresAt, userID, userName))
 	if err != nil {
 		return nil, err
 	}
+	s.logActivity(ctx, activity{node: node, action: "share_created", actorID: userID, actorName: userName,
+		detail: map[string]any{"share_id": sh.ID, "access_type": in.AccessType, "allow_download": in.AllowDownload}})
 	out := &CreatedShare{shareFields: sh.shareFields, HasPin: sh.PinHash != nil, URL: s.shareURL(sh.Token),
 		NodeName: node.Name, NodeKind: node.Kind}
 	if in.SendEmail && len(emails) > 0 {

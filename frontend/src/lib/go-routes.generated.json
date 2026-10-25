@@ -1247,6 +1247,16 @@
   {
     "module": "dataroom",
     "method": "GET",
+    "path": "/api/dataroom/activity"
+  },
+  {
+    "module": "dataroom",
+    "method": "DELETE",
+    "path": "/api/dataroom/comments/{id}"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
     "path": "/api/dataroom/departments"
   },
   {
@@ -1262,6 +1272,11 @@
   {
     "module": "dataroom",
     "method": "DELETE",
+    "path": "/api/dataroom/nodes/{id}"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
     "path": "/api/dataroom/nodes/{id}"
   },
   {
@@ -1282,7 +1297,102 @@
   {
     "module": "dataroom",
     "method": "GET",
+    "path": "/api/dataroom/nodes/{id}/activity"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/nodes/{id}/comments"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/dataroom/nodes/{id}/comments"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/dataroom/nodes/{id}/copy"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
     "path": "/api/dataroom/nodes/{id}/download"
+  },
+  {
+    "module": "dataroom",
+    "method": "DELETE",
+    "path": "/api/dataroom/nodes/{id}/lock"
+  },
+  {
+    "module": "dataroom",
+    "method": "PUT",
+    "path": "/api/dataroom/nodes/{id}/lock"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/nodes/{id}/permissions"
+  },
+  {
+    "module": "dataroom",
+    "method": "PUT",
+    "path": "/api/dataroom/nodes/{id}/permissions"
+  },
+  {
+    "module": "dataroom",
+    "method": "DELETE",
+    "path": "/api/dataroom/nodes/{id}/purge"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/dataroom/nodes/{id}/restore"
+  },
+  {
+    "module": "dataroom",
+    "method": "DELETE",
+    "path": "/api/dataroom/nodes/{id}/star"
+  },
+  {
+    "module": "dataroom",
+    "method": "PUT",
+    "path": "/api/dataroom/nodes/{id}/star"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/nodes/{id}/text"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/nodes/{id}/versions"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/dataroom/nodes/{id}/versions"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/nodes/{id}/versions/{versionId}/download"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/dataroom/nodes/{id}/versions/{versionId}/restore"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/people"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/search"
   },
   {
     "module": "dataroom",
@@ -1307,12 +1417,42 @@
   {
     "module": "dataroom",
     "method": "GET",
+    "path": "/api/dataroom/tags"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
     "path": "/api/dataroom/tree"
   },
   {
     "module": "dataroom",
     "method": "POST",
     "path": "/api/dataroom/upload"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/dataroom/uploads"
+  },
+  {
+    "module": "dataroom",
+    "method": "DELETE",
+    "path": "/api/dataroom/uploads/{id}"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/uploads/{id}"
+  },
+  {
+    "module": "dataroom",
+    "method": "PUT",
+    "path": "/api/dataroom/uploads/{id}/chunk"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/dataroom/uploads/{id}/complete"
   },
   {
     "module": "desktop",
