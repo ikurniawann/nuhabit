@@ -37,7 +37,7 @@ func crmInboxGateway(d module.Deps) inbox.Gateway {
 }
 
 func integrationsSettingsPorts(d module.Deps) settings.Ports {
-	return settings.Ports{Messages: integrationsMessageLog{inbox: crmInboxGateway(d)}, Flash: integrationsFlashSQL{}}
+	return settings.Ports{Messages: integrationsMessageLog{inbox: crmInboxGateway(d)}, Flash: integrationsFlashSQL{}, Mail: newMailService(d)}
 }
 
 func integrationsWebhookPorts(d module.Deps) webhooks.Ports {

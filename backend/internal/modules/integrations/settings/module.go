@@ -1,7 +1,8 @@
 // Package settings ports the integration settings pages: AI providers
 // (settings/integrations), Google Business Profile, Instagram Messaging,
 // payment gateways, the WhatsApp gateway (status, pairing QR, message log
-// and resend) and the owner WhatsApp notifications (config and test send).
+// and resend), the owner WhatsApp notifications (config and test send) and
+// the outbound email provider (config, test send, log and resend).
 // Stored secrets never leave the server: responses carry masked values.
 package settings
 
@@ -18,6 +19,7 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/mail"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -58,6 +60,9 @@ type FlashReports interface {
 type Ports struct {
 	Messages MessageLog
 	Flash    FlashReports
+	// Mail is the outbound mailer: its settings, test send and log live on
+	// the Email page.
+	Mail *mail.Service
 }
 
 // Handler serves the settings routes.
@@ -111,6 +116,11 @@ func (h *Handler) Routes() []module.Route {
 		r("GET /api/settings/wa-notifications", h.getWaNotif),
 		r("PUT /api/settings/wa-notifications", h.putWaNotif),
 		r("POST /api/settings/wa-notifications/test", h.testWaNotif),
+		r("GET /api/settings/email", h.getEmail),
+		r("PUT /api/settings/email", h.putEmail),
+		r("POST /api/settings/email/test", h.testEmail),
+		r("GET /api/settings/email/log", h.listEmailLog),
+		r("POST /api/settings/email/log/{id}/resend", h.resendEmail),
 	}
 }
 

@@ -485,7 +485,7 @@ func TestRunLifecycle(t *testing.T) {
 		t.Fatalf("staff without employee %v", mine)
 	}
 	e.mailer.err = errors.New("mailer down")
-	wantErr(t, e.call(&e.hr, "POST", "/api/hris/payslips/notify", map[string]any{"payroll_detail_id": slip["id"]}, 502), "Email slip gaji gagal dikirim; coba lagi")
+	wantErr(t, e.call(&e.hr, "POST", "/api/hris/payslips/notify", map[string]any{"payroll_detail_id": slip["id"]}, 502), "Email slip gaji gagal dikirim: mailer down")
 	var sent bool
 	e.scalar(&sent, `SELECT payslip_sent FROM hris.payroll_details WHERE id = $1`, slip["id"])
 	if sent {
@@ -493,7 +493,7 @@ func TestRunLifecycle(t *testing.T) {
 	}
 	e.mailer.err = nil
 	notify := e.call(&e.hr, "POST", "/api/hris/payslips/notify", map[string]any{"payroll_detail_id": slip["id"]}, 200)
-	if notify["message"] != "Email slip gaji diterima Resend" ||
+	if notify["message"] != "Email slip gaji diterima provider email" ||
 		notify["data"].(map[string]any)["email"] != *e.emps.briefs[worker].Email ||
 		e.mailer.to != *e.emps.briefs[worker].Email || !strings.HasPrefix(string(e.mailer.pdf), "%PDF") {
 		t.Fatalf("notify %v", notify)

@@ -254,6 +254,13 @@ or `frontend/node_modules`).
   `ErrNotInstalled` when the binary is missing (`TESSERACT_BIN` overrides the
   path). The runtime image installs `tesseract-ocr` with the eng and ind
   packs; locally `brew install tesseract tesseract-lang`.
+- **`platform/mail`**: the outbound email port. `Service.Send` picks the
+  provider from Settings → Integrasi → Email (`configuration.app_settings`
+  `mail_*` keys, env as the fallback), logs the message in
+  `platform.mail_log` and retries transient failures from the
+  `integrations.mail-retry` job. Providers: Resend, Microsoft Graph
+  `sendMail` (client credentials, token cached in memory) and SMTP AUTH over
+  STARTTLS. See [EMAIL.md](EMAIL.md).
 - **`platform/imageproc`** (golang.org/x/image): `Decode` with EXIF
   orientation, `FitInside`, `Flatten`, `JPEGThumbnail` (the gofood-image and
   attendance-photo sharp pipelines) and `Watermark` (the data room's image

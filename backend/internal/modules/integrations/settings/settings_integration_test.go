@@ -18,6 +18,7 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/mail"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/testutil"
 )
@@ -32,7 +33,7 @@ func (headerGuard) RequireUser(r *http.Request) (*auth.User, error) {
 	if r.Header.Get("X-Role") == "" {
 		return nil, httpx.Unauthorized("")
 	}
-	return &auth.User{ID: "00000000-0000-0000-0000-000000000001", Role: r.Header.Get("X-Role")}, nil
+	return &auth.User{ID: "00000000-0000-0000-0000-000000000001", Role: r.Header.Get("X-Role"), Email: r.Header.Get("X-Email")}, nil
 }
 
 func (g headerGuard) RequireMenuPrefix(r *http.Request, _ ...string) (*auth.User, error) {
@@ -80,27 +81,41 @@ func (fakeFlash) Gather(_ context.Context, _ database.Querier, date string) (dom
 }
 
 type fixture struct {
-	t   *testing.T
-	tx  pgx.Tx
-	mux *http.ServeMux
-	msg *fakeMessages
-	env map[string]string
+	t    *testing.T
+	tx   pgx.Tx
+	mux  *http.ServeMux
+	msg  *fakeMessages
+	mail *fakeMailProvider
+	// mailer caches its configuration; tests that change env call Invalidate.
+	mailer *mail.Service
+	env    map[string]string
+	// email, when set, is the signed-in user's address.
+	email string
 }
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	tx := testutil.Tx(t)
-	f := &fixture{t: t, tx: tx, msg: &fakeMessages{}, env: map[string]string{}}
+	f := &fixture{t: t, tx: tx, msg: &fakeMessages{}, mail: &fakeMailProvider{}, env: map[string]string{}}
 	now := func() time.Time { return time.Date(2026, 10, 4, 7, 30, 0, 0, time.UTC) }
-	h := NewHandler(tx, headerGuard{}, Ports{Messages: f.msg, Flash: fakeFlash{}}, now,
-		slog.New(slog.NewTextHandler(io.Discard, nil)), func(k string) string { return f.env[k] })
+	getenv := func(k string) string { return f.env[k] }
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	mailer := mail.New(tx, getenv, log, now)
+	mailer.Providers = func(c mail.Config) (mail.Provider, error) {
+		if c.Resolved() == "" {
+			return nil, mail.ErrNotConfigured
+		}
+		return f.mail, nil
+	}
+	f.mailer = mailer
+	h := NewHandler(tx, headerGuard{}, Ports{Messages: f.msg, Flash: fakeFlash{}, Mail: mailer}, now, log, getenv)
 	f.mux = testutil.Mux(routes(h.Routes()))
 	// Start from a known state: the keys these tests touch are cleared.
-	f.exec(`DELETE FROM configuration.app_settings WHERE key = ANY($1)`, []string{
+	f.exec(`DELETE FROM configuration.app_settings WHERE key = ANY($1)`, append([]string{
 		"deepseek_api_key", "deepseek_model", "deepseek_base_url", "openai_api_key", "openai_model", "openai_base_url",
 		"google_bp_client_id", "google_bp_client_secret", "google_bp_refresh_token", "google_bp_account_id", "google_bp_location_id",
 		"ig_app_secret", "ig_verify_token", "ig_access_token", "ig_account_id", "wa_gateway_url", "wa_gateway_token",
-		"wa_notif_config", "pos_shift_report_wa_recipients"})
+		"wa_notif_config", "pos_shift_report_wa_recipients"}, mail.SettingKeys()...))
 	return f
 }
 
@@ -139,6 +154,9 @@ func (f *fixture) do(method, target string, body any, role string, menu bool) re
 	}
 	if menu {
 		r.Header.Set("X-Menu", "1")
+	}
+	if f.email != "" {
+		r.Header.Set("X-Email", f.email)
 	}
 	rec := httptest.NewRecorder()
 	f.mux.ServeHTTP(rec, r)

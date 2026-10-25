@@ -24,5 +24,6 @@ func RecruitmentPorts(d module.Deps) recruitment.Ports {
 		Settings:  configuration.AppSettings{},
 		Speech:    recruitmentSpeech{log: d.Log},
 		Hired:     recruitmentHired{},
+		Mailer:    recruitmentMail{svc: newMailService(d)},
 	}
 }

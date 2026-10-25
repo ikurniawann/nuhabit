@@ -4,7 +4,6 @@ import (
 	"context"
 	"html"
 	"log/slog"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -17,7 +16,8 @@ import (
 
 // crmEngagementPorts wires the CRM engagement area's ports: POS order reads
 // and member web push, both stopgap adapters in the engagement package, and
-// the WhatsApp and email channels of gym notifications.
+// the WhatsApp and email channels of gym notifications (email through the
+// mailer port, adapters_mail.go).
 func crmEngagementPorts(d module.Deps) engagement.Ports {
 	return engagement.Ports{
 		Orders: engagement.OrdersSQL{},
@@ -30,25 +30,27 @@ func newGymChannels(d module.Deps) gymChannels {
 	return gymChannels{
 		db:   d.DB,
 		wa:   whatsapp.New(d.Log),
-		mail: &resendMailer{apiKey: strings.TrimSpace(os.Getenv("RESEND_API_KEY")), log: d.Log, client: &http.Client{Timeout: 15 * time.Second}},
+		mail: mailSender{svc: newMailService(d), kind: "gym"},
 		from: strings.TrimSpace(firstNonEmptyStr(os.Getenv("GYM_FROM_EMAIL"), os.Getenv("FROM_EMAIL"))),
 		log:  d.Log,
 	}
 }
 
-type mailSender interface {
+// htmlMailer sends one HTML email; false when it did not go out.
+type htmlMailer interface {
 	Send(ctx context.Context, to, from, subject, html string) bool
 }
 
 // gymChannels sends a gym notification on WhatsApp when a provider is
-// configured (services/wa-gateway, Meta or Fonnte) and by email when
-// RESEND_API_KEY and a sender address (GYM_FROM_EMAIL or FROM_EMAIL) are set.
-// The member's gym_whatsapp and gym_email switches (gym.athlete_settings,
-// set in the member app) turn a channel off; no row means both on.
+// configured (services/wa-gateway, Meta or Fonnte) and by email when the
+// mailer has a provider (Settings → Integrasi → Email); GYM_FROM_EMAIL or
+// FROM_EMAIL overrides the configured sender. The member's gym_whatsapp and
+// gym_email switches (gym.athlete_settings, set in the member app) turn a
+// channel off; no row means both on.
 type gymChannels struct {
 	db   database.Querier
 	wa   *whatsapp.Client
-	mail mailSender
+	mail htmlMailer
 	from string
 	log  *slog.Logger
 }
@@ -104,7 +106,7 @@ func (c gymChannels) sendTo(ctx context.Context, phone, email *string, title, bo
 			}
 		}
 	}
-	if email != nil && strings.Contains(*email, "@") && c.from != "" {
+	if email != nil && strings.Contains(*email, "@") && c.mail != nil {
 		c.mail.Send(ctx, strings.TrimSpace(*email), c.from, title, gymEmailHTML(title, body))
 	}
 }

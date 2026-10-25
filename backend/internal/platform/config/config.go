@@ -53,7 +53,8 @@ func DisabledIntegrations(getenv func(string) string) []string {
 		enabled bool
 	}{
 		{"URL publik NEXT_PUBLIC_APP_URL (tautan di WA/email dari job latar jadi relatif)", has("NEXT_PUBLIC_APP_URL") || has("NEXT_PUBLIC_BASE_URL")},
-		{"email Resend (RESEND_API_KEY)", has("RESEND_API_KEY")},
+		{"email lewat env (RESEND_API_KEY, MS_GRAPH_CLIENT_SECRET atau SMTP_PASSWORD; bisa juga diatur di Settings → Integrasi → Email)",
+			has("RESEND_API_KEY") || has("MS_GRAPH_CLIENT_SECRET") || has("SMTP_PASSWORD")},
 		{"pembayaran Xendit (XENDIT_SECRET_KEY + XENDIT_WEBHOOK_TOKEN)", getenv("XENDIT_MOCK") == "1" || (has("XENDIT_SECRET_KEY") && has("XENDIT_WEBHOOK_TOKEN"))},
 		{"web push portal member (VAPID_PUBLIC_KEY + VAPID_PRIVATE_KEY)", has("VAPID_PUBLIC_KEY") && has("VAPID_PRIVATE_KEY")},
 		{"foto produk GoFood dari public/ Next (PUBLIC_ORIGIN atau PUBLIC_DIR)", has("PUBLIC_ORIGIN") || has("PUBLIC_DIR")},
