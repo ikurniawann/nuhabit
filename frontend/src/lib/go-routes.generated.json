@@ -2166,8 +2166,53 @@
   },
   {
     "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/dept-tasks/items"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/dept-tasks/kpi"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/dept-tasks/kpi/contributions"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/dept-tasks/meta"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/dept-tasks/monitor"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/dept-tasks/occurrences/{id}"
+  },
+  {
+    "module": "payroll",
     "method": "PATCH",
     "path": "/api/hris/dept-tasks/occurrences/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/dept-tasks/occurrences/{id}/attachments"
+  },
+  {
+    "module": "payroll",
+    "method": "DELETE",
+    "path": "/api/hris/dept-tasks/occurrences/{id}/attachments/{attId}"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/dept-tasks/occurrences/{id}/attachments/{attId}"
   },
   {
     "module": "payroll",

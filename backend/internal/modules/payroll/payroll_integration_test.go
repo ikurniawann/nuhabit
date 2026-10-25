@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 
 	"nuhabit/backend/internal/modules/payroll/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/storage"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -141,6 +143,7 @@ type env struct {
 	ctx    context.Context
 	tx     pgx.Tx
 	mux    http.Handler
+	svc    *service
 	emps   *fakeEmployees
 	depts  *fakeDepartments
 	work   *fakeWorkforce
@@ -148,6 +151,19 @@ type env struct {
 	hr     testutil.Staff
 	admin  testutil.Staff
 	staff  testutil.Staff
+	// channels records the WhatsApp and email titles the task reminders sent.
+	channels fakeChannels
+}
+
+type fakeChannels struct {
+	mu     sync.Mutex
+	titles []string
+}
+
+func (f *fakeChannels) SendTo(_, _ *string, title, _ string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.titles = append(f.titles, title)
 }
 
 type fakePayslipMailer struct {
@@ -193,7 +209,9 @@ func setup(t *testing.T) *env {
 		depts:  &fakeDepartments{},
 		work:   &fakeWorkforce{records: map[string]domain.WorkforceRecords{}, holidays: map[string]bool{}},
 		mailer: &fakePayslipMailer{}}
-	e.mux = testutil.Mux(NewOn(deps, tx, Ports{Employees: e.emps, Departments: e.depts, Workforce: e.work, Settings: fakeSettings{}, PayslipMailer: e.mailer, PayslipFrom: "Payroll <payroll@example.com>"}))
+	mod := NewOn(deps, tx, Ports{Employees: e.emps, Departments: e.depts, Workforce: e.work, Settings: fakeSettings{}, PayslipMailer: e.mailer,
+		PayslipFrom: "Payroll <payroll@example.com>", TaskChannels: &e.channels, TaskStore: storage.New(t.TempDir())}).(payrollModule)
+	e.mux, e.svc = testutil.Mux(mod), mod.svc
 	return e
 }
 

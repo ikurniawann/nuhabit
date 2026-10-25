@@ -36,6 +36,8 @@ func TestJobsFollowMountedModules(t *testing.T) {
 		"gym-credits.expiry":                      time.Hour,
 		"gym-credits.pass-revenue":                time.Hour,
 		"member-portal.referral-rewards":          15 * time.Minute,
+		"dept-tasks.recurrence":                   time.Hour,
+		"dept-tasks.reminders":                    15 * time.Minute,
 	}
 	for name, every := range want {
 		if all[name] != every {

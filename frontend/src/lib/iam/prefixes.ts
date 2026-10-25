@@ -117,6 +117,12 @@ export const IAM = {
   gymGateDevices: ["gym.gate-devices"],
   /** Gym → Referral (pengaturan program, daftar referral, leaderboard). */
   gymReferrals: ["gym.referrals"],
+  /** Tugas Saya: daftar tugas sendiri (baca, buat, ubah milik sendiri). */
+  tasks: ["tasks"],
+  /** Papan tugas departemen untuk manajer; kepala departemen lolos lewat cek modul. */
+  tasksTeam: ["tasks.team"],
+  /** Tampilan KPI & Tugas per indikator. */
+  tasksKpi: ["tasks.kpi"],
   /** HRIS → Master Data (departemen, jabatan, status kepegawaian). */
   hrisMaster: ["hris.master"],
   /** HRIS → Organisasi (struktur organisasi, seksi). */

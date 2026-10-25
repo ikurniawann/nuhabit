@@ -14,12 +14,16 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/storage"
 )
 
 // Name is the MODULES key.
 const Name = "payroll"
 
-type payrollModule struct{ routes []module.Route }
+type payrollModule struct {
+	routes []module.Route
+	svc    *service
+}
 
 func (m payrollModule) Name() string           { return Name }
 func (m payrollModule) Routes() []module.Route { return m.routes }
@@ -38,15 +42,24 @@ func NewOn(deps module.Deps, db database.DB, ports Ports) module.Module {
 	if log == nil {
 		log = slog.Default()
 	}
+	if ports.TaskChannels == nil {
+		ports.TaskChannels = noTaskChannels{}
+	}
+	if ports.TaskStore == nil {
+		ports.TaskStore = storage.FromEnv()
+	}
 	svc := &service{db: db, ports: ports, now: now, log: log}
-	h := &handler{svc: svc, auth: deps.Auth}
-	return payrollModule{routes: append(h.routes(), h.fileRoutes()...)}
+	h := &handler{svc: svc, auth: deps.Auth, guard: deps.Auth}
+	routes := append(h.routes(), h.fileRoutes()...)
+	return payrollModule{routes: append(routes, h.taskRoutes()...), svc: svc}
 }
 
 // handler parses requests, guards them and renders the service results.
+// guard is auth for the IAM-guarded task routes; a stub in tests.
 type handler struct {
-	svc  *service
-	auth *auth.Service
+	svc   *service
+	auth  *auth.Service
+	guard auth.Granter
 }
 
 // service holds the use cases. db is the pool or a test transaction.

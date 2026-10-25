@@ -7,14 +7,18 @@ import (
 	"math"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/payroll/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/validate"
 )
+
+func ptrInt(i int) *int { return &i }
 
 // Department tasks (lib/hris/dept-tasks-repo.ts). hris.department_task*
 // belong to this module; employees and departments come through ports.
@@ -65,7 +69,8 @@ func (s *service) isDepartmentHead(ctx context.Context, employeeID, departmentID
 // ensureOccurrences generates the missing occurrences of the department's
 // active tasks in [start, end] (idempotent).
 func (s *service) ensureOccurrences(ctx context.Context, departmentID, start, end string) error {
-	rows, err := s.db.Query(ctx, `SELECT id::text, recurrence, weekly_day, monthly_day, due_date::text
+	rows, err := s.db.Query(ctx, `SELECT id::text, recurrence, weekly_day, monthly_day, due_date::text,
+		(created_at AT TIME ZONE timezone)::date::text
 		FROM hris.department_tasks WHERE department_id = $1 AND is_active = true`, departmentID)
 	if err != nil {
 		return err
@@ -76,7 +81,7 @@ func (s *service) ensureOccurrences(ctx context.Context, departmentID, start, en
 	}
 	tasks, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (task, error) {
 		var t task
-		return t, r.Scan(&t.id, &t.Recurrence, &t.WeeklyDay, &t.MonthlyDay, &t.DueDate)
+		return t, r.Scan(&t.id, &t.Recurrence, &t.WeeklyDay, &t.MonthlyDay, &t.DueDate, &t.CreatedDate)
 	})
 	if err != nil {
 		return err
@@ -205,13 +210,27 @@ func (s *service) fillNames(ctx context.Context, rows []*obj, alias, column stri
 	return nil
 }
 
-func (s *service) createDeptTask(ctx context.Context, me *taskActor, deptParam, assigneeParam *string, task *domain.NormalizedTask) (string, error) {
+// taskExtras are the fields MOM item 13 added to a new task.
+type taskExtras struct {
+	Priority        string
+	KpiIndicatorID  *string
+	KpiContribution *float64
+	// Timezone is the creator's branch zone; the task's dates are read in it.
+	Timezone string
+}
+
+// createDeptTask files a task. HR files anywhere, a head in their own
+// department; anyone else may file a task for themselves in their own
+// department (a personal to-do). A task assigned to its creator needs no
+// review: done is final.
+func (s *service) createDeptTask(ctx context.Context, me *taskActor, deptParam, assigneeParam *string, task *domain.NormalizedTask, x taskExtras) (string, error) {
 	departmentID := targetDepartment(me, deptParam)
 	if departmentID == nil {
 		return "", httpx.BadRequest("Departemen tidak diketahui")
 	}
+	self := assigneeParam != nil && me.EmployeeID != nil && *assigneeParam == *me.EmployeeID
 	if !me.IsHR {
-		if !me.HasSubordinates {
+		if !me.HasSubordinates && !self {
 			return "", httpx.Forbidden("Hanya HRD atau atasan (kepala tim) yang boleh membuat task departemen")
 		}
 		if me.DepartmentID == nil || *departmentID != *me.DepartmentID {
@@ -229,6 +248,18 @@ func (s *service) createDeptTask(ctx context.Context, me *taskActor, deptParam, 
 		}
 		assignee = assigneeParam
 	}
+	if x.Priority == "" {
+		x.Priority = "normal"
+	}
+	if !domain.ValidPriority(x.Priority) {
+		return "", httpx.BadRequest("Prioritas tidak valid")
+	}
+	if err := s.checkIndicator(ctx, x.KpiIndicatorID); err != nil {
+		return "", err
+	}
+	if x.Timezone == "" {
+		x.Timezone = localtime.Default
+	}
 	createdBy := "—"
 	if me.FullName != nil {
 		createdBy = *me.FullName
@@ -236,10 +267,12 @@ func (s *service) createDeptTask(ctx context.Context, me *taskActor, deptParam, 
 	var id string
 	err := s.db.QueryRow(ctx, `INSERT INTO hris.department_tasks
 		   (department_id, assignee_employee_id, title, description, recurrence,
-		    weekly_day, monthly_day, due_date, created_by, created_by_name)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id::text`,
+		    weekly_day, monthly_day, due_date, created_by, created_by_name,
+		    priority, kpi_indicator_id, kpi_contribution, timezone, review_required, created_by_user_id, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$17) RETURNING id::text`,
 		*departmentID, assignee, task.Title, task.Description, task.Schedule.Recurrence,
-		task.Schedule.WeeklyDay, task.Schedule.MonthlyDay, task.Schedule.DueDate, me.EmployeeID, createdBy).Scan(&id)
+		task.Schedule.WeeklyDay, task.Schedule.MonthlyDay, task.Schedule.DueDate, me.EmployeeID, createdBy,
+		x.Priority, x.KpiIndicatorID, x.KpiContribution, x.Timezone, !self, me.UserID, s.now()).Scan(&id)
 	if err != nil {
 		return "", err
 	}
@@ -252,34 +285,130 @@ func (s *service) createDeptTask(ctx context.Context, me *taskActor, deptParam, 
 	return id, nil
 }
 
-func (s *service) deactivateDeptTask(ctx context.Context, a *actor, id string) error {
+// assertTaskManager: HR, the head of the task's department, or the
+// creator of a personal (review-free) task.
+func (s *service) assertTaskManager(ctx context.Context, a *actor, id, verb string) error {
 	var deptID string
-	err := s.db.QueryRow(ctx, `SELECT department_id::text FROM hris.department_tasks WHERE id = $1 AND is_active`, id).Scan(&deptID)
+	var creator *string
+	var reviewRequired bool
+	err := s.db.QueryRow(ctx, `SELECT department_id::text, created_by_user_id::text, review_required
+		FROM hris.department_tasks WHERE id = $1 AND is_active`, id).Scan(&deptID, &creator, &reviewRequired)
 	if database.IsNoRows(err) {
 		return httpx.NotFound("Task tidak ditemukan")
 	}
 	if err != nil {
 		return err
 	}
-	if !a.IsHR {
-		if a.EmployeeID == nil {
-			return httpx.Forbidden("Akun tidak terhubung ke karyawan")
+	if a.IsHR || (!reviewRequired && creator != nil && *creator == a.UserID) {
+		return nil
+	}
+	if a.EmployeeID == nil {
+		return httpx.Forbidden("Akun tidak terhubung ke karyawan")
+	}
+	head, err := s.isDepartmentHead(ctx, *a.EmployeeID, deptID, false)
+	if err != nil {
+		return err
+	}
+	if !head {
+		return httpx.Forbidden("Hanya HRD atau atasan departemen ini yang boleh " + verb + " task")
+	}
+	return nil
+}
+
+func (s *service) deactivateDeptTask(ctx context.Context, a *actor, id string) error {
+	if err := s.assertTaskManager(ctx, a, id, "menonaktifkan"); err != nil {
+		return err
+	}
+	_, err := s.db.Exec(ctx, `UPDATE hris.department_tasks SET is_active = false, updated_at = now() WHERE id = $1`, id)
+	return err
+}
+
+// taskPatch edits a task; nil keeps a value. AssigneeSet with a nil
+// assignee clears it; KpiSet likewise clears the indicator.
+type taskPatch struct {
+	Title, Description, Priority *string
+	Assignee                     *string
+	AssigneeSet                  bool
+	KpiIndicatorID               *string
+	KpiSet                       bool
+	KpiContribution              *float64
+	KpiContributionSet           bool
+}
+
+func (s *service) updateDeptTask(ctx context.Context, a *actor, id string, p taskPatch) error {
+	if err := s.assertTaskManager(ctx, a, id, "mengubah"); err != nil {
+		return err
+	}
+	sets, args := []string{"updated_at = now()"}, []any{}
+	set := func(col string, v any) {
+		args = append(args, v)
+		sets = append(sets, fmt.Sprintf("%s = $%d", col, len(args)))
+	}
+	if p.Title != nil {
+		t := strings.TrimSpace(*p.Title)
+		if len([]rune(t)) < 3 {
+			return httpx.BadRequest("Judul task minimal 3 karakter")
 		}
-		head, err := s.isDepartmentHead(ctx, *a.EmployeeID, deptID, false)
-		if err != nil {
+		set("title", t)
+	}
+	if p.Description != nil {
+		set("description", trimOrNil(p.Description))
+	}
+	if p.Priority != nil {
+		if !domain.ValidPriority(*p.Priority) {
+			return httpx.BadRequest("Prioritas tidak valid")
+		}
+		set("priority", *p.Priority)
+	}
+	if p.AssigneeSet {
+		if p.Assignee != nil {
+			var deptID string
+			if err := s.db.QueryRow(ctx, `SELECT department_id::text FROM hris.department_tasks WHERE id = $1`, id).Scan(&deptID); err != nil {
+				return err
+			}
+			b, err := s.brief(ctx, *p.Assignee)
+			if err != nil {
+				return err
+			}
+			if b == nil || !b.IsActive || b.DepartmentID == nil || *b.DepartmentID != deptID {
+				return httpx.BadRequest("Penanggung jawab harus karyawan aktif di departemen yang sama")
+			}
+		}
+		set("assignee_employee_id", p.Assignee)
+	}
+	if p.KpiSet {
+		if err := s.checkIndicator(ctx, p.KpiIndicatorID); err != nil {
 			return err
 		}
-		if !head {
-			return httpx.Forbidden("Hanya HRD atau atasan departemen ini yang boleh menonaktifkan task")
-		}
+		set("kpi_indicator_id", p.KpiIndicatorID)
 	}
-	_, err = s.db.Exec(ctx, `UPDATE hris.department_tasks SET is_active = false, updated_at = now() WHERE id = $1`, id)
+	if p.KpiContributionSet {
+		set("kpi_contribution", p.KpiContribution)
+	}
+	args = append(args, id)
+	_, err := s.db.Exec(ctx, fmt.Sprintf("UPDATE hris.department_tasks SET %s WHERE id = $%d", strings.Join(sets, ", "), len(args)), args...)
 	return err
+}
+
+func (s *service) checkIndicator(ctx context.Context, id *string) error {
+	if id == nil {
+		return nil
+	}
+	var ok bool
+	if err := s.db.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM performance.kpi_indicators WHERE id = $1 AND is_active)`, *id).Scan(&ok); err != nil {
+		return err
+	}
+	if !ok {
+		return httpx.BadRequest("Indikator KPI tidak ditemukan")
+	}
+	return nil
 }
 
 type occurrence struct {
 	ID, Status, TaskID, DepartmentID string
 	Assignee                         *string
+	ReviewRequired                   bool
+	Date                             string
 }
 
 // assertWorker: the assignee, or any active department member when the task
@@ -315,13 +444,22 @@ type occurrenceAction struct {
 	Notes     *string
 	SubtaskID *string
 	Checked   *bool
+	// Note and ProgressPercent belong to the progress and comment actions.
+	Note            *string
+	ProgressPercent *int
 }
+
+// occurrenceActions are the PATCH actions: done, approve, reject and
+// check_subtask (owner 2026-08-31), progress (EPIC-068: in_progress with a
+// note and, for tasks without sub-tasks, 0-99%), start, reopen and comment.
+var occurrenceActions = []string{"done", "approve", "reject", "check_subtask", "progress", "start", "reopen", "comment"}
 
 func (s *service) occurrenceAction(ctx context.Context, a *actor, id string, in occurrenceAction) (any, error) {
 	var occ occurrence
-	err := s.db.QueryRow(ctx, `SELECT o.id::text, o.status, o.task_id::text, t.department_id::text, t.assignee_employee_id::text
+	err := s.db.QueryRow(ctx, `SELECT o.id::text, o.status, o.task_id::text, t.department_id::text, t.assignee_employee_id::text,
+	          t.review_required, o.occurrence_date::text
 		  FROM hris.department_task_occurrences o JOIN hris.department_tasks t ON t.id = o.task_id
-		 WHERE o.id = $1`, id).Scan(&occ.ID, &occ.Status, &occ.TaskID, &occ.DepartmentID, &occ.Assignee)
+		 WHERE o.id = $1`, id).Scan(&occ.ID, &occ.Status, &occ.TaskID, &occ.DepartmentID, &occ.Assignee, &occ.ReviewRequired, &occ.Date)
 	if database.IsNoRows(err) {
 		return nil, httpx.NotFound("Kemunculan task tidak ditemukan")
 	}
@@ -337,22 +475,126 @@ func (s *service) occurrenceAction(ctx context.Context, a *actor, id string, in 
 			myName = b.FullName
 		}
 	}
+	log := func(kind string, note *string, percent *int, detail map[string]any) error {
+		return logUpdate(ctx, s.db, id, a, myName, kind, note, percent, detail)
+	}
 
 	switch in.Action {
+	case "comment":
+		if err := s.assertParticipant(ctx, a, occ); err != nil {
+			return nil, err
+		}
+		note := trimOrNil(in.Note)
+		if note == nil {
+			return nil, httpx.BadRequest("Komentar wajib diisi")
+		}
+		if err := log("comment", note, nil, nil); err != nil {
+			return nil, err
+		}
+		return messageBody{"Komentar dikirim"}, nil
 	case "check_subtask":
 		if err := s.assertWorker(ctx, a, occ); err != nil {
 			return nil, err
 		}
 		return s.checkSubtask(ctx, a, occ, in, myName)
+	case "start":
+		if err := s.assertWorker(ctx, a, occ); err != nil {
+			return nil, err
+		}
+		if occ.Status == "done" {
+			return nil, httpx.BadRequest("Task sudah ditandai selesai — menunggu review")
+		}
+		if _, err := s.db.Exec(ctx, `UPDATE hris.department_task_occurrences
+			SET status = 'in_progress', started_at = COALESCE(started_at, now()), updated_at = now() WHERE id = $1`, id); err != nil {
+			return nil, err
+		}
+		if err := log("status", nil, nil, map[string]any{"status": "in_progress"}); err != nil {
+			return nil, err
+		}
+		return messageBody{"Task mulai dikerjakan"}, nil
+	case "progress":
+		if err := s.assertWorker(ctx, a, occ); err != nil {
+			return nil, err
+		}
+		if occ.Status == "done" {
+			return nil, httpx.BadRequest("Task sudah ditandai selesai — menunggu review")
+		}
+		note := trimOrNil(in.Note)
+		if note == nil {
+			note = trimOrNil(in.Notes)
+		}
+		var percent *int
+		if in.ProgressPercent != nil {
+			var n int
+			if err := s.db.QueryRow(ctx, `SELECT count(*)::int FROM hris.department_task_subtasks WHERE task_id = $1`, occ.TaskID).Scan(&n); err != nil {
+				return nil, err
+			}
+			if n > 0 {
+				return nil, httpx.BadRequest("Task ini memakai sub-task — progres dihitung dari ceklis sub-task")
+			}
+			if *in.ProgressPercent < 0 || *in.ProgressPercent > 99 {
+				return nil, httpx.BadRequest("Progres 0–99% (untuk 100% pakai Tandai Selesai)")
+			}
+			percent = in.ProgressPercent
+		}
+		if note == nil && percent == nil {
+			return nil, httpx.BadRequest("Isi catatan atau persen progres")
+		}
+		if _, err := s.db.Exec(ctx, `UPDATE hris.department_task_occurrences
+			SET status = 'in_progress', started_at = COALESCE(started_at, now()),
+			    progress_percent = COALESCE($2::smallint, progress_percent), updated_at = now()
+			WHERE id = $1`, id, percent); err != nil {
+			return nil, err
+		}
+		if err := log("progress", note, percent, nil); err != nil {
+			return nil, err
+		}
+		return messageBody{"Progres dicatat — status Sedang dikerjakan"}, nil
+	case "reopen":
+		if err := s.assertReopener(ctx, a, occ); err != nil {
+			return nil, err
+		}
+		if _, err := s.db.Exec(ctx, `UPDATE hris.department_task_occurrences
+			SET status = 'pending', done_at = NULL, done_by = NULL, done_by_name = NULL, progress_percent = NULL,
+			    review_notes = NULL, reviewed_by = NULL, reviewed_by_name = NULL, reviewed_at = NULL, updated_at = now()
+			WHERE id = $1`, id); err != nil {
+			return nil, err
+		}
+		if err := s.dropContribution(ctx, id); err != nil {
+			return nil, err
+		}
+		if err := log("status", trimOrNil(in.Note), nil, map[string]any{"status": "pending"}); err != nil {
+			return nil, err
+		}
+		return messageBody{"Task dibuka lagi"}, nil
 	case "done":
 		if err := s.assertWorker(ctx, a, occ); err != nil {
 			return nil, err
+		}
+		if !occ.ReviewRequired {
+			// A personal task: done is final, as if its owner approved it.
+			if _, err := s.db.Exec(ctx, `UPDATE hris.department_task_occurrences
+				SET status = 'approved', done_at = now(), done_by = $2, done_by_name = $3,
+				    review_notes = NULL, reviewed_by = $2, reviewed_by_name = $3, reviewed_at = now(), updated_at = now()
+				WHERE id = $1`, id, a.EmployeeID, myName); err != nil {
+				return nil, err
+			}
+			if err := s.recordContribution(ctx, occ); err != nil {
+				return nil, err
+			}
+			if err := log("status", nil, nil, map[string]any{"status": "approved"}); err != nil {
+				return nil, err
+			}
+			return messageBody{"Tugas selesai"}, nil
 		}
 		if _, err := s.db.Exec(ctx, `UPDATE hris.department_task_occurrences
 			SET status = 'done', done_at = now(), done_by = $2, done_by_name = $3,
 			    review_notes = NULL, reviewed_by = NULL, reviewed_by_name = NULL,
 			    reviewed_at = NULL, updated_at = now()
 			WHERE id = $1`, id, a.EmployeeID, myName); err != nil {
+			return nil, err
+		}
+		if err := log("status", nil, nil, map[string]any{"status": "done"}); err != nil {
 			return nil, err
 		}
 		return messageBody{"Task ditandai selesai — menunggu review Head Division"}, nil
@@ -385,7 +627,78 @@ func (s *service) occurrenceAction(ctx context.Context, a *actor, id string, in 
 		WHERE id = $1`, id, status, trimOrNil(in.Notes), reviewer, myName); err != nil {
 		return nil, err
 	}
+	if status == "approved" {
+		err = s.recordContribution(ctx, occ)
+	} else {
+		err = s.dropContribution(ctx, id)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := log("review", trimOrNil(in.Notes), nil, map[string]any{"status": status}); err != nil {
+		return nil, err
+	}
 	return messageBody{msg}, nil
+}
+
+// assertParticipant: whoever may work the row (approved or not), its
+// department head, or HR.
+func (s *service) assertParticipant(ctx context.Context, a *actor, occ occurrence) error {
+	open := occ
+	open.Status = "pending"
+	if err := s.assertWorker(ctx, a, open); err == nil {
+		return nil
+	}
+	if a.EmployeeID != nil {
+		head, err := s.isDepartmentHead(ctx, *a.EmployeeID, occ.DepartmentID, true)
+		if err != nil {
+			return err
+		}
+		if head {
+			return nil
+		}
+	}
+	return httpx.Forbidden("Hanya yang terlibat di task ini yang bisa berkomentar")
+}
+
+// assertReopener: the worker may reopen their own done or sent-back row;
+// an approved row only HR or the department head.
+func (s *service) assertReopener(ctx context.Context, a *actor, occ occurrence) error {
+	if occ.Status != "approved" {
+		return s.assertWorker(ctx, a, occ)
+	}
+	if a.IsHR {
+		return nil
+	}
+	if a.EmployeeID == nil {
+		return httpx.Forbidden("Akun ini tidak terhubung ke data karyawan")
+	}
+	head, err := s.isDepartmentHead(ctx, *a.EmployeeID, occ.DepartmentID, true)
+	if err != nil {
+		return err
+	}
+	if !head {
+		return httpx.Forbidden("Hanya Head Division departemen ini (atau HRD) yang boleh membuka task yang sudah disetujui")
+	}
+	return nil
+}
+
+// recordContribution writes the KPI contribution of an approved occurrence
+// in the month of its day; a task without an indicator records nothing.
+func (s *service) recordContribution(ctx context.Context, occ occurrence) error {
+	_, err := s.db.Exec(ctx, `INSERT INTO hris.department_task_kpi_contributions
+	    (occurrence_id, indicator_id, department_id, employee_id, period_year, period_month, amount)
+	  SELECT $1, t.kpi_indicator_id, t.department_id, t.assignee_employee_id, $2::int, $3::int, t.kpi_contribution
+	    FROM hris.department_tasks t WHERE t.id = $4 AND t.kpi_indicator_id IS NOT NULL
+	  ON CONFLICT (occurrence_id) DO UPDATE SET indicator_id = EXCLUDED.indicator_id, department_id = EXCLUDED.department_id,
+	    employee_id = EXCLUDED.employee_id, period_year = EXCLUDED.period_year, period_month = EXCLUDED.period_month,
+	    amount = EXCLUDED.amount, recorded_at = now()`, occ.ID, occ.Date[:4], occ.Date[5:7], occ.TaskID)
+	return err
+}
+
+func (s *service) dropContribution(ctx context.Context, occurrenceID string) error {
+	_, err := s.db.Exec(ctx, `DELETE FROM hris.department_task_kpi_contributions WHERE occurrence_id = $1`, occurrenceID)
+	return err
 }
 
 type progressData struct {
@@ -432,13 +745,38 @@ func (s *service) checkSubtask(ctx context.Context, a *actor, occ occurrence, in
 	}
 	progress, sum := domain.JSNumber(done), domain.JSNumber(total)
 	complete := sum > 0 && progress >= sum-0.01
+	// All ticked: done (final for a personal task); some: in progress.
+	status := "pending"
+	switch {
+	case complete && !occ.ReviewRequired:
+		status = "approved"
+	case complete:
+		status = "done"
+	case progress > 0:
+		status = "in_progress"
+	}
 	if _, err := s.db.Exec(ctx, `UPDATE hris.department_task_occurrences
-		SET status = CASE WHEN $2::boolean THEN 'done' ELSE 'pending' END,
-		    done_at = CASE WHEN $2::boolean THEN now() END,
-		    done_by = CASE WHEN $2::boolean THEN $3::uuid END,
-		    done_by_name = CASE WHEN $2::boolean THEN $4 END,
+		SET status = $2::text,
+		    started_at = CASE WHEN $5::float8 > 0 THEN COALESCE(started_at, now()) ELSE started_at END,
+		    done_at = CASE WHEN $6::boolean THEN now() END,
+		    done_by = CASE WHEN $6::boolean THEN $3::uuid END,
+		    done_by_name = CASE WHEN $6::boolean THEN $4 END,
+		    reviewed_by = CASE WHEN $2::text = 'approved' THEN $3::uuid END,
+		    reviewed_by_name = CASE WHEN $2::text = 'approved' THEN $4 END,
+		    reviewed_at = CASE WHEN $2::text = 'approved' THEN now() END,
 		    updated_at = now()
-		WHERE id = $1`, occ.ID, complete, a.EmployeeID, myName); err != nil {
+		WHERE id = $1`, occ.ID, status, a.EmployeeID, myName, progress, complete); err != nil {
+		return nil, err
+	}
+	if status == "approved" {
+		if err := s.recordContribution(ctx, occ); err != nil {
+			return nil, err
+		}
+	} else if err := s.dropContribution(ctx, occ.ID); err != nil {
+		return nil, err
+	}
+	if err := logUpdate(ctx, s.db, occ.ID, a, myName, "progress", nil, ptrInt(int(domain.Round(progress))),
+		map[string]any{"subtask_id": subtaskID, "checked": checked}); err != nil {
 		return nil, err
 	}
 	msg := fmt.Sprintf("Progres %v%%", domain.Round(progress))
@@ -516,6 +854,9 @@ func (h *handler) createDeptTask(w http.ResponseWriter, r *http.Request) error {
 	b.WeeklyDay = dayField(f, "weekly_day")
 	b.MonthlyDay = dayField(f, "monthly_day")
 	b.DueDate = f.Str("due_date", nullish, validate.StrOpts{Max: 10})
+	priority := f.Str("priority", nullish, validate.StrOpts{Max: 10})
+	kpi := f.Str("kpi_indicator_id", nullish, validate.StrOpts{Check: validate.UUIDCheck})
+	contribution := f.Num("kpi_contribution", nullish, validate.NumOpts{})
 	f.List("subtasks", optional, math.MaxInt, func(sub *validate.Form, i int, v any) {
 		item := sub.Item(i, v)
 		b.Subtasks = append(b.Subtasks, item.Str("title", optional, validate.StrOpts{Max: 255}))
@@ -527,7 +868,15 @@ func (h *handler) createDeptTask(w http.ResponseWriter, r *http.Request) error {
 	if msg != "" {
 		return httpx.BadRequest(msg)
 	}
-	id, err := h.svc.createDeptTask(r.Context(), me, dept, assignee, task)
+	x := taskExtras{Priority: strOr(priority), KpiIndicatorID: kpi, KpiContribution: contribution}
+	if u, err := h.auth.CurrentUser(r); err == nil && u != nil {
+		zone, err := localtime.BranchZone(r.Context(), h.svc.db, u.BranchID)
+		if err != nil {
+			return err
+		}
+		x.Timezone = localtime.Name(zone)
+	}
+	id, err := h.svc.createDeptTask(r.Context(), me, dept, assignee, task, x)
 	if err != nil {
 		return err
 	}
@@ -537,7 +886,8 @@ func (h *handler) createDeptTask(w http.ResponseWriter, r *http.Request) error {
 	}{"Task dibuat", object("id", id)})
 }
 
-// PATCH /api/hris/dept-tasks/{id}
+// PATCH /api/hris/dept-tasks/{id}: without a body (or with is_active
+// false) the task is deactivated; with fields it is edited.
 func (h *handler) deactivateDeptTask(w http.ResponseWriter, r *http.Request) error {
 	a, err := h.requireActor(r)
 	if err != nil {
@@ -546,6 +896,35 @@ func (h *handler) deactivateDeptTask(w http.ResponseWriter, r *http.Request) err
 	id, err := requireUUID(r.PathValue("id"), "")
 	if err != nil {
 		return err
+	}
+	f := readOptionalJSON(r)
+	var p taskPatch
+	p.Title = f.Str("title", optional, validate.StrOpts{Max: 255})
+	p.Description = f.Str("description", nullish, validate.StrOpts{Max: 5000})
+	p.Priority = f.Str("priority", optional, validate.StrOpts{Max: 10})
+	if _, sent := field(f, "assignee_employee_id"); sent {
+		p.AssigneeSet = true
+		p.Assignee = f.Str("assignee_employee_id", nullish, validate.StrOpts{Check: validate.UUIDCheck})
+	}
+	if _, sent := field(f, "kpi_indicator_id"); sent {
+		p.KpiSet = true
+		p.KpiIndicatorID = f.Str("kpi_indicator_id", nullish, validate.StrOpts{Check: validate.UUIDCheck})
+	}
+	if _, sent := field(f, "kpi_contribution"); sent {
+		p.KpiContributionSet = true
+		p.KpiContribution = f.Num("kpi_contribution", nullish, validate.NumOpts{})
+	}
+	active := f.Bool("is_active", nullish)
+	if err := issuesErr(f, ""); err != nil {
+		return err
+	}
+	if p.Title != nil || p.Description != nil || p.Priority != nil || p.AssigneeSet || p.KpiSet || p.KpiContributionSet {
+		if err := h.svc.updateDeptTask(r.Context(), a, id, p); err != nil {
+			return err
+		}
+		if active == nil || *active {
+			return writeJSON(w, messageBody{"Task diperbarui"})
+		}
 	}
 	if err := h.svc.deactivateDeptTask(r.Context(), a, id); err != nil {
 		return err
@@ -569,11 +948,13 @@ func (h *handler) occurrenceAction(w http.ResponseWriter, r *http.Request) error
 	}
 	var in occurrenceAction
 	before := len(f.Issues())
-	action := f.Enum("action", validate.Rule{}, []string{"done", "approve", "reject", "check_subtask"})
+	action := f.Enum("action", validate.Rule{}, occurrenceActions)
 	for i := before; i < len(f.Issues()); i++ {
 		f.Issues()[i].Message = "Aksi tidak dikenal"
 	}
 	in.Notes = f.Str("notes", nullish, validate.StrOpts{Max: 2000})
+	in.Note = f.Str("note", nullish, validate.StrOpts{Max: 2000})
+	in.ProgressPercent = f.Int("progress_percent", nullish, validate.NumOpts{})
 	in.SubtaskID = f.Str("subtask_id", optional, validate.StrOpts{})
 	in.Checked = f.Bool("checked", optional)
 	if err := issuesErr(f, ""); err != nil {

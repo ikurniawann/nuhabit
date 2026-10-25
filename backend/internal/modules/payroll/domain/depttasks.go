@@ -18,11 +18,18 @@ type TaskSchedule struct {
 	WeeklyDay  *int
 	MonthlyDay *int
 	DueDate    *string
+	// CreatedDate is the day the task was filed, in its zone. A recurring
+	// task is not scheduled before it (EPIC-068): a daily task filed on the
+	// 22nd would otherwise carry 21 overdue occurrences into the KPI.
+	CreatedDate *string
 }
 
 // OccurrenceDates is occurrenceDatesFor: the task's dates in [start, end].
 func OccurrenceDates(t TaskSchedule, start, end string) []string {
 	out := []string{}
+	if t.Recurrence != "once" && t.CreatedDate != nil && *t.CreatedDate > start {
+		start = *t.CreatedDate
+	}
 	s, err1 := time.Parse(isoDate, start)
 	e, err2 := time.Parse(isoDate, end)
 	if err1 != nil || err2 != nil || s.After(e) {

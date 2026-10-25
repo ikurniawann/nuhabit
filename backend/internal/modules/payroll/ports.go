@@ -2,6 +2,7 @@ package payroll
 
 import (
 	"context"
+	"nuhabit/backend/internal/platform/storage"
 
 	"nuhabit/backend/internal/modules/payroll/domain"
 	"nuhabit/backend/internal/platform/database"
@@ -107,7 +108,24 @@ type Ports struct {
 	PayslipFrom   string
 	// KPI reads what the KPI snapshot measures in other contexts.
 	KPI KPISources
+	// TaskChannels delivers department task reminders on WhatsApp and
+	// email after the inbox row, best effort; nil keeps the inbox only.
+	TaskChannels TaskChannels
+	// TaskStore holds occurrence attachments under private/dept-tasks;
+	// nil means the STORAGE_DIR store.
+	TaskStore *storage.Store
 }
+
+// TaskChannels sends a staff notice in the background; a nil phone or
+// email skips that channel.
+type TaskChannels interface {
+	SendTo(phone, email *string, title, body string)
+}
+
+// noTaskChannels keeps the inbox row as the only delivery.
+type noTaskChannels struct{}
+
+func (noTaskChannels) SendTo(*string, *string, string, string) {}
 
 // PayslipMailer sends a salary PDF only to the employee's registered email.
 type PayslipMailer interface {

@@ -152,7 +152,8 @@ func TestDeptTasks(t *testing.T) {
 		"weekly_day": "1", "assignee_employee_id": cook, "subtasks": []any{map[string]any{"title": "Sapu"}, map[string]any{"title": "Pel"}}}, 201)
 	taskID := created["data"].(map[string]any)["id"].(string)
 
-	board := e.call(&e.staff, "GET", "/api/hris/dept-tasks?month=2026-09", nil, 200)["data"].(map[string]any)
+	// Filed on Sunday 4 October (fixedNow): the Mondays of October from the 5th.
+	board := e.call(&e.staff, "GET", "/api/hris/dept-tasks?month=2026-10", nil, 200)["data"].(map[string]any)
 	tasks, occs := board["tasks"].([]any), board["occurrences"].([]any)
 	if board["department_id"] != dept || len(occs) != 4 || board["can_review"] != true || board["departments"] == nil ||
 		len(board["subtasks"].([]any)) != 2 || len(board["members"].([]any)) != 2 {
