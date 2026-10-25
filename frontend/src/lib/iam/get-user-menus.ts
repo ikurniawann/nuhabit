@@ -275,7 +275,8 @@ export const getUserMenus = cache(async (userId: string, role: UserRole): Promis
 
 /**
  * Kebijakan akses berbasis IAM: user dianggap full-access bila role IAM-nya
- * punya permission aktif pada menu di luar Area Karyawan (kode `ess`/`ess.*`).
+ * punya permission aktif pada menu di luar Area Karyawan (kode `ess`/`ess.*`)
+ * dan Tugas (`tasks`/`tasks.*`, yang di-grant ke setiap role).
  *
  * Fallback ke kebijakan kode (`isEssOnlyRole`) bila IAM tidak tersedia atau
  * user belum punya role/permission sama sekali — mencegah lockout saat data
@@ -300,6 +301,8 @@ export const isEssOnlyUser = cache(
              AND m.is_active = true
              AND m.code <> 'ess'
              AND m.code NOT LIKE 'ess.%'
+             AND m.code <> 'tasks'
+             AND m.code NOT LIKE 'tasks.%'
          ) AS has_access`,
         [roleIds]
       );

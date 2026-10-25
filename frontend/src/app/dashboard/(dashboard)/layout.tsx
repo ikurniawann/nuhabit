@@ -13,6 +13,7 @@ import {
   isEssPath,
   isPathAllowedByMenus,
   ESS_HOME_PATH,
+  TASKS_HOME_PATH,
 } from "@/lib/iam/access";
 import { loadGrantedMenuActionsForUser, loadGrantedMenuCodesForUser } from "@/lib/iam/has-menu";
 import { IamAccessProvider } from "@/components/iam/iam-access-provider";
@@ -68,11 +69,13 @@ export default async function DashboardGroupLayout({
     );
     redirect(firstMenu ?? allowedModulePaths(user.role)[0] ?? ESS_HOME_PATH);
   }
-  // ESS-only: menu Area Karyawan + modul tambahan role. Full-access: buang
-  // "Beranda" ESS (/dashboard/me) agar tak ganda dengan Beranda utama.
+  // ESS-only: menu Area Karyawan, Tugas Saya + modul tambahan role.
+  // Full-access: buang "Beranda" ESS (/dashboard/me) agar tak ganda dengan
+  // Beranda utama.
   const navItems = essOnly
     ? filterNavByPrefixes(allNavItems, [
         ESS_HOME_PATH,
+        TASKS_HOME_PATH,
         ...allowedModulePaths(user.role),
       ])
     : allNavItems.filter((item) => item.href !== "/dashboard/me");

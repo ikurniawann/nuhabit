@@ -10,16 +10,16 @@ import (
 )
 
 var (
-	menuInsert = regexp.MustCompile(`(?is)INSERT INTO iam\.menus\s*\([^)]*\)\s*VALUES(.*?)(?:ON CONFLICT|;)`)
-	gymMenuRow = regexp.MustCompile(`\(\s*'((?:gym|investor)(?:\.[a-z0-9-]+)*)'`)
-	seederRow  = regexp.MustCompile(`(?m)^\s*\('([a-z0-9._-]+)',`)
-	keepCode   = regexp.MustCompile(`'([a-z0-9._-]+)'`)
+	menuInsert    = regexp.MustCompile(`(?is)INSERT INTO iam\.menus\s*\([^)]*\)\s*VALUES(.*?)(?:ON CONFLICT|;)`)
+	moduleMenuRow = regexp.MustCompile(`\(\s*'((?:gym|investor|tasks)(?:\.[a-z0-9-]+)*)'`)
+	seederRow     = regexp.MustCompile(`(?m)^\s*\('([a-z0-9._-]+)',`)
+	keepCode      = regexp.MustCompile(`'([a-z0-9._-]+)'`)
 )
 
-// Every gym and investor menu a migration creates must be in the IAM menu
+// Every gym, investor and tasks menu a migration creates must be in the IAM menu
 // seeder, both as an upserted row and in the keep list, or re-running the
 // seeder retires it.
-func TestIAMMenuSeederHasGymMenus(t *testing.T) {
+func TestIAMMenuSeederHasModuleMenus(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	db := filepath.Join(filepath.Dir(file), "../../database")
 
@@ -34,13 +34,13 @@ func TestIAMMenuSeederHasGymMenus(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, insert := range menuInsert.FindAllStringSubmatch(string(sql), -1) {
-			for _, row := range gymMenuRow.FindAllStringSubmatch(insert[1], -1) {
+			for _, row := range moduleMenuRow.FindAllStringSubmatch(insert[1], -1) {
 				migrated[row[1]] = filepath.Base(path)
 			}
 		}
 	}
-	if len(migrated) < 20 {
-		t.Fatalf("found only %d gym and investor menus in the migrations: %v", len(migrated), migrated)
+	if len(migrated) < 23 {
+		t.Fatalf("found only %d gym, investor and tasks menus in the migrations: %v", len(migrated), migrated)
 	}
 
 	raw, err := os.ReadFile(filepath.Join(db, "seeders", "iam-menus.sql"))

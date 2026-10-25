@@ -94,6 +94,19 @@ func TestDeptTasks(t *testing.T) {
 	if len(OccurrenceDates(TaskSchedule{Recurrence: "daily"}, "2026-09-05", "2026-09-01")) != 0 {
 		t.Fatal("reversed")
 	}
+	// A recurring task starts on the day it was filed; a one-off keeps its due date.
+	filed := "2026-09-04"
+	if got := OccurrenceDates(TaskSchedule{Recurrence: "daily", CreatedDate: &filed}, "2026-09-01", "2026-09-05"); join(got) != "2026-09-04,2026-09-05" {
+		t.Fatal(got)
+	}
+	earlier := "2026-08-20"
+	if got := OccurrenceDates(TaskSchedule{Recurrence: "daily", CreatedDate: &earlier}, "2026-09-01", "2026-09-02"); len(got) != 2 {
+		t.Fatal(got)
+	}
+	early := "2026-09-02"
+	if got := OccurrenceDates(TaskSchedule{Recurrence: "once", DueDate: &early, CreatedDate: &filed}, "2026-09-01", "2026-09-30"); join(got) != early {
+		t.Fatal(got)
+	}
 	if s, e := MonthRange("2028-02"); s != "2028-02-01" || e != "2028-02-29" {
 		t.Fatal(s, e)
 	}

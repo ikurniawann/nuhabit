@@ -41,7 +41,7 @@ export function DeptTaskOccurrence({
   onToggleSubtask,
 }: DeptTaskOccurrenceProps) {
   const meta = OCCURRENCE_STATUS_META[occ.status];
-  const canMarkDone = occ.status === "pending" || occ.status === "rejected";
+  const canMarkDone = occ.status === "pending" || occ.status === "in_progress" || occ.status === "rejected";
   const busy = busyId === occ.id;
   const progress = subtaskProgress(occ.id, subtasks, checked);
 

@@ -221,6 +221,11 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('investor.progress', 'Progres', '/dashboard/investor/progress', 'megaphone', 'sidebar', 30, '{"actions":["read"]}'::jsonb),
   ('investor.documents', 'Dokumen', '/dashboard/investor/documents', 'file-text', 'sidebar', 40, '{"actions":["read"]}'::jsonb),
   ('investor.updates', 'Update untuk Investor', '/dashboard/investor/updates', 'paper-airplane', 'sidebar', 90, '{"actions":["read","create","update","delete"]}'::jsonb)
+  -- Tugas (MOM item 13): daftar sendiri, papan tim, KPI & tugas
+  -- (internal/migrate/seeders_test.go checks every tasks menu is here).
+  ('tasks', 'Tugas Saya', '/dashboard/tasks', 'clipboard-document-check', 'sidebar', 4, '{"actions":["read","create","update"]}'::jsonb),
+  ('tasks.team', 'Papan Tim', '/dashboard/tasks/team', 'users', 'sidebar', 10, '{"actions":["read","create","update","delete","assign"]}'::jsonb),
+  ('tasks.kpi', 'KPI & Tugas', '/dashboard/tasks/kpi', 'chart', 'sidebar', 20, '{"actions":["read"]}'::jsonb)
 ON CONFLICT (code) DO UPDATE SET
   menu_name            = EXCLUDED.menu_name,
   route_path           = EXCLUDED.route_path,
@@ -361,6 +366,7 @@ WHERE deleted_at IS NULL
     'gym.complaints',
     -- Coach leave and substitutes (28 Oct 2026):
     'gym.coach-leave',
+    'tasks', 'tasks.team', 'tasks.kpi',
     'items.raw-material.inventory.expiry', 'items.raw-material.inventory.movements',
     'items.raw-material.inventory.scrap', 'pos.catalog.channel-prices',
     'pos.loyalty.wallet', 'pos.loyalty.wallet.packages', 'pos.loyalty.wallet.payments',

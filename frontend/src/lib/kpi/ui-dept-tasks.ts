@@ -7,7 +7,7 @@ interface OccurrenceLike {
   id: string;
   task_id: string;
   occurrence_date: string;
-  status: "pending" | "done" | "approved" | "rejected";
+  status: "pending" | "in_progress" | "done" | "approved" | "rejected";
 }
 
 interface SubtaskLike {
@@ -66,9 +66,12 @@ export function hasOpenToday(occurrences: readonly OccurrenceLike[], todayIso: s
   return occurrences.some((o) => o.occurrence_date === todayIso && o.status !== "approved");
 }
 
-/** Pending dan tanggalnya sudah lewat. */
+/** Belum selesai (belum mulai, dikerjakan, ditolak) dan tanggalnya sudah lewat. */
 export function isOverdue(occurrence: OccurrenceLike, todayIso: string): boolean {
-  return occurrence.status === "pending" && occurrence.occurrence_date < todayIso;
+  return (
+    (occurrence.status === "pending" || occurrence.status === "in_progress" || occurrence.status === "rejected") &&
+    occurrence.occurrence_date < todayIso
+  );
 }
 
 /** Persen progres (jumlah bobot sub-task yang diceklis). */

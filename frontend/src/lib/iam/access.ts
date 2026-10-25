@@ -29,6 +29,9 @@ export function isEssOnlyRole(role: string | null | undefined): boolean {
 /** Beranda / akar Area Karyawan (ESS). */
 export const ESS_HOME_PATH = "/dashboard/me";
 
+/** Tugas Saya: menu yang juga tampil untuk user ESS-only. */
+export const TASKS_HOME_PATH = "/dashboard/tasks";
+
 /** True bila path berada di dalam Area Karyawan (ESS). */
 export function isEssPath(pathname: string): boolean {
   return pathname === ESS_HOME_PATH || pathname.startsWith(`${ESS_HOME_PATH}/`);
