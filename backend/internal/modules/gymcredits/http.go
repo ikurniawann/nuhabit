@@ -42,6 +42,8 @@ func (h *Handler) Routes() []module.Route {
 		{Pattern: "POST /api/gym/packages", Handler: h.api(h.savePackage)},
 		{Pattern: "PATCH /api/gym/packages/{id}", Handler: h.api(h.setPackageStatus)},
 		{Pattern: "DELETE /api/gym/packages/{id}", Handler: h.api(h.deletePackage)},
+		{Pattern: "GET /api/gym/packages/import/template", Handler: h.api(h.packageTemplate)},
+		{Pattern: "POST /api/gym/packages/import", Handler: h.api(h.importPackages)},
 		{Pattern: "GET /api/gym/credits", Handler: h.api(h.searchMembers)},
 		{Pattern: "GET /api/gym/credits/{customerId}", Handler: h.api(h.memberCredits)},
 		{Pattern: "POST /api/gym/credits/{customerId}/adjust", Handler: h.api(h.adjust)},

@@ -30,6 +30,8 @@ func (h *handler) Routes() []module.Route {
 	return []module.Route{
 		{Pattern: "GET /api/gym/members", Handler: auth.Staff(h.guard, h.listMembers, iam.Can("read", members))},
 		{Pattern: "POST /api/gym/members", Handler: auth.Staff(h.guard, h.register, iam.Can("create", members))},
+		{Pattern: "GET /api/gym/members/import/template", Handler: auth.Staff(h.guard, h.memberTemplate, iam.Can("create", members))},
+		{Pattern: "POST /api/gym/members/import", Handler: auth.Staff(h.guard, h.importMembers, iam.Can("create", members))},
 		{Pattern: "GET /api/gym/members/{id}", Handler: auth.Staff(h.guard, h.member, iam.Can("read", members))},
 		{Pattern: "PATCH /api/gym/members/{id}", Handler: auth.Staff(h.guard, h.updateMember, iam.Can("update", members))},
 		// Staff notes need only read: anyone who can open the member can

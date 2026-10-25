@@ -50,6 +50,8 @@ func TestStaffRouteGrants(t *testing.T) {
 		"POST /api/gym/packages":                              "create gym.packages | update gym.packages",
 		"PATCH /api/gym/packages/{id}":                        "update gym.packages",
 		"DELETE /api/gym/packages/{id}":                       "delete gym.packages",
+		"GET /api/gym/packages/import/template":               "create gym.packages",
+		"POST /api/gym/packages/import":                       "create gym.packages",
 		"GET /api/gym/credits":                                "read gym.credits",
 		"GET /api/gym/credits/{customerId}":                   "read gym.credits",
 		"POST /api/gym/credits/{customerId}/adjust":           "update gym.credits",

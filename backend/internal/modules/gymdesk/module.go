@@ -60,6 +60,7 @@ type Credits interface {
 type Ports struct {
 	Accounts Accounts
 	Credits  Credits
+	Opening  OpeningBalances
 	// WaiverVersion is the waiver text members accept today.
 	WaiverVersion string
 }
