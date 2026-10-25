@@ -103,6 +103,9 @@ func (s *Service) claimSlot(ctx context.Context, q Q, slot domain.Slot) error {
 	if err == nil && clash != nil {
 		err = schedulingError(clash.Message())
 	}
+	if err == nil {
+		err = s.checkCoachLeave(ctx, q, slot)
+	}
 	return err
 }
 
@@ -234,13 +237,24 @@ func (s *Service) UpdateSession(ctx context.Context, id string, patch SessionPat
 		if !moved && !coachChanged {
 			return nil
 		}
+		rules, err := s.Rules.ForBranch(ctx, q, branchID)
+		if err != nil {
+			return err
+		}
+		kind := changeCoach
+		if moved {
+			kind = changeMoved
+		}
+		deliverAfter, err := s.stampChange(ctx, q, session, kind, startsAt, rules, coachChanged)
+		if err != nil {
+			return err
+		}
 		var notices []Notification
 		if moved {
 			notices = append(notices, Notification{
 				Type:  "gym_session_moved",
 				Title: "Jadwal berubah: " + session.ClassTypeName,
-				Body: "Kelas dipindah ke " + session.at(startsAt) +
-					". Bila tidak bisa hadir, batalkan dari portal dalam 24 jam tanpa potongan kredit.",
+				Body:  "Kelas dipindah ke " + session.at(startsAt) + "." + freeCancelHint(rules),
 			})
 		}
 		if coachChanged {
@@ -248,7 +262,11 @@ func (s *Service) UpdateSession(ctx context.Context, id string, patch SessionPat
 			if err != nil {
 				return err
 			}
+			n.Body += freeCancelHint(rules)
 			notices = append(notices, n)
+		}
+		for i := range notices {
+			notices[i].DeliverAfter = deliverAfter
 		}
 		customers, err := s.repo.ActiveBookingCustomers(ctx, q, id)
 		if err != nil {
@@ -393,6 +411,14 @@ func (s *Service) cancelSession(ctx context.Context, q Q, session *SessionRow, o
 	if err := s.repo.ClearPassStrikes(ctx, q, session.ID); err != nil {
 		return err
 	}
+	rules, err := s.Rules.ForBranch(ctx, q, session.BranchID)
+	if err != nil {
+		return err
+	}
+	deliverAfter, err := s.stampChange(ctx, q, session, changeCancelled, session.StartsAt, rules, false)
+	if err != nil {
+		return err
+	}
 	for _, c := range customers {
 		body := "Kelas " + session.when() + " dibatalkan studio. Kredit Anda tidak terpotong."
 		if n := refunded[c]; n > 0 {
@@ -401,6 +427,7 @@ func (s *Service) cancelSession(ctx context.Context, q Q, session *SessionRow, o
 		}
 		if err := s.Notifier.NotifyMember(ctx, q, c, Notification{
 			Type: "gym_session_cancelled", Title: "Kelas dibatalkan: " + session.ClassTypeName, Body: body,
+			DeliverAfter: deliverAfter,
 		}); err != nil {
 			return err
 		}

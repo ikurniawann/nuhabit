@@ -89,11 +89,13 @@ func (s *Service) ListLeaves(ctx context.Context, a *Actor, f leaveFilter, page,
 	return obj("data", rows, "pagination", pagination(page, limit, total)), nil
 }
 
-// leaveRequest is leaveRequestSchema.
+// leaveRequest is leaveRequestSchema. BlackoutException is a coach asking
+// the Program Director to allow leave on a blackout date.
 type leaveRequest struct {
 	EmployeeID                            *string
 	LeaveType, StartDate, EndDate, Reason string
 	AttachmentURL                         *string
+	BlackoutException                     bool
 }
 
 // CreateLeave is createLeave: weekends and national holidays do not consume
@@ -135,6 +137,11 @@ func (s *Service) CreateLeave(ctx context.Context, a *Actor, in leaveRequest) (*
 		}
 	}
 
+	coach, err := s.screenCoachLeave(ctx, a, *employeeID, in)
+	if err != nil {
+		return nil, err
+	}
+
 	var f fields
 	f.add("employee_id", *employeeID)
 	f.add("leave_type", in.LeaveType)
@@ -144,11 +151,21 @@ func (s *Service) CreateLeave(ctx context.Context, a *Actor, in leaveRequest) (*
 	f.add("reason", in.Reason)
 	f.add("attachment_url", nilIfEmpty(in.AttachmentURL))
 	f.add("status", "pending")
+	if coach.Coach {
+		f.add("is_short_notice", coach.ShortNotice)
+		f.add("notice_days", coach.NoticeDays)
+		f.add("blackout_exception_requested", in.BlackoutException)
+	}
 	var leave *Row
 	err = s.repo.InTx(ctx, func(r Repository) error {
 		var err error
 		if leave, err = r.InsertLeave(ctx, f); err != nil {
 			return err
+		}
+		if coach.Coach {
+			if err := s.coachLeaves.Submitted(ctx, r.querier(), leave.Str("id")); err != nil {
+				return err
+			}
 		}
 		reason := in.Reason
 		return r.Publish(ctx, TopicLeaveRequested, *employeeID, contracts.LeaveRequested{
@@ -264,7 +281,15 @@ func (s *Service) UpdateLeave(ctx context.Context, a *Actor, id string, in leave
 		if approved && leave.Str("leave_type") == "annual" {
 			refund = &quotaMove{EmployeeID: leave.Str("employee_id"), Year: dateYear(leave, "start_date"), Days: leave.Str("total_days")}
 		}
-		if err := s.repo.InTx(ctx, func(r Repository) error { return r.CancelLeave(ctx, id, refund) }); err != nil {
+		if err := s.repo.InTx(ctx, func(r Repository) error {
+			if err := r.CancelLeave(ctx, id, refund); err != nil {
+				return err
+			}
+			if s.coachLeaves == nil {
+				return nil
+			}
+			return s.coachLeaves.Cancelled(ctx, r.querier(), id)
+		}); err != nil {
 			return nil, err
 		}
 		if refund != nil {
@@ -313,10 +338,12 @@ func (s *Service) DeleteLeave(ctx context.Context, a *Actor, id string) error {
 	return s.repo.DeleteLeave(ctx, id)
 }
 
-// leaveDecision is leaveApprovalSchema.
+// leaveDecision is leaveApprovalSchema. BlackoutOverride is the Program
+// Director's reason for approving coach leave on a blackout date.
 type leaveDecision struct {
-	LeaveID, Action string
-	Rejection       *string
+	LeaveID, Action  string
+	Rejection        *string
+	BlackoutOverride string
 }
 
 // DecideLeave is decideLeave: HR or the direct manager approves or rejects a
@@ -331,8 +358,15 @@ func (s *Service) DecideLeave(ctx context.Context, a *Actor, in leaveDecision) (
 		return nil, httpx.NotFound("Leave request not found")
 	}
 	emp := leave.Child("employee")
+	coach, err := s.coachDecider(ctx, in.LeaveID, a.UserID)
+	if err != nil {
+		return nil, err
+	}
 	isManager := a.EmployeeID != nil && emp != nil && emp.Str("reporting_to") == *a.EmployeeID
-	if !a.IsHR && !isManager {
+	switch {
+	case coach.Coach && !coach.Allowed:
+		return nil, httpx.Forbidden(coach.Reason)
+	case !coach.Coach && !a.IsHR && !isManager:
 		return nil, httpx.Forbidden("Forbidden: hanya HRD/admin atau atasan langsung yang bisa memproses")
 	}
 	if status := leave.Str("status"); status != "pending" {
@@ -351,7 +385,15 @@ func (s *Service) DecideLeave(ctx context.Context, a *Actor, in leaveDecision) (
 		}
 	}
 	if err := s.repo.InTx(ctx, func(r Repository) error {
-		return r.DecideLeave(ctx, in.LeaveID, status, a.EmployeeID, rejection, credit)
+		if err := r.DecideLeave(ctx, in.LeaveID, status, a.EmployeeID, rejection, credit); err != nil {
+			return err
+		}
+		if !coach.Coach {
+			return nil
+		}
+		return s.coachLeaves.Decided(ctx, r.querier(), CoachLeaveDecision{
+			LeaveID: in.LeaveID, Approved: approve, ActorUserID: a.UserID, BlackoutOverride: in.BlackoutOverride,
+		})
 	}); err != nil {
 		return nil, err
 	}

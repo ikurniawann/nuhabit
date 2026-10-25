@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 import { TableNote } from "@/features/crm/engagement/components/shared";
@@ -17,6 +18,10 @@ import { formatNumber } from "@/lib/format";
 import { MY_CLASSES_KEYS, myClassesApi } from "../api";
 import { CoachComplaints } from "@/features/gym/complaints/components/coach-complaints";
 import { MyIncentives } from "./my-incentives";
+import { CoachLeaveTab } from "@/features/gym/coach-leave/components/coach-leave-tab";
+
+const TABS = ["schedule", "history", "incentives", "leave"] as const;
+type TabValue = (typeof TABS)[number];
 
 const UPCOMING_DAYS = 14;
 const HISTORY_DAYS = 30;
@@ -33,6 +38,19 @@ function windows() {
 
 /** Gym → Kelas Saya: kelas yang dilatih akun ini, roster dan absensinya, serta insentifnya. */
 export function MyClassesPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const requested = searchParams.get("tab");
+  // ?tab=leave (inbox links, /coach?tab=leave) opens the Cuti tab.
+  const tab: TabValue = TABS.includes(requested as TabValue) ? (requested as TabValue) : "schedule";
+  const setTab = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === "schedule") next.delete("tab");
+    else next.set("tab", value);
+    const search = next.toString();
+    router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false });
+  };
   const [range] = useState(windows);
   const upcoming = useQuery({
     queryKey: MY_CLASSES_KEYS.classes(range.upcoming.from, range.upcoming.to),
@@ -80,12 +98,13 @@ export function MyClassesPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="schedule" className="w-full flex-col">
+      <Tabs value={tab} onValueChange={(value) => setTab(String(value))} className="w-full flex-col">
         <TabsList>
           <TabsTrigger value="schedule">Jadwal</TabsTrigger>
           <TabsTrigger value="history">Riwayat</TabsTrigger>
           <TabsTrigger value="incentives">Insentif</TabsTrigger>
           <TabsTrigger value="complaints">Keluhan</TabsTrigger>
+          <TabsTrigger value="leave">Cuti</TabsTrigger>
         </TabsList>
         <TabsContent value="schedule" className="mt-4">
           {sessions.length === 0 ? (
@@ -118,6 +137,9 @@ export function MyClassesPage() {
         </TabsContent>
         <TabsContent value="complaints" className="mt-4">
           <CoachComplaints />
+        </TabsContent>
+        <TabsContent value="leave" className="mt-4">
+          <CoachLeaveTab />
         </TabsContent>
       </Tabs>
     </div>

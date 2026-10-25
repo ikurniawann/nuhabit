@@ -177,7 +177,7 @@ const sessionSelect = `
          s.branch_id, s.area, s.starts_at, s.ends_at, s.capacity, s.credit_cost,
          s.booking_opens_at, s.booking_closes_at, s.status, s.notes,
          s.moved_at, s.original_starts_at, s.template_id, s.occurrence_date::text AS occurrence_date,
-         ` + sessionZone + ` AS timezone
+         ` + sessionZone + ` AS timezone, s.coach_changed_at
     FROM gym.class_sessions s
     JOIN gym.class_types t ON t.id = s.class_type_id
     LEFT JOIN gym.coaches c ON c.id = s.coach_id
@@ -239,7 +239,7 @@ func (Postgres) LockSession(ctx context.Context, q Q, id string) (*SessionRow, e
 		&s.ID, &s.ClassTypeID, &s.ClassTypeName, &s.Color, &s.CoachID, &s.CoachName,
 		&s.BranchID, &s.Area, &s.StartsAt, &s.EndsAt, &s.Capacity, &s.CreditCost,
 		&s.BookingOpensAt, &s.BookingClosesAt, &s.Status, &s.Notes,
-		&s.MovedAt, &s.OriginalStartsAt, &templateID, &occurrenceDate, &zone)
+		&s.MovedAt, &s.OriginalStartsAt, &templateID, &occurrenceDate, &zone, &s.CoachChangedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -562,7 +562,7 @@ func (Postgres) MemberBookings(ctx context.Context, q Q, customerID string, past
 	return queryRows(ctx, q, `SELECT b.id, b.status, b.waitlist_position, b.late_cancel, b.promotion_offered_at, b.checked_in_at,
             b.cancelled_at, b.created_at,
             s.id AS session_id, s.branch_id, s.starts_at, s.ends_at, s.area, s.credit_cost, s.status AS session_status,
-            s.moved_at, s.original_starts_at,
+            s.moved_at, s.original_starts_at, s.coach_changed_at,
             t.name AS class_type_name, t.color, co.name AS coach_name, `+sessionZone+` AS timezone
        FROM gym.bookings b
        JOIN gym.class_sessions s ON s.id = b.session_id

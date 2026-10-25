@@ -75,6 +75,10 @@ export interface GymRules {
   defaultCompanyId: string;
   /** Berapa kali member boleh memindahkan satu sesi PT dari aplikasi (0 = hanya lewat staf). */
   ptRescheduleLimit: number;
+  /** Member yang booking sebelum studio memindah kelas atau mengganti coach boleh batal gratis selama ini (jam; 0 = mati). */
+  changeFreeCancelHours: number;
+  /** Perubahan jadwal yang dikabarkan kurang dari ini (jam) sebelum kelas ditandai terlambat di laporan. */
+  changeNoticeMinHours: number;
 }
 
 /** credits: a batch of class credits; pass: unlimited bookings for validity_days. */

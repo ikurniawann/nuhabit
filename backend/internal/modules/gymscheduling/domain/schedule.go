@@ -159,34 +159,44 @@ func TemplateOccurrences(t WeeklySlot, now time.Time, horizonDays int) []Occurre
 	return out
 }
 
-// ── Moved sessions ──────────────────────────────────────────────────────────
+// ── Changed sessions ────────────────────────────────────────────────────────
 
-// MoveNoticeWindow: after the studio moves a session, members booked before
-// the move may cancel free of charge for this long.
-const MoveNoticeWindow = 24 * time.Hour
-
-// SessionMove records the studio's last move of a session; both nil when the
-// session was never moved.
+// SessionMove records the studio's last changes to a session: the move
+// (MovedAt and OriginalStartsAt) and the coach change (CoachChangedAt). All
+// nil when the studio changed neither.
 type SessionMove struct {
 	MovedAt          *time.Time
 	OriginalStartsAt *time.Time
+	CoachChangedAt   *time.Time
 }
 
 // WaiveLateCancelForMove lifts the late-cancel penalty for a member who
-// booked before the studio moved the session. Their free deadline becomes
-// the latest of: the deadline from the new start, the deadline from the
-// original start, and MoveNoticeWindow after the move, but never later than
-// the new start. Bookings made after the move keep the outcome unchanged.
+// booked before the studio moved the session or changed its coach. Their
+// free deadline becomes the latest of: the deadline from the new start, the
+// deadline from the original start (a move), and ChangeFreeCancelHours
+// after the change, but never later than the start. Bookings made after
+// every change keep the outcome unchanged.
 func WaiveLateCancelForMove(out CancellationOutcome, move SessionMove, bookedAt time.Time, rules Rules, now time.Time) CancellationOutcome {
-	if move.MovedAt == nil || move.OriginalStartsAt == nil || !bookedAt.Before(*move.MovedAt) {
-		return out
-	}
+	window := time.Duration(rules.ChangeFreeCancelHours) * time.Hour
 	deadline := out.Deadline
-	if original := CancellationDeadline(*move.OriginalStartsAt, rules); original.After(deadline) {
-		deadline = original
+	changed := false
+	if move.MovedAt != nil && move.OriginalStartsAt != nil && bookedAt.Before(*move.MovedAt) {
+		changed = true
+		if original := CancellationDeadline(*move.OriginalStartsAt, rules); original.After(deadline) {
+			deadline = original
+		}
+		if notice := move.MovedAt.Add(window); notice.After(deadline) {
+			deadline = notice
+		}
 	}
-	if notice := move.MovedAt.Add(MoveNoticeWindow); notice.After(deadline) {
-		deadline = notice
+	if move.CoachChangedAt != nil && bookedAt.Before(*move.CoachChangedAt) {
+		changed = true
+		if notice := move.CoachChangedAt.Add(window); notice.After(deadline) {
+			deadline = notice
+		}
+	}
+	if !changed {
+		return out
 	}
 	if startsAt := out.Deadline.Add(time.Duration(rules.CancellationDeadlineHours) * time.Hour); deadline.After(startsAt) {
 		deadline = startsAt

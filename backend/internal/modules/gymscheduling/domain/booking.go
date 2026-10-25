@@ -61,6 +61,12 @@ type Rules struct {
 	// CorrectionWindowDays: how long after the class staff may undo a
 	// check-in or no-show.
 	CorrectionWindowDays int
+	// ChangeFreeCancelHours: members booked before the studio moved the
+	// class or changed its coach may cancel free this long after the change.
+	ChangeFreeCancelHours int
+	// ChangeNoticeMinHours: a change announced closer to the start than this
+	// is flagged late.
+	ChangeNoticeMinHours int
 }
 
 // ── Sessions ────────────────────────────────────────────────────────────────

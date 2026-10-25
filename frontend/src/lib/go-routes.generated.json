@@ -1735,6 +1735,81 @@
     "path": "/api/gym/class-types/{id}"
   },
   {
+    "module": "gym-coach-leave",
+    "method": "GET",
+    "path": "/api/gym/coach-leave/blackouts"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "POST",
+    "path": "/api/gym/coach-leave/blackouts"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "DELETE",
+    "path": "/api/gym/coach-leave/blackouts/{id}"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "GET",
+    "path": "/api/gym/coach-leave/changes"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "POST",
+    "path": "/api/gym/coach-leave/covers/{id}/assign"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "POST",
+    "path": "/api/gym/coach-leave/covers/{id}/cancel-session"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "GET",
+    "path": "/api/gym/coach-leave/covers/{id}/candidates"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "GET",
+    "path": "/api/gym/coach-leave/incidents"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "POST",
+    "path": "/api/gym/coach-leave/incidents"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "POST",
+    "path": "/api/gym/coach-leave/incidents/{id}/void"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "GET",
+    "path": "/api/gym/coach-leave/queue"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "GET",
+    "path": "/api/gym/coach-leave/settings"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "PUT",
+    "path": "/api/gym/coach-leave/settings"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "GET",
+    "path": "/api/gym/coach-leave/warnings"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "POST",
+    "path": "/api/gym/coach-leave/warnings/{id}"
+  },
+  {
     "module": "gym-scheduling",
     "method": "GET",
     "path": "/api/gym/coaches"
@@ -2063,6 +2138,36 @@
     "module": "gym-training",
     "method": "GET",
     "path": "/api/gym/my-classes/incentives"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "GET",
+    "path": "/api/gym/my-classes/landing"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "GET",
+    "path": "/api/gym/my-classes/leave"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "GET",
+    "path": "/api/gym/my-classes/leave/covers/{id}/candidates"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "POST",
+    "path": "/api/gym/my-classes/leave/covers/{id}/request"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "POST",
+    "path": "/api/gym/my-classes/leave/covers/{id}/respond"
+  },
+  {
+    "module": "gym-coach-leave",
+    "method": "GET",
+    "path": "/api/gym/my-classes/leave/impact"
   },
   {
     "module": "gym-scheduling",

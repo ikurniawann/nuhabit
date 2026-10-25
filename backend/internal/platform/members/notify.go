@@ -2,6 +2,7 @@ package members
 
 import (
 	"context"
+	"time"
 
 	"nuhabit/backend/internal/contracts/gym"
 	"nuhabit/backend/internal/platform/database"
@@ -20,12 +21,18 @@ type Notice struct {
 // and email after commit, so a delivery failure never fails the caller's
 // write.
 func Notify(ctx context.Context, q database.Querier, customerID string, n Notice) error {
+	return NotifyAfter(ctx, q, customerID, n, time.Time{})
+}
+
+// NotifyAfter is Notify with the push, WhatsApp and email held until at
+// (quiet hours); the inbox row is written now. A zero at sends after commit.
+func NotifyAfter(ctx context.Context, q database.Querier, customerID string, n Notice, at time.Time) error {
 	if _, err := q.Exec(ctx,
 		`INSERT INTO crm.member_notifications (customer_id, type, title, body) VALUES ($1, $2, $3, $4)`,
 		customerID, n.Type, n.Title, n.Body); err != nil {
 		return err
 	}
-	return outbox.Publish(ctx, q, gym.TopicMemberNotified, customerID, gym.MemberNotified{
+	return outbox.PublishAt(ctx, q, gym.TopicMemberNotified, customerID, gym.MemberNotified{
 		CustomerID: customerID, Type: n.Type, Title: n.Title, Body: n.Body,
-	})
+	}, at)
 }

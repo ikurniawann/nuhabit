@@ -72,6 +72,7 @@ func (h handlers) createLeave(w http.ResponseWriter, r *http.Request, a *Actor) 
 	in.EndDate = strOr(f.Str("end_date", validate.Rule{}, validate.StrOpts{Check: matches(domain.DateRe, "Tanggal selesai harus berformat YYYY-MM-DD")}))
 	in.Reason = strOr(f.Str("reason", validate.Rule{}, validate.StrOpts{Check: minLen(10, "Reason must be at least 10 characters")}))
 	in.AttachmentURL = f.Str("attachment_url", optional, validate.StrOpts{})
+	in.BlackoutException = f.BoolDefault("blackout_exception_requested", false)
 	if err := formErr(f, message); err != nil {
 		return err
 	}
@@ -127,6 +128,9 @@ func (h handlers) decideLeave(w http.ResponseWriter, r *http.Request, a *Actor) 
 		LeaveID:   strOr(f.UUID("leave_id", validate.Rule{})),
 		Action:    strOr(f.Enum("action", validate.Rule{}, []string{"approve", "reject"})),
 		Rejection: f.Str("rejection_reason", optional, validate.StrOpts{}),
+	}
+	if v := f.Str("blackout_override_reason", optional, validate.StrOpts{}); v != nil {
+		in.BlackoutOverride = *v
 	}
 	if err := formErr(f, message); err != nil {
 		return err

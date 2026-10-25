@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { MyClassesPage } from "@/features/gym/my-classes/components/my-classes-page";
 
 export default function Page() {
-  return <MyClassesPage />;
+  return (
+    <Suspense fallback={null}>
+      <MyClassesPage />
+    </Suspense>
+  );
 }

@@ -73,5 +73,5 @@ type NotificationsSQL struct{}
 var _ Notifier = NotificationsSQL{}
 
 func (NotificationsSQL) NotifyMember(ctx context.Context, q database.Querier, customerID string, n Notification) error {
-	return members.Notify(ctx, q, customerID, members.Notice(n))
+	return members.NotifyAfter(ctx, q, customerID, members.Notice{Type: n.Type, Title: n.Title, Body: n.Body}, n.DeliverAfter)
 }

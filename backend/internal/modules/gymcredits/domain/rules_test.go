@@ -20,6 +20,7 @@ func defaultsKV() []KV {
 		{"requireWaiver", true}, {"checkinOpensMinBefore", 45.0}, {"checkinClosesMinAfter", 15.0},
 		{"openGymEnabled", false}, {"openGymCreditCost", 1.0}, {"correctionWindowDays", 7.0},
 		{"allowMemberCreditTransfer", false}, {"maxTransferCreditsPerMonth", 0.0}, {"defaultCompanyId", ""}, {"ptRescheduleLimit", 2.0},
+		{"changeFreeCancelHours", 24.0}, {"changeNoticeMinHours", 12.0},
 	}
 }
 
@@ -45,15 +46,16 @@ func decode(t *testing.T, raw string) any {
 
 func TestRuleDefaultsContract(t *testing.T) {
 	got, _ := json.Marshal(RuleDefaults)
-	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0,"maxConcurrentBookings":10,"maxBookingsPerDay":3,"strikeLimit":3,"strikeWindowDays":30,"strikeSuspendDays":7,"waitlistPromoteCutoffMin":60,"waitlistOfferMinutes":30,"classReminderMinutes":120,"scheduleHorizonDays":14,"maxFreezeDaysPerYear":30,"minFreezeDays":7,"renewalLeadDays":3,"renewalRetryCount":2,"renewalRetryHours":24,"renewalGraceDays":3,"requireWaiver":true,"checkinOpensMinBefore":45,"checkinClosesMinAfter":15,"openGymEnabled":false,"openGymCreditCost":1,"correctionWindowDays":7,"allowMemberCreditTransfer":false,"maxTransferCreditsPerMonth":0,"defaultCompanyId":"","ptRescheduleLimit":2}`
+	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0,"maxConcurrentBookings":10,"maxBookingsPerDay":3,"strikeLimit":3,"strikeWindowDays":30,"strikeSuspendDays":7,"waitlistPromoteCutoffMin":60,"waitlistOfferMinutes":30,"classReminderMinutes":120,"scheduleHorizonDays":14,"maxFreezeDaysPerYear":30,"minFreezeDays":7,"renewalLeadDays":3,"renewalRetryCount":2,"renewalRetryHours":24,"renewalGraceDays":3,"requireWaiver":true,"checkinOpensMinBefore":45,"checkinClosesMinAfter":15,"openGymEnabled":false,"openGymCreditCost":1,"correctionWindowDays":7,"allowMemberCreditTransfer":false,"maxTransferCreditsPerMonth":0,"defaultCompanyId":"","ptRescheduleLimit":2,"changeFreeCancelHours":24,"changeNoticeMinHours":12}`
 	eq(t, string(got), want)
-	eq(t, len(RuleKeys()), 37)
+	eq(t, len(RuleKeys()), 39)
 }
 
 func TestGateRules(t *testing.T) {
 	for key, v := range map[string]any{
 		"requireWaiver": "ya", "checkinOpensMinBefore": -1.0, "checkinClosesMinAfter": 1441.0,
 		"openGymEnabled": 1.0, "openGymCreditCost": 21.0, "correctionWindowDays": 91.0, "ptRescheduleLimit": 21.0,
+		"changeFreeCancelHours": 169.0, "changeNoticeMinHours": 73.0,
 	} {
 		if _, msg := ValidateRules(with(defaultsKV(), key, v)); msg == "" {
 			t.Fatalf("%s=%v should be rejected", key, v)
