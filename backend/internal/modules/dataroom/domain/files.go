@@ -90,9 +90,10 @@ func ResolveMime(data []byte, name, claimed string) string {
 
 var imageMimeRe = regexp.MustCompile(`^image/(jpeg|png|webp|gif|bmp|tiff)$`)
 
-// IsPreviewable is isPreviewable: images and PDF may open inline.
+// IsPreviewable reports whether a file may open inline: images, PDF,
+// video, audio and the text types IsTextPreview lists.
 func IsPreviewable(mime string) bool {
-	return imageMimeRe.MatchString(mime) || mime == "application/pdf"
+	return imageMimeRe.MatchString(mime) || mime == "application/pdf" || IsMediaPreview(mime) || IsTextPreview(mime)
 }
 
 // IsWatermarkable is isWatermarkable: JPEG, PNG, WebP and PDF.

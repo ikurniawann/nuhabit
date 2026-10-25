@@ -113,7 +113,7 @@ func newFixture(t *testing.T) *fixture {
 	tx := testutil.Tx(t)
 	f := &fixture{t: t, tx: tx, mail: &fakeMailer{}, staff: newUUID(t, tx), now: time.Now()}
 	f.dir = testDirectory{q: tx, dept: map[string]string{}}
-	f.svc = NewService(tx, Ports{Directory: f.dir, Mailer: f.mail, AppOrigin: "https://app.example", Brand: "NüHabit",
+	f.svc = NewService(tx, Ports{Directory: f.dir, People: testPeople{q: tx}, Mailer: f.mail, AppOrigin: "https://app.example", Brand: "NüHabit",
 		MailFrom: "Dataroom <x@y.id>", QuotaBytes: 50 * 1024 * 1024 * 1024, MaxFileBytes: 100 * 1024 * 1024}, nil, nil, false)
 	f.mux = testutil.Mux(mod{h: newHandler(f.svc, headerGuard{})})
 	return f
@@ -220,7 +220,7 @@ func TestFoldersAndAccess(t *testing.T) {
 	f := newFixture(t)
 	created := f.ok(f.do(call{method: "POST", target: "/api/dataroom/nodes", body: map[string]any{"name": "  Laporan/2026 "}}), 201)
 	root := created.data()["id"].(string)
-	if !regexp.MustCompile(`^\{"success":true,"data":\{"id":"[0-9a-f-]{36}","parent_id":null,"kind":"folder","name":"Laporan-2026","mime":null,"size_bytes":0,"storage_path":null,"created_by":"` + f.staff + `","created_by_name":"Dewi Arsip","created_at":"[^"]+Z","updated_at":"[^"]+Z"\}\}$`).MatchString(created.Raw) {
+	if !regexp.MustCompile(`^\{"success":true,"data":\{"id":"[0-9a-f-]{36}","parent_id":null,"kind":"folder","name":"Laporan-2026","mime":null,"size_bytes":0,"storage_path":null,"created_by":"` + f.staff + `","created_by_name":"Dewi Arsip","created_at":"[^"]+Z","updated_at":"[^"]+Z","description":null,"tags":\[\],"trashed_at":null,"trashed_root":false,"version":1,"locked_by":null,"locked_by_name":null,"locked_at":null,"restricted":false\}\}$`).MatchString(created.Raw) {
 		t.Fatalf("create folder: %s", created.Raw)
 	}
 	sub := f.folder("Keuangan", &root)
@@ -240,7 +240,7 @@ func TestFoldersAndAccess(t *testing.T) {
 	if raw, _ := json.Marshal(list["usage"]); !strings.Contains(string(raw), `"quota":53687091200,"used":`) {
 		t.Fatalf("usage: %s", raw)
 	}
-	if raw, _ := json.Marshal(list["permissions"]); string(raw) != `{"create":true,"delete":false,"manage_access":false,"update":true}` {
+	if raw, _ := json.Marshal(list["permissions"]); string(raw) != `{"create":true,"delete":false,"level":"owner","manage_access":false,"update":true}` {
 		t.Fatalf("permissions: %s", raw)
 	}
 	f.fail(f.do(call{method: "GET", target: "/api/dataroom/nodes?parent=" + pdf}), 404, "Folder tidak ditemukan")
@@ -320,7 +320,7 @@ func TestSharesAdmin(t *testing.T) {
 	f.fail(f.do(call{method: "POST", target: "/api/dataroom/shares", body: map[string]any{"node_id": root, "access_type": "email", "emails": []string{"salah"}}}), 400,
 		"Isi minimal satu email penerima yang valid")
 	bad := f.do(call{method: "POST", target: "/api/dataroom/shares", body: map[string]any{"node_id": root, "access_type": "public", "pin": "12"}})
-	if bad.Status != 400 || !strings.Contains(bad.Raw, "PIN harus 4–6 digit angka") {
+	if bad.Status != 400 || !strings.Contains(bad.Raw, "PIN harus 4 sampai 6 digit angka") {
 		t.Fatalf("pin: %s", bad.Raw)
 	}
 	f.fail(f.do(call{method: "POST", target: "/api/dataroom/shares", body: map[string]any{"node_id": newUUID(t, f.tx), "access_type": "public"}}), 404, "Item tidak ditemukan")
@@ -373,7 +373,7 @@ func TestPublicShareLink(t *testing.T) {
 
 	f.fail(f.do(call{method: "GET", target: "/api/share/pendek", staff: "-"}), 404, "Link tidak ditemukan")
 	open := f.ok(f.do(call{method: "GET", target: "/api/share/" + token, staff: "-", headers: map[string]string{"cf-connecting-ip": "203.0.113.9", "User-Agent": "Go-Test"}}), 200)
-	if !regexp.MustCompile(`^\{"success":true,"data":\{"name":"Proposal","kind":"folder","access_type":"public","requires_pin":false,"watermark":false,"expires_at":"[^"]+Z","shared_by":"Dewi Arsip","steps":\{"needEmail":false,"needPin":false\},"verified":true,"email":null,"root":\{"id":"` + root + `","parent_id":null,"kind":"folder","name":"Proposal","mime":null,"size_bytes":0,"updated_at":"[^"]+"\},"items":\[\{"id":"` + sub + `".*"name":"ringkasan.pdf".*\]\}\}$`).MatchString(open.Raw) {
+	if !regexp.MustCompile(`^\{"success":true,"data":\{"name":"Proposal","kind":"folder","access_type":"public","requires_pin":false,"watermark":false,"allow_download":true,"expires_at":"[^"]+Z","shared_by":"Dewi Arsip","steps":\{"needEmail":false,"needPin":false\},"verified":true,"email":null,"root":\{"id":"` + root + `","parent_id":null,"kind":"folder","name":"Proposal","mime":null,"size_bytes":0,"updated_at":"[^"]+"\},"items":\[\{"id":"` + sub + `".*"name":"ringkasan.pdf".*\]\}\}$`).MatchString(open.Raw) {
 		t.Fatalf("open: %s", open.Raw)
 	}
 	if got := f.scalar(`SELECT s.view_count || '|' || l.action || '|' || l.ip || '|' || l.user_agent FROM dataroom.shares s

@@ -47,7 +47,7 @@ func (h *handler) resolveShare(r *http.Request, token string) (*shareContext, er
 	if err != nil {
 		return nil, err
 	}
-	if root == nil {
+	if root == nil || root.TrashedAt != nil {
 		return nil, httpx.NotFound("Berkas sudah dihapus")
 	}
 	sc := &shareContext{share: sh, root: root}
@@ -102,20 +102,21 @@ func (h *handler) shareInfo(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	return httpx.Data(w, http.StatusOK, struct {
-		Name        string       `json:"name"`
-		Kind        string       `json:"kind"`
-		AccessType  string       `json:"access_type"`
-		RequiresPin bool         `json:"requires_pin"`
-		Watermark   bool         `json:"watermark"`
-		ExpiresAt   httpx.JSTime `json:"expires_at"`
-		SharedBy    *string      `json:"shared_by"`
-		Steps       domain.Steps `json:"steps"`
-		Verified    bool         `json:"verified"`
-		Email       *string      `json:"email"`
-		Root        *PublicNode  `json:"root"`
-		Items       []PublicNode `json:"items"`
+		Name          string       `json:"name"`
+		Kind          string       `json:"kind"`
+		AccessType    string       `json:"access_type"`
+		RequiresPin   bool         `json:"requires_pin"`
+		Watermark     bool         `json:"watermark"`
+		AllowDownload bool         `json:"allow_download"`
+		ExpiresAt     httpx.JSTime `json:"expires_at"`
+		SharedBy      *string      `json:"shared_by"`
+		Steps         domain.Steps `json:"steps"`
+		Verified      bool         `json:"verified"`
+		Email         *string      `json:"email"`
+		Root          *PublicNode  `json:"root"`
+		Items         []PublicNode `json:"items"`
 	}{sc.root.Name, sc.root.Kind, sc.share.AccessType, sc.share.PinHash != nil && *sc.share.PinHash != "", sc.share.Watermark,
-		sc.share.ExpiresAt, sc.share.CreatedByName, sc.steps, verified, sessionEmail(sc.session), root, items})
+		sc.share.AllowDownload, sc.share.ExpiresAt, sc.share.CreatedByName, sc.steps, verified, sessionEmail(sc.session), root, items})
 }
 
 // failWith writes { success: false, error, data } with status.

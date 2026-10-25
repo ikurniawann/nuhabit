@@ -199,14 +199,20 @@ func TestUploadDownloadDelete(t *testing.T) {
 	f.fail(f.do(call{method: "GET", target: "/api/dataroom/nodes/" + secret + "/download", staff: ops}), 403, "File ini tidak dibuka untuk departemen Anda")
 	f.fail(f.do(call{method: "DELETE", target: "/api/dataroom/nodes/" + locked, staff: ops}), 403, "Item ini tidak dibuka untuk departemen Anda")
 
-	// Deleting a folder removes the subtree and its files.
+	// Deleting a folder trashes the subtree; purging removes it with its files.
 	sub := f.folder("Lampiran", &root)
 	inner := f.ok(f.upload(sub, part{"file", "a.png", "", samplePNG(t, 4, 4)}, ""), 201).data()
 	f.fail(f.do(call{method: "DELETE", target: "/api/dataroom/nodes/" + root, deny: "delete"}), 403, "Insufficient permissions")
 	f.fail(f.do(call{method: "DELETE", target: "/api/dataroom/nodes/" + newUUID(t, f.tx)}), 404, "Item tidak ditemukan")
-	del := f.ok(f.do(call{method: "DELETE", target: "/api/dataroom/nodes/" + root}), 200)
+	if r := f.ok(f.do(call{method: "DELETE", target: "/api/dataroom/nodes/" + root}), 200); r.Raw != `{"success":true,"data":{"trashed":"`+root+`"}}` {
+		t.Fatalf("trash: %s", r.Raw)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "private", filepath.FromSlash(path))); err != nil {
+		t.Fatalf("trashed file left the disk: %v", err)
+	}
+	del := f.ok(f.do(call{method: "DELETE", target: "/api/dataroom/nodes/" + root + "/purge"}), 200)
 	if del.Raw != `{"success":true,"data":{"deleted":"`+root+`","files_removed":2}}` {
-		t.Fatalf("delete: %s", del.Raw)
+		t.Fatalf("purge: %s", del.Raw)
 	}
 	for _, p := range []string{path, inner["storage_path"].(string)} {
 		if _, err := os.Stat(filepath.Join(dir, "private", filepath.FromSlash(p))); !os.IsNotExist(err) {
@@ -323,8 +329,10 @@ func TestShareFiles(t *testing.T) {
 		t.Fatal("png carries no watermark")
 	}
 
-	// Other types, and a PDF the stamp cannot read, go out unchanged.
-	if r := f.ok(get(txtID, "", nil), 200); r.Raw != "apa adanya" || r.Header.Get("Content-Disposition") != `attachment; filename="catatan.txt"; filename*=UTF-8''catatan.txt` {
+	// Other types, and a PDF the stamp cannot read, go out unchanged; text
+	// previews inline as text/plain.
+	if r := f.ok(get(txtID, "", nil), 200); r.Raw != "apa adanya" || r.Header.Get("Content-Disposition") != `inline; filename="catatan.txt"; filename*=UTF-8''catatan.txt` ||
+		r.Header.Get("Content-Type") != "text/plain; charset=utf-8" {
 		t.Fatalf("plain file: %s %v", r.Raw, r.Header)
 	}
 	if r := f.ok(get(brokenID, "?download=1", nil), 200); r.Raw != "apa adanya" {
