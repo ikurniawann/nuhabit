@@ -1,9 +1,7 @@
 package recruitment
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"html"
 	"net/http"
@@ -34,7 +32,7 @@ type userGuard interface {
 type Sender interface {
 	// WhatsApp is sendWhatsAppText (provider switch and crm.wa_messages log).
 	WhatsApp(ctx context.Context, q database.Querier, target, message string) (ok bool, reason string)
-	// Email is sendEmail through Resend; false when not sent.
+	// Email is sendEmail through the mailer port; false when not sent.
 	Email(ctx context.Context, to, subject, html string) bool
 }
 
@@ -258,10 +256,10 @@ func candidateStatusEmail(name, status, notes string) (subject, body string) {
 }
 
 // defaultSender sends WhatsApp through platform/whatsapp and email through
-// the Resend REST API (RESEND_API_KEY; without it nothing is sent).
+// the Mailer port (nothing when no provider is configured).
 type defaultSender struct {
-	wa     *whatsapp.Client
-	getenv func(string) string
+	wa   *whatsapp.Client
+	mail Mailer
 }
 
 func (d defaultSender) WhatsApp(ctx context.Context, q database.Querier, target, message string) (bool, string) {
@@ -270,21 +268,5 @@ func (d defaultSender) WhatsApp(ctx context.Context, q database.Querier, target,
 }
 
 func (d defaultSender) Email(ctx context.Context, to, subject, body string) bool {
-	key := strings.TrimSpace(d.getenv("RESEND_API_KEY"))
-	if key == "" {
-		return false
-	}
-	raw, _ := json.Marshal(map[string]string{"from": "Talent Pool <onboarding@resend.dev>", "to": to, "subject": subject, "html": body})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.resend.com/emails", bytes.NewReader(raw))
-	if err != nil {
-		return false
-	}
-	req.Header.Set("Authorization", "Bearer "+key)
-	req.Header.Set("Content-Type", "application/json")
-	res, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
-	if err != nil {
-		return false
-	}
-	defer res.Body.Close()
-	return res.StatusCode >= 200 && res.StatusCode < 300
+	return d.mail != nil && d.mail.Send(ctx, to, subject, body)
 }

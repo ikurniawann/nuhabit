@@ -40,8 +40,8 @@ type Ports struct {
 	Mailer    Mailer
 	// AppOrigin prefixes share links (appOrigin() without a request).
 	AppOrigin string
-	// Brand is brandName(); MailFrom is DATAROOM_FROM_EMAIL ?? FROM_EMAIL ??
-	// the Resend onboarding sender.
+	// Brand is brandName(); MailFrom is DATAROOM_FROM_EMAIL ?? FROM_EMAIL,
+	// empty for the sender configured in Settings → Integrasi → Email.
 	Brand, MailFrom string
 	// QuotaBytes and MaxFileBytes are DATAROOM_QUOTA_BYTES and
 	// DATAROOM_MAX_FILE_BYTES.

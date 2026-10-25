@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -26,7 +25,7 @@ func init() {
 			Loyalty:         memberLoyalty{engine: crm.NewEngine(deps, crmPosReads{}), db: deps.DB},
 			ReferralCredits: referralCredits{svc: gymcredits.NewDefaultService(deps, deps.DB)},
 			OTPMail: memberOTPMail{
-				mail: &resendMailer{apiKey: strings.TrimSpace(os.Getenv("RESEND_API_KEY")), log: deps.Log, client: &http.Client{Timeout: 15 * time.Second}},
+				svc:  newMailService(deps),
 				from: strings.TrimSpace(firstNonEmptyStr(os.Getenv("GYM_FROM_EMAIL"), os.Getenv("FROM_EMAIL"))),
 			},
 		})
@@ -51,19 +50,6 @@ func (c referralCredits) GrantBonus(ctx context.Context, q database.Querier, g r
 		SourceType: "referral", SourceID: g.ReferralID, Note: g.Note, IdempotencyKey: g.Key,
 	})
 	return err
-}
-
-// memberOTPMail emails member sign-in codes through Resend when
-// RESEND_API_KEY and a sender (GYM_FROM_EMAIL or FROM_EMAIL) are set.
-type memberOTPMail struct {
-	mail *resendMailer
-	from string
-}
-
-func (m memberOTPMail) Configured() bool { return m.mail.apiKey != "" && m.from != "" }
-
-func (m memberOTPMail) Send(ctx context.Context, to, subject, html string) bool {
-	return m.mail.Send(ctx, to, m.from, subject, html)
 }
 
 // memberLoyalty adapts the CRM XP engine to the member portal's Loyalty

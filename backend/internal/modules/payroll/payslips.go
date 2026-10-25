@@ -2,6 +2,7 @@ package payroll
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"html"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	platformmail "nuhabit/backend/internal/platform/mail"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -92,7 +94,7 @@ func (s *service) notifyPayslip(ctx context.Context, detailID string) (*messageD
 	if runStatus != "paid" {
 		return nil, httpx.BadRequest("Notifikasi hanya untuk run yang sudah dibayar")
 	}
-	if s.ports.PayslipMailer == nil || strings.TrimSpace(s.ports.PayslipFrom) == "" {
+	if s.ports.PayslipMailer == nil {
 		return nil, httpx.Status(http.StatusServiceUnavailable, "Pengiriman email slip gaji belum dikonfigurasi")
 	}
 	doc, err := s.payslipDocument(ctx, detailID)
@@ -117,19 +119,22 @@ func (s *service) notifyPayslip(ctx context.Context, detailID string) (*messageD
 	period := domain.PeriodLabelID(month, year)
 	name := html.EscapeString(doc.employee.FullName)
 	message := fmt.Sprintf("<p>Halo %s,</p><p>Slip gaji periode %s terlampir dalam email ini.</p><p>Salam,<br>NüHabit</p>", name, html.EscapeString(period))
-	resendID, err := s.ports.PayslipMailer.SendPayslip(ctx, to, s.ports.PayslipFrom, "Slip Gaji NüHabit — "+period, message,
+	messageID, err := s.ports.PayslipMailer.SendPayslip(ctx, to, s.ports.PayslipFrom, "Slip Gaji NüHabit — "+period, message,
 		domain.PayslipFileName(doc.employee.FullName, doc.month, doc.year), pdf)
+	if errors.Is(err, platformmail.ErrNotConfigured) {
+		return nil, httpx.Status(http.StatusServiceUnavailable, "Pengiriman email slip gaji belum dikonfigurasi")
+	}
 	if err != nil {
 		s.log.ErrorContext(ctx, "payslip: email send failed", "id", detailID, "error", err)
-		return nil, httpx.Status(http.StatusBadGateway, "Email slip gaji gagal dikirim; coba lagi")
+		return nil, httpx.Status(http.StatusBadGateway, "Email slip gaji gagal dikirim: "+err.Error())
 	}
 	if _, err := s.db.Exec(ctx, `UPDATE hris.payroll_details SET payslip_sent = true, payslip_sent_at = $2,
 		payslip_emailed_at = $2, payslip_email_recipient = $3, payslip_resend_id = $4 WHERE id = $1`,
-		detailID, s.clock(), to, resendID); err != nil {
+		detailID, s.clock(), to, messageID); err != nil {
 		s.log.ErrorContext(ctx, "payslip: mark sent failed", "id", detailID, "error", err)
 		return nil, err
 	}
-	return &messageData{Data: notifyData{to, true}, Message: "Email slip gaji diterima Resend"}, nil
+	return &messageData{Data: notifyData{to, true}, Message: "Email slip gaji diterima provider email"}, nil
 }
 
 // GET /api/hris/payslips?employee_id&payroll_run_id&year&month

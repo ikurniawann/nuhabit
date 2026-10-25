@@ -1,9 +1,7 @@
 package recruitment
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"net/http"
 	"os"
 	"regexp"
@@ -308,16 +306,11 @@ func hrdNotificationHTML(d applicationEmail) string {
 }
 
 // sendApplicationEmails mails the applicant and, when HRD_EMAIL is set,
-// HRD through Resend. Best effort: a failed email never undoes the saved
-// application.
+// HRD through the Mailer port. Best effort: a failed email never undoes the
+// saved application.
 func (f *fileHandler) sendApplicationEmails(ctx context.Context, d applicationEmail) {
-	key := os.Getenv("RESEND_API_KEY")
-	if key == "" {
+	if f.svc.ports.Mailer == nil {
 		return
-	}
-	from := os.Getenv("FROM_EMAIL")
-	if from == "" {
-		from = "noreply@aapextechnology.com"
 	}
 	type message struct{ label, to, subject, html string }
 	messages := []message{{"Candidate", d.email, "We Received Your Application", candidateConfirmationHTML(d)}}
@@ -326,21 +319,8 @@ func (f *fileHandler) sendApplicationEmails(ctx context.Context, d applicationEm
 			emailSubject("[Talent Pool] Lamaran Baru: " + d.fullName + " untuk " + d.positionTitle), hrdNotificationHTML(d)})
 	}
 	for _, m := range messages {
-		body, _ := json.Marshal(map[string]string{"from": from, "to": m.to, "subject": m.subject, "html": m.html})
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.resend.com/emails", bytes.NewReader(body))
-		if err != nil {
-			continue
-		}
-		req.Header.Set("Authorization", "Bearer "+key)
-		req.Header.Set("Content-Type", "application/json")
-		res, err := f.ai.http.Do(req)
-		if err != nil {
-			f.svc.log.Error(m.label+" email error", "error", err)
-			continue
-		}
-		_ = res.Body.Close()
-		if res.StatusCode >= 300 {
-			f.svc.log.Error(m.label+" email error", "status", res.StatusCode)
+		if !f.svc.ports.Mailer.Send(ctx, m.to, m.subject, m.html) {
+			f.svc.log.Error(m.label + " email error")
 		}
 	}
 }

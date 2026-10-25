@@ -134,6 +134,7 @@ registers its own jobs in `internal/app/module_<name>.go`
 | `gym-credits.pass-renewals` | 1 h | Buys the next pass of auto-renewing passes inside `renewalLeadDays` (ARK Coin, saved method or invoice), retries failed or expired renewal payments `renewalRetryCount` times `renewalRetryHours` apart until `renewalGraceDays` after the pass ends, then turns auto-renew off. |
 | `gym-credits.reminders` | 1 h | Credit expiry and pass expiry reminders (`expiryReminderDays`), low-balance nudges (`lowBalanceThreshold`). |
 | `gym-scheduling.class-reminders` | 5 min | Reminds booked members `classReminderMinutes` before class, unless they turned off booking reminders in the member app. |
+| `integrations.mail-retry` | 1 min | Sends queued emails whose wait is over (`platform.mail_log`): a transient provider failure is retried after 1 and 5 minutes, three attempts in all. See [EMAIL.md](EMAIL.md). |
 
 - Replicas: a job takes a Postgres advisory lock for the length of a run and
   starts only when its last start (`platform.job_runs`) is at least one
@@ -150,10 +151,11 @@ registers its own jobs in `internal/app/module_<name>.go`
 Gym notifications (bookings, waitlist, class changes, check-in, reminders)
 land in the member inbox and go out through the outbox to web push
 (`VAPID_*`), WhatsApp (any configured provider: `services/wa-gateway`, Meta
-or Fonnte) and email (Resend, when `RESEND_API_KEY` and `GYM_FROM_EMAIL` or
-`FROM_EMAIL` are set). Members turn WhatsApp and email off in the member app
-settings. A delivery failure is logged and never fails the booking or
-the job.
+or Fonnte) and email (the provider in Settings → Integrasi → Email: Resend
+or a Microsoft 365 mailbox, env as the fallback; `GYM_FROM_EMAIL` overrides
+the sender on Resend). Members turn WhatsApp and email off in the member app
+settings. A delivery failure is logged in `platform.mail_log`, retried when
+transient, and never fails the booking or the job. See [EMAIL.md](EMAIL.md).
 
 ## Member sign-in and self sign-up
 
@@ -169,7 +171,7 @@ Codes are on when at least one channel is configured:
 | Channel | What to configure |
 |---|---|
 | WhatsApp (preferred) | One provider, the same setup gym notifications use: Meta Cloud API (`META_WA_ACCESS_TOKEN` and `META_WA_PHONE_NUMBER_ID`, with an approved `otp_login` authentication template or `META_WA_OTP_TEMPLATE`), the `services/wa-gateway` token (`WA_GATEWAY_TOKEN`, or `wa_gateway_token` in the dashboard settings, with `WA_GATEWAY_URL` when not the default), or `FONNTE_API_KEY`. `WHATSAPP_PROVIDER` pins one. |
-| Email (fallback) | `RESEND_API_KEY` plus a sender in `GYM_FROM_EMAIL` or `FROM_EMAIL` on a domain verified in Resend. Codes then go to the email typed at sign-up or the one on the account; a member without an email gets a 409 and signs in with a password. The public `/join` checkout speaks WhatsApp only, so on an email-only setup it sends new members to the front desk; the member app sign-up works. |
+| Email (fallback) | An email provider in Settings → Integrasi → Email (Resend with a verified domain, or a Microsoft 365 / outlook.com mailbox through Graph or SMTP), or the same through env (`RESEND_API_KEY` + `FROM_EMAIL`, `MS_GRAPH_*`, `SMTP_*`; see [EMAIL.md](EMAIL.md)). Codes then go to the email typed at sign-up or the one on the account; a member without an email gets a 409 and signs in with a password. The public `/join` checkout speaks WhatsApp only, so on an email-only setup it sends new members to the front desk; the member app sign-up works. |
 
 To open self sign-up in production:
 

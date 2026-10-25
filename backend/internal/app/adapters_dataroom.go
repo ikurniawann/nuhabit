@@ -1,16 +1,10 @@
 package app
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"log/slog"
 	"math"
-	"net/http"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -20,13 +14,15 @@ import (
 )
 
 // dataroomPorts reads the Dataroom env the TS reads (lib/dataroom/config.ts,
-// mail.ts, lib/branding.ts, lib/app-origin.ts).
+// mail.ts, lib/branding.ts, lib/app-origin.ts). Emails go through the
+// mailer port; DATAROOM_FROM_EMAIL or FROM_EMAIL overrides the configured
+// sender.
 func dataroomPorts(d module.Deps, getenv func(string) string, lookup func(string) (string, bool)) dataroom.Ports {
 	brand := strings.TrimSpace(getenv("NEXT_PUBLIC_APP_NAME"))
 	if brand == "" {
 		brand = "NüHabit"
 	}
-	from := "Dataroom <onboarding@resend.dev>"
+	from := ""
 	if v, ok := lookup("DATAROOM_FROM_EMAIL"); ok {
 		from = v
 	} else if v, ok := lookup("FROM_EMAIL"); ok {
@@ -34,7 +30,7 @@ func dataroomPorts(d module.Deps, getenv func(string) string, lookup func(string
 	}
 	return dataroom.Ports{
 		Directory:    dataroomDirectory{db: d.DB},
-		Mailer:       &resendMailer{apiKey: strings.TrimSpace(getenv("RESEND_API_KEY")), log: d.Log, client: &http.Client{Timeout: 15 * time.Second}},
+		Mailer:       mailSender{svc: newMailService(d), kind: "dataroom"},
 		AppOrigin:    ticketingAppOrigin(getenv),
 		Brand:        brand,
 		MailFrom:     from,
@@ -83,39 +79,4 @@ func (a dataroomDirectory) departments(ctx context.Context, sql string, args ...
 		return nil, err
 	}
 	return pgx.CollectRows(rows, pgx.RowToStructByPos[dataroom.DepartmentRef])
-}
-
-// resendMailer is lib/resend sendEmail over Resend's HTTP API: false
-// without RESEND_API_KEY (warned once) or on any failure.
-type resendMailer struct {
-	apiKey string
-	log    *slog.Logger
-	client *http.Client
-	warned sync.Once
-}
-
-func (m *resendMailer) Send(ctx context.Context, to, from, subject, html string) bool {
-	if m.apiKey == "" {
-		m.warned.Do(func() { m.log.Warn("[resend] RESEND_API_KEY belum diset; email tidak dikirim") })
-		return false
-	}
-	payload, _ := json.Marshal(map[string]string{"from": from, "to": to, "subject": subject, "html": html})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.resend.com/emails", bytes.NewReader(payload))
-	if err != nil {
-		m.log.Error("Email send error:", "error", err)
-		return false
-	}
-	req.Header.Set("Authorization", "Bearer "+m.apiKey)
-	req.Header.Set("Content-Type", "application/json")
-	res, err := m.client.Do(req)
-	if err != nil {
-		m.log.Error("Email send error:", "error", err)
-		return false
-	}
-	defer res.Body.Close()
-	if res.StatusCode/100 != 2 {
-		m.log.Error("Resend error:", "status", res.StatusCode)
-		return false
-	}
-	return true
 }

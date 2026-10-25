@@ -79,9 +79,9 @@ func TestGymChannelsHonourOptOuts(t *testing.T) {
 		t.Fatalf("emails = %q", mail.to)
 	}
 
-	// Without a provider or a sender address nothing goes out and nothing is logged as failed.
+	// Without a WhatsApp provider or a mailer nothing goes out and nothing is logged as failed.
 	env = map[string]string{}
-	c.from = ""
+	c.mail = nil
 	c.deliver(ctx, all, "x", "y")
 	var failed int
 	if err := tx.QueryRow(ctx, `SELECT count(*)::int FROM crm.wa_messages WHERE customer_id = $1 AND status = 'failed'`, all).Scan(&failed); err != nil {

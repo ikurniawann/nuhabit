@@ -19,6 +19,14 @@ type Ports struct {
 	Settings Settings
 	Speech   Speech
 	Hired    HiredEmployees
+	// Mailer sends candidate and HRD emails from the configured sender;
+	// nil sends none.
+	Mailer Mailer
+}
+
+// Mailer is the outbound email port; false when the message was not sent.
+type Mailer interface {
+	Send(ctx context.Context, to, subject, html string) bool
 }
 
 // Settings reads configuration.app_settings (AI keys and models).
