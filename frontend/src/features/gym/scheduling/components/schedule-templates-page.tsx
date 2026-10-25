@@ -27,6 +27,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SELECT } from "@/features/gym/shared";
+import { ImportButton } from "@/features/data-import/import-dialog";
 import { formatNumber } from "@/lib/format";
 import { localDay, zoneAbbr, zoneSuffix } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
@@ -94,6 +95,14 @@ export function ScheduleTemplatesPage() {
             <Link href="/dashboard/gym/schedule" className={buttonVariants({ variant: "ghost" })}>
               <CalendarDays /> Jadwal kelas
             </Link>
+            <ImportButton
+              menu="gym.schedule"
+              title="Impor template jadwal"
+              description="Kunci: jenis kelas, cabang, hari dan jam mulai. Durasi, kapasitas dan biaya kredit yang kosong mengikuti jenis kelasnya."
+              endpoint="/api/gym/session-templates/import"
+              templateHref="/api/gym/session-templates/import/template"
+              onImported={refresh}
+            />
             <Can menu="gym.schedule" action="create" mode="disable">
               <Button variant="outline" onClick={() => generate.mutate()} disabled={generate.isPending}>
                 <RefreshCw className={cn(generate.isPending && "animate-spin")} /> Generate sekarang

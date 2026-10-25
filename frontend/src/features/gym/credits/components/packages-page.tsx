@@ -26,6 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Field, TableNote, TEXTAREA } from "@/features/crm/engagement/components/shared";
 import { SELECT } from "@/features/gym/shared";
+import { ImportButton } from "@/features/data-import/import-dialog";
 import { formatNumber, formatRupiah } from "@/lib/format";
 import {
   gymCreditsApi,
@@ -77,11 +78,21 @@ export function PackagesPage() {
         title="Paket Kredit"
         description="Paket kredit dan pass yang dijual ke member. Satu kredit = satu slot kelas sesuai biaya kelasnya; pass membuka booking tanpa batas selama masa berlakunya. Paket yang sudah pernah dibeli hanya bisa diarsipkan."
         actions={
-          <Can menu="gym.packages" action="create" mode="disable">
-            <Button onClick={() => setEditing("new")}>
-              <Plus /> Paket baru
-            </Button>
-          </Can>
+          <>
+            <ImportButton
+              menu="gym.packages"
+              title="Impor paket"
+              description="Nama paket menjadi kunci. Jenis credits atau pass, harga cabang dengan KODE=harga, jenis kelas dipisah titik koma."
+              endpoint="/api/gym/packages/import"
+              templateHref="/api/gym/packages/import/template"
+              onImported={refresh}
+            />
+            <Can menu="gym.packages" action="create" mode="disable">
+              <Button onClick={() => setEditing("new")}>
+                <Plus /> Paket baru
+              </Button>
+            </Can>
+          </>
         }
       />
 

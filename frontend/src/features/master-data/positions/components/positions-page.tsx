@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { BriefcaseIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,8 @@ import { useDepartmentList } from "@/features/master-data/departments";
 import { MasterDeleteDialog } from "../../components/master-delete-dialog";
 import { MasterTableActions } from "../../components/master-table-actions";
 import { usePositionList } from "../queries";
+import { ImportButton } from "@/features/data-import/import-dialog";
+import { positionsQueryKeys } from "../query-keys";
 import {
   useCreatePosition,
   useUpdatePosition,
@@ -59,6 +62,7 @@ export function PositionsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: positions, isLoading } = usePositionList();
+  const queryClient = useQueryClient();
   const { data: departments } = useDepartmentList();
   const createMutation = useCreatePosition();
   const updateMutation = useUpdatePosition();
@@ -149,14 +153,24 @@ export function PositionsPage() {
             Daftar posisi/jabatan per departemen — {rows.length} jabatan terdaftar
           </p>
         </div>
-        <Button
-          type="button"
-          onClick={openAdd}
-          className="h-10 w-full gap-2 rounded-lg bg-pink-600 px-3 text-sm font-semibold text-white shadow-sm hover:bg-pink-700 sm:w-auto"
-        >
-          <PlusIcon className="h-4 w-4" />
-          Tambah Jabatan
-        </Button>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <ImportButton
+            menu="hris.master"
+            title="Impor jabatan"
+            description="Nama jabatan menjadi kunci. Departemen memakai nama departemen yang sudah ada; level mengikuti pilihan di form."
+            endpoint="/api/master/positions/import"
+            templateHref="/api/master/positions/import/template"
+            onImported={() => void queryClient.invalidateQueries({ queryKey: positionsQueryKeys.all })}
+          />
+          <Button
+            type="button"
+            onClick={openAdd}
+            className="h-10 w-full gap-2 rounded-lg bg-pink-600 px-3 text-sm font-semibold text-white shadow-sm hover:bg-pink-700 sm:w-auto"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Tambah Jabatan
+          </Button>
+        </div>
       </div>
 
       <PurchasingListSection
