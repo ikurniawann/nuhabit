@@ -83,6 +83,7 @@ docs/ARCHITECTURE.md
 | `gym-desk` | 11 | member list and 360 page, staff notes, front desk registration, gym reports, check-in log export |
 | `gym-coaching` | 26 | personal training (coach availability, PT appointments, PT reminders) and fitness assessments |
 | `gym-training` | 30 | exercises, HYROX workouts and sessions, races, coach incentives and payouts |
+| `gym-automation` | 5 | gym background job switches, job settings and manual runs, member notification log |
 | `athlete` | 30 | member app train tab (activities, feed, clubs, challenges, gear) and home settings |
 | `member-portal` | 46 | member OTP sign-in, profile, inbox, push, top-up, engagement, collectibles, app home |
 | `pos-sales` | 39 | orders, multi-stall checkout, QRIS, KDS, print jobs, supervisor PIN, GoFood, table order |

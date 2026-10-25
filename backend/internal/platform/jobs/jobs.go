@@ -10,6 +10,7 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -138,7 +139,7 @@ func (r *Runner) RunOnce(ctx context.Context, j Job) (ran bool, err error) {
 	}
 	r.runs.Inc(j.Name)
 	started := time.Now()
-	err = r.call(ctx, j, now)
+	err = invoke(ctx, j, now)
 	r.duration.Observe(time.Since(started).Seconds(), j.Name)
 	release(err)
 	if err != nil {
@@ -150,7 +151,8 @@ func (r *Runner) RunOnce(ctx context.Context, j Job) (ran bool, err error) {
 	return true, nil
 }
 
-func (r *Runner) call(ctx context.Context, j Job, now time.Time) (err error) {
+// invoke runs j with at most one interval and turns a panic into an error.
+func invoke(ctx context.Context, j Job, now time.Time) (err error) {
 	ctx, cancel := context.WithTimeout(ctx, j.Every)
 	defer cancel()
 	defer func() {
@@ -159,6 +161,32 @@ func (r *Runner) call(ctx context.Context, j Job, now time.Time) (err error) {
 		}
 	}()
 	return j.Run(ctx, now)
+}
+
+// ErrBusy refuses a manual run while the job is running.
+var ErrBusy = errors.New("jobs: job is already running")
+
+// NowLocker takes a job's lock for a manual run.
+type NowLocker interface {
+	// AcquireNow is Acquire without the interval and the job switch: ok is
+	// false only when a run holds the lock.
+	AcquireNow(ctx context.Context, name string, now time.Time) (release func(runErr error), ok bool, err error)
+}
+
+// RunNow runs j once, now, under the same lock as its scheduled runs, so it
+// never overlaps one. It records the run like a scheduled one and refuses
+// with ErrBusy while another run holds the lock.
+func RunNow(ctx context.Context, l NowLocker, j Job, now time.Time) error {
+	release, ok, err := l.AcquireNow(ctx, j.Name, now)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrBusy
+	}
+	err = invoke(ctx, j, now)
+	release(err)
+	return err
 }
 
 // Due reports whether a job that last started at last may start again at

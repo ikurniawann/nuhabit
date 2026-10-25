@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"nuhabit/backend/internal/modules/gymautomation"
 	"nuhabit/backend/internal/modules/gymcoaching"
 	"nuhabit/backend/internal/modules/gymcredits"
 	creditsdomain "nuhabit/backend/internal/modules/gymcredits/domain"
@@ -14,6 +15,7 @@ import (
 	memberdomain "nuhabit/backend/internal/modules/memberportal/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/jobs"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -34,11 +36,24 @@ func init() {
 			_, err := s.GenerateFromTemplates(ctx, now, 0) // 0: each branch's scheduleHorizonDays
 			return err
 		})
-	RegisterJob(gymscheduling.Name, "gym-scheduling.complete-past-sessions", 10*time.Minute, schedulingService,
-		func(s *gymscheduling.Service, ctx context.Context, now time.Time) error {
-			_, err := s.CompletePastSessions(ctx, now, 30)
-			return err
-		})
+	RegisterJob(gymscheduling.Name, gymautomation.AutoCloseJob, 10*time.Minute,
+		func(d module.Deps) autoClose { return autoClose{svc: schedulingService(d), db: d.DB} }, autoClose.run)
+}
+
+// autoClose closes past sessions after the grace the automation page sets
+// (platform.job_settings), gymautomation.AutoCloseGrace without one.
+type autoClose struct {
+	svc *gymscheduling.Service
+	db  database.Querier
+}
+
+func (a autoClose) run(ctx context.Context, now time.Time) error {
+	cfg := map[string]int{gymautomation.AutoCloseGrace.Key: gymautomation.AutoCloseGrace.Default}
+	if err := jobs.Config(ctx, a.db, gymautomation.AutoCloseJob, &cfg); err != nil {
+		return err
+	}
+	_, err := a.svc.CompletePastSessions(ctx, now, cfg[gymautomation.AutoCloseGrace.Key])
+	return err
 }
 
 func schedulingPorts(d module.Deps) gymscheduling.Ports { return schedulingPortsOn(d, d.DB) }
