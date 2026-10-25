@@ -97,6 +97,7 @@ const SECTIONS: { title: string; fields: RuleField[] }[] = [
     title: "Check-in & gate",
     fields: [
       { key: "requireWaiver", kind: "boolean", label: "Wajib waiver", hint: "Member tanpa waiver versi terbaru tidak bisa booking atau masuk gate. Staf bisa mencatat waiver di front desk." },
+      { key: "requireParq", kind: "boolean", label: "Wajib PAR-Q", hint: "Member yang belum mengisi deklarasi kesehatan PAR-Q, atau isiannya sudah lewat 12 bulan, tidak bisa booking kelas. Member mengisinya di aplikasi (Profil → Deklarasi kesehatan)." },
       { key: "checkinOpensMinBefore", kind: "number", label: "Check-in dibuka", unit: "menit sebelum kelas", hint: "Gate menerima booking kelas mulai saat ini.", min: 0 },
       { key: "checkinClosesMinAfter", kind: "number", label: "Check-in ditutup", unit: "menit setelah kelas", hint: "Setelah ini booking tidak bisa check-in di gate.", min: 0 },
       { key: "qrTtlSec", kind: "number", label: "Umur QR member", unit: "detik", hint: "QR di aplikasi diperbarui setelah waktu ini. Minimal 10 detik.", min: 10 },

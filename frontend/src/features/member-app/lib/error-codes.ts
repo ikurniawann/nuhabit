@@ -13,6 +13,8 @@ import { useLang, type Lang } from "./lang";
  */
 /** The booking denial that links to the waiver screen. */
 export const WAIVER_REQUIRED = "BOOKING_WAIVER_REQUIRED";
+/** The booking denial that links to the health declaration. */
+export const PARQ_REQUIRED = "BOOKING_PARQ_REQUIRED";
 
 export const ERROR_MESSAGES: Record<string, string> = {
   // Booking (gymscheduling)
@@ -28,6 +30,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   BOOKING_INSUFFICIENT_CREDITS: "Not enough credits for this class.",
   BOOKING_CLASS_NOT_COVERED: "Your credit package doesn't cover this class.",
   BOOKING_WAIVER_REQUIRED: "Accept the gym waiver before you book or check in.",
+  BOOKING_PARQ_REQUIRED: "Fill in your health declaration (PAR-Q) before you book. It renews every 12 months.",
   BOOKING_NO_OFFER: "No spot has been offered to you in this class yet.",
   BOOKING_OFFER_EXPIRED: "This spot offer has expired.",
   BOOKING_SEAT_TAKEN: "Another member already took that spot.",

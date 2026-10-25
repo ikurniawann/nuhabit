@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { ApiError } from "../lib/api";
-import { useErrorText, WAIVER_REQUIRED } from "../lib/error-codes";
+import { PARQ_REQUIRED, useErrorText, WAIVER_REQUIRED } from "../lib/error-codes";
 import { coverageFor } from "../lib/classes-view";
 import { fill, useT } from "../lib/i18n";
 import { googleCalendarEventUrl } from "../lib/google-calendar";
@@ -23,6 +23,16 @@ import {
 import { sessionRundown } from "./session-rundown";
 import { Spinner, formatDayTime } from "../ui";
 
+type FixLink = { href: string; label: string };
+
+/** The screen that clears a booking denial, or undefined. */
+function fixLink(e: unknown): FixLink | undefined {
+  if (!(e instanceof ApiError)) return undefined;
+  if (e.code === WAIVER_REQUIRED) return { href: "/profile/waiver", label: "Read and sign the waiver" };
+  if (e.code === PARQ_REQUIRED) return { href: "/profile/health", label: "Fill in the health declaration" };
+  return undefined;
+}
+
 export function SessionDetailPage() {
   const t = useT();
   const errorText = useErrorText();
@@ -32,8 +42,8 @@ export function SessionDetailPage() {
   const { data: wallet } = useWallet();
   const book = useBookMutation();
   const cancel = useCancelMutation();
-  // waiver: the booking failed for a missing waiver, so the message links to the waiver screen.
-  const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string; waiver?: boolean } | null>(null);
+  // fix: the booking failed for a missing waiver or PAR-Q, so the message links to that screen.
+  const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string; fix?: FixLink } | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const invalidate = useInvalidateAll();
 
@@ -47,7 +57,7 @@ export function SessionDetailPage() {
       setMessage({
         kind: "err",
         text: errorText(e, t("Could not confirm.")),
-        waiver: e instanceof ApiError && e.code === WAIVER_REQUIRED,
+        fix: fixLink(e),
       });
       invalidate();
     } finally {
@@ -87,7 +97,7 @@ export function SessionDetailPage() {
       setMessage({
         kind: "err",
         text: errorText(e, t("Booking failed.")),
-        waiver: e instanceof ApiError && e.code === WAIVER_REQUIRED,
+        fix: fixLink(e),
       });
     }
   };
@@ -182,9 +192,9 @@ export function SessionDetailPage() {
           }`}
         >
           {message.text}
-          {message.waiver ? (
-            <Link href={m("/profile/waiver")} className="mt-2 block text-nh-forest underline">
-              {t("Read and sign the waiver")} →
+          {message.fix ? (
+            <Link href={m(message.fix.href)} className="mt-2 block text-nh-forest underline">
+              {t(message.fix.label)} →
             </Link>
           ) : null}
         </div>

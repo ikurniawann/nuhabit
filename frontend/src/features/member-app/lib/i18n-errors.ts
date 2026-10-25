@@ -15,6 +15,8 @@ export const ERRORS_ID: Record<string, string> = {
     "Kredit tidak cukup untuk kelas ini: tersedia {available}, butuh {needed} ({reserved} kredit sudah terpakai untuk booking lain).",
   "Your credit package doesn't cover this class.": "Paket kredit kamu tidak mencakup kelas ini.",
   "Accept the gym waiver before you book or check in.": "Setujui waiver gym dulu sebelum booking atau check-in.",
+  "Fill in your health declaration (PAR-Q) before you book. It renews every 12 months.":
+    "Isi deklarasi kesehatan (PAR-Q) dulu sebelum booking. Isian berlaku 12 bulan.",
   "No spot has been offered to you in this class yet.": "Belum ada kursi yang ditawarkan untukmu di kelas ini.",
   "This spot offer has expired.": "Tawaran kursi ini sudah kedaluwarsa.",
   "Another member already took that spot.": "Kursi itu sudah diambil member lain.",

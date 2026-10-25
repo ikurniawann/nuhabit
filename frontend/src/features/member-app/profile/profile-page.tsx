@@ -42,6 +42,7 @@ import { activeMethod } from "../lib/classes-view";
 import { useSavedMethods } from "../lib/queries-classes";
 import { useLoyaltyMe } from "../lib/queries-loyalty";
 import { Spinner, StatusBadge, formatDay } from "../ui";
+import { HealthCard } from "./health-card";
 
 export function ProfilePage() {
   const t = useT();
@@ -331,6 +332,8 @@ export function ProfilePage() {
           ]}
         />
       </section>
+
+      <HealthCard />
 
       <Link href={m("/profile/waiver")} className="nh-card flex flex-col gap-2 text-sm">
         <p className="nh-label !mb-0">{t("Digital waiver")}</p>

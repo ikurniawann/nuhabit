@@ -75,6 +75,8 @@ export interface GymRules {
   defaultCompanyId: string;
   /** Berapa kali member boleh memindahkan satu sesi PT dari aplikasi (0 = hanya lewat staf). */
   ptRescheduleLimit: number;
+  /** Booking butuh deklarasi kesehatan PAR-Q yang diisi dalam 12 bulan terakhir. */
+  requireParq: boolean;
 }
 
 /** credits: a batch of class credits; pass: unlimited bookings for validity_days. */
