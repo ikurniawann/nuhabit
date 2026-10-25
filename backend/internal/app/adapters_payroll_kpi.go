@@ -270,3 +270,40 @@ func (payrollKPISQL) VendorPaySLA(ctx context.Context, q database.Querier, start
 	return &domain.CollectorValue{Actual: &actual, SampleSize: float64(settled),
 		Detail: map[string]any{"avg_days": avg, "settled_terms": settled}}, nil
 }
+
+// CoachComplaintRate is complaint tickets linked to a coach (raised in the
+// period) per 100 attendees of the coach's classes in the period, for each
+// active employee whose account is linked to a gym coach. Days are Jakarta
+// dates; a coach without attendees has no value.
+func (payrollKPISQL) CoachComplaintRate(ctx context.Context, q database.Querier, start, end string) (map[string]domain.CollectorValue, error) {
+	return keyed(ctx, q, `WITH coach AS (
+		  SELECT DISTINCT e.id AS employee_id, co.id AS coach_id
+		    FROM hris.employees e JOIN gym.coaches co ON co.user_id = e.user_id
+		   WHERE e.is_active = true
+		), att AS (
+		  SELECT s.coach_id, count(*)::int AS attendees
+		    FROM gym.bookings b JOIN gym.class_sessions s ON s.id = b.session_id
+		   WHERE b.status IN ('checked_in', 'completed')
+		     AND (s.starts_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $1::date AND $2::date
+		   GROUP BY s.coach_id
+		), kel AS (
+		  SELECT coach_id, count(*)::int AS complaints
+		    FROM gym.complaints
+		   WHERE coach_id IS NOT NULL
+		     AND (created_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN $1::date AND $2::date
+		   GROUP BY coach_id
+		)
+		SELECT c.employee_id::text, sum(att.attendees)::int, COALESCE(sum(kel.complaints), 0)::int
+		  FROM coach c
+		  JOIN att ON att.coach_id = c.coach_id
+		  LEFT JOIN kel ON kel.coach_id = c.coach_id
+		 GROUP BY c.employee_id`,
+		func(r pgx.CollectableRow) (string, domain.CollectorValue, error) {
+			var id string
+			var attendees, complaints int
+			err := r.Scan(&id, &attendees, &complaints)
+			rate := math.Round(float64(complaints)*100/float64(attendees)*100) / 100
+			return id, domain.CollectorValue{Actual: &rate, SampleSize: float64(attendees),
+				Detail: map[string]any{"complaints": complaints, "attendees": attendees}}, err
+		}, start, end)
+}
