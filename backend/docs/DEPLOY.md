@@ -197,6 +197,38 @@ member's sessions, writes an audit row and shows the password once or sends
 it by WhatsApp. Members can change their own password afterwards
 (`PUT /api/member-portal/password`).
 
+## Go-live checklist
+
+Before the first production cutover, on the production database (or the
+copy that becomes it), in this order. [DATA_SETUP.md](DATA_SETUP.md) has
+the detail of each step.
+
+1. Migrations applied and `migrate -verify` clean (steps 2 of the deploy
+   script, or by hand as below).
+2. IAM seeded: `database/seeders/iam-menus.sql`, `iam-role-permissions.sql`
+   and `iam-admin-permissions.sql`, then the first super admin
+   (`database/seeders/super-admin.js`).
+3. Demo content removed: `go run ./cmd/demo-data -remove -dry-run
+   -allow-remote` against the target, read the kept rows and their
+   reasons, then run it without `-dry-run`. Do this before the real data
+   goes in, so nothing real references a demo row by then. Demo accounts
+   from `cmd/demo-users` (`demo-*@nuhabit.test`) must not exist on
+   production; disable them in Manajemen User if a copy of a demo
+   database was promoted.
+4. Real data entered in the order of DATA_SETUP.md: companies and branches
+   (with their time zones), departments and positions, login accounts and
+   employees, class types and coaches, schedule templates (then `Generate
+   sekarang`), packages, members with their opening balances. Each import
+   writes an `audit.audit_log` row, so the audit page shows who loaded
+   what.
+5. Gym rules reviewed (Gym > Aturan Gym): credit expiry, cancellation
+   deadline, booking window, schedule horizon, `defaultCompanyId`.
+6. Deferred revenue of packages sold before the gym journals existed:
+   `cmd/gym-opening-balance -dry-run`, then for real
+   ([GYM_OPENING_BALANCE.md](GYM_OPENING_BALANCE.md)).
+7. A backup taken ([BACKUP.md](BACKUP.md)) once the data is in, before
+   members start booking.
+
 ## Schema drift check
 
 `migrate -verify` creates a scratch database on the target's server
