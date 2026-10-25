@@ -121,6 +121,8 @@ export const IAM = {
   investor: ["investor"],
   /** Investor → Update untuk Investor: editor progres yang dikelola direksi. */
   investorUpdates: ["investor.updates"],
+  /** Gym → Keluhan (tiket keluhan member, SLA, eskalasi, laporan). */
+  gymComplaints: ["gym.complaints"],
   /** HRIS → Master Data (departemen, jabatan, status kepegawaian). */
   hrisMaster: ["hris.master"],
   /** HRIS → Organisasi (struktur organisasi, seksi). */

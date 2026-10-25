@@ -51,6 +51,9 @@ type KPISources interface {
 	// nil without terms in the period.
 	VendorPayOntime(ctx context.Context, q database.Querier, start, end string) (*domain.CollectorValue, error)
 	VendorPaySLA(ctx context.Context, q database.Querier, start, end string) (*domain.CollectorValue, error)
+	// CoachComplaintRate is coach_complaint_rate per employee linked to a
+	// gym coach with attendees in the period.
+	CoachComplaintRate(ctx context.Context, q database.Querier, start, end string) (map[string]domain.CollectorValue, error)
 }
 
 // LogbookCount is a department's checked and total checklist items.
@@ -60,7 +63,7 @@ type LogbookCount struct{ Checked, Total int }
 // automatic collector, per employee and organisation wide.
 var (
 	employeeCollectors = []string{"att_ontime", "pos_cash_variance", "logbook_compliance", "po_fulfillment",
-		"team_ontime", "pos_sales_shift", "leave_request_discipline", "att_late_ratio", "task_completion"}
+		"team_ontime", "pos_sales_shift", "leave_request_discipline", "att_late_ratio", "task_completion", "coach_complaint_rate"}
 	orgCollectors = []string{"leave_sla", "vendor_pay_ontime", "vendor_pay_sla", "payroll_paid_ontime", "payroll_ready_h2"}
 )
 
@@ -79,6 +82,7 @@ type snapshotCounts struct {
 	VendorPaySLA      int `json:"vendor_pay_sla"`
 	PayrollPaidOntime int `json:"payroll_paid_ontime"`
 	PayrollReadyH2    int `json:"payroll_ready_h2"`
+	CoachComplaints   int `json:"coach_complaint_rate"`
 }
 
 // snapshotSummary is SnapshotSummary.
@@ -328,7 +332,8 @@ func (c collected) counts() snapshotCounts {
 	}
 	return snapshotCounts{n("att_ontime"), n("pos_cash_variance"), n("logbook_compliance"), n("po_fulfillment"),
 		n("team_ontime"), n("pos_sales_shift"), n("leave_request_discipline"), n("att_late_ratio"),
-		one("leave_sla"), one("vendor_pay_ontime"), one("vendor_pay_sla"), one("payroll_paid_ontime"), one("payroll_ready_h2")}
+		one("leave_sla"), one("vendor_pay_ontime"), one("vendor_pay_sla"), one("payroll_paid_ontime"), one("payroll_ready_h2"),
+		n("coach_complaint_rate")}
 }
 
 // collect runs the wave 1 and 2 collectors.
@@ -394,6 +399,9 @@ func (s *service) collect(ctx context.Context, employees []domain.KPIEmployee, y
 		return nil, err
 	}
 	if c.perEmployee["leave_request_discipline"], err = src.LeaveDiscipline(ctx, q, start, end); err != nil {
+		return nil, err
+	}
+	if c.perEmployee["coach_complaint_rate"], err = src.CoachComplaintRate(ctx, q, start, end); err != nil {
 		return nil, err
 	}
 	tasks, err := s.taskCounts(ctx, start, end)

@@ -17,6 +17,7 @@ import {
   IdCard,
   LogOut,
   MessageSquareText,
+  MessageSquareWarning,
   PartyPopper,
   Receipt,
   ReceiptText,
@@ -295,6 +296,12 @@ export function ProfilePage() {
             },
             { to: "/profile/gear", icon: Footprints, title: t("My gear"), hint: t("Shoes & bike mileage") },
             { to: "/profile/settings", icon: Settings, title: t("Settings"), hint: t("Units, reminders") },
+            {
+              to: "/profile/feedback",
+              icon: MessageSquareWarning,
+              title: t("Feedback & reports"),
+              hint: t("Report a problem or share an idea"),
+            },
           ]}
         />
       </section>

@@ -77,6 +77,14 @@ export const ERROR_MESSAGES: Record<string, string> = {
   // Referral
   REFERRAL_INVALID: "Referral code not found, or the program is paused.",
   REFERRAL_RATE_LIMITED: "Too many requests. Try again in a few minutes.",
+  // Feedback & reports (gymcomplaints)
+  FEEDBACK_TOO_SHORT: "Tell us a little more (at least {min} characters).",
+  FEEDBACK_TOO_LONG: "Keep it under {max} characters.",
+  FEEDBACK_DAILY_LIMIT: "You can send up to {max} reports a day. Try again tomorrow.",
+  FEEDBACK_NOT_RESOLVED: "This report isn't marked as resolved yet.",
+  COMPLAINT_NOT_FOUND: "Report not found.",
+  COMPLAINT_NOTE_REQUIRED: "Tell us what is still wrong.",
+  COMPLAINT_CATEGORY_INVALID: "Choose a category.",
 };
 
 /** The insufficient-credit denial names the numbers only when other bookings hold credits, as the server text does. */

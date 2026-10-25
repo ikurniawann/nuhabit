@@ -1775,6 +1775,91 @@
     "path": "/api/gym/coaches/{id}/schedule"
   },
   {
+    "module": "gym-complaints",
+    "method": "GET",
+    "path": "/api/gym/complaints"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "POST",
+    "path": "/api/gym/complaints"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "GET",
+    "path": "/api/gym/complaints/categories"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "PUT",
+    "path": "/api/gym/complaints/categories"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "GET",
+    "path": "/api/gym/complaints/conversations/{conversationId}/ticket"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "POST",
+    "path": "/api/gym/complaints/conversations/{conversationId}/ticket"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "GET",
+    "path": "/api/gym/complaints/member-classes"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "GET",
+    "path": "/api/gym/complaints/options"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "GET",
+    "path": "/api/gym/complaints/report"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "GET",
+    "path": "/api/gym/complaints/settings"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "PUT",
+    "path": "/api/gym/complaints/settings"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "DELETE",
+    "path": "/api/gym/complaints/{id}"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "GET",
+    "path": "/api/gym/complaints/{id}"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "PATCH",
+    "path": "/api/gym/complaints/{id}"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "POST",
+    "path": "/api/gym/complaints/{id}/assign"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "POST",
+    "path": "/api/gym/complaints/{id}/notes"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "POST",
+    "path": "/api/gym/complaints/{id}/status"
+  },
+  {
     "module": "gym-credits",
     "method": "GET",
     "path": "/api/gym/credits"
@@ -1968,6 +2053,11 @@
     "module": "gym-scheduling",
     "method": "GET",
     "path": "/api/gym/my-classes"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "GET",
+    "path": "/api/gym/my-classes/complaints"
   },
   {
     "module": "gym-training",
@@ -3763,6 +3853,36 @@
     "module": "gym-credits",
     "method": "POST",
     "path": "/api/member-portal/gym/credits/vouchers/preview"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "GET",
+    "path": "/api/member-portal/gym/feedback"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "POST",
+    "path": "/api/member-portal/gym/feedback"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "GET",
+    "path": "/api/member-portal/gym/feedback/options"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "GET",
+    "path": "/api/member-portal/gym/feedback/{id}"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "POST",
+    "path": "/api/member-portal/gym/feedback/{id}/confirm"
+  },
+  {
+    "module": "gym-complaints",
+    "method": "POST",
+    "path": "/api/member-portal/gym/feedback/{id}/reopen"
   },
   {
     "module": "gym-credits",

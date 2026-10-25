@@ -22,6 +22,7 @@ import { GATE_DENIAL_LABEL } from "@/lib/gym/booking";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import { MEMBER_KEYS, membersApi, type Member360, type MemberBooking } from "../api";
 import { MemberAssessments } from "@/features/gym/coaching/components/member-assessments";
+import { MemberComplaints } from "@/features/gym/complaints/components/member-complaints";
 import { MemberNotes } from "./member-notes";
 import { ProfileDialog } from "./profile-dialog";
 
@@ -33,6 +34,7 @@ const TABS = [
   { value: "pembelian", label: "Pembelian" },
   { value: "asesmen", label: "Asesmen" },
   { value: "catatan", label: "Catatan" },
+  { value: "keluhan", label: "Keluhan" },
 ] as const;
 type TabValue = (typeof TABS)[number]["value"];
 
@@ -161,6 +163,9 @@ export function MemberDetailPage({ customerId }: { customerId: string }) {
         </TabsContent>
         <TabsContent value="catatan" className="mt-4">
           <MemberNotes customerId={p.id} notes={m.notes} />
+        </TabsContent>
+        <TabsContent value="keluhan" className="mt-4">
+          <MemberComplaints customerId={p.id} name={p.name} />
         </TabsContent>
       </Tabs>
 
