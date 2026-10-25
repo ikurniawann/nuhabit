@@ -164,8 +164,12 @@ func (s *Service) Documents(ctx context.Context) ([]Document, error) {
 	}
 	out := []Document{}
 	for _, u := range list {
+		published := u.UpdatedAt
+		if u.PublishedAt != nil {
+			published = *u.PublishedAt
+		}
 		for _, a := range u.Attachments {
-			out = append(out, Document{Attachment: a, UpdateID: u.ID, UpdateTitle: u.Title, PublishedAt: *u.PublishedAt})
+			out = append(out, Document{Attachment: a, UpdateID: u.ID, UpdateTitle: u.Title, PublishedAt: published})
 		}
 	}
 	return out, nil

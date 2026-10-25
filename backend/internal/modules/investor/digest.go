@@ -14,6 +14,7 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/jobs"
 	"nuhabit/backend/internal/platform/localtime"
+	"nuhabit/backend/internal/platform/pdfgen"
 )
 
 // Kirim ringkasan harian: investors who turn it on get one email per day
@@ -124,40 +125,20 @@ func digestHTML(o *Overview) string {
 	b.WriteString(`<div style="font-family:Arial,sans-serif;color:#1f2a1f;max-width:560px">`)
 	fmt.Fprintf(&b, `<h2 style="margin:0 0 12px">Ringkasan harian %s</h2>`, html.EscapeString(localtime.FormatDate(mustDay(o.Today), localtime.Jakarta)))
 	b.WriteString(`<table style="border-collapse:collapse;font-size:14px">`)
-	row("Pendapatan kemarin", rupiah(o.Revenue.Today.Previous))
-	row("Pendapatan bulan berjalan", rupiah(o.Revenue.MTD.Value))
+	row("Pendapatan kemarin", pdfgen.RupiahSpaced(o.Revenue.Today.Previous))
+	row("Pendapatan bulan berjalan", pdfgen.RupiahSpaced(o.Revenue.MTD.Value))
 	for _, s := range domain.Streams {
-		row("  "+streamLabels[s], rupiah(o.Revenue.Streams[s]))
+		row("  "+streamLabels[s], pdfgen.RupiahSpaced(o.Revenue.Streams[s]))
 	}
-	row("Pendapatan tahun berjalan", rupiah(o.Revenue.YTD.Value))
+	row("Pendapatan tahun berjalan", pdfgen.RupiahSpaced(o.Revenue.YTD.Value))
 	row("Member aktif 30 hari", fmt.Sprintf("%d", o.Members.Active))
 	row("Member baru bulan ini", fmt.Sprintf("%.0f", o.Members.New.Value))
 	row("Check-in kelas 30 hari", fmt.Sprintf("%d", o.Classes.CheckedIn))
 	row("Rata-rata isi kelas", fmt.Sprintf("%.0f%%", o.Classes.AvgFill*100))
 	row("Sesi PT bulan ini", fmt.Sprintf("%.0f", o.PT.Value))
-	row("ARK Coin beredar", rupiah(o.ArkCoin))
-	row("Pendapatan ditangguhkan", rupiah(o.DeferredRevenue.Total))
+	row("ARK Coin beredar", pdfgen.RupiahSpaced(o.ArkCoin))
+	row("Pendapatan ditangguhkan", pdfgen.RupiahSpaced(o.DeferredRevenue.Total))
 	b.WriteString(`</table>`)
 	b.WriteString(`<p style="font-size:12px;color:#5b6b5b;margin-top:16px">Angka dihitung dalam WIB untuk seluruh cabang. Buka portal investor untuk grafik dan laporan bulanan.</p></div>`)
 	return b.String()
-}
-
-// rupiah formats a whole-rupiah amount with dots as thousand separators.
-func rupiah(v float64) string {
-	neg := v < 0
-	if neg {
-		v = -v
-	}
-	digits := fmt.Sprintf("%.0f", v)
-	var out []byte
-	for i, c := range []byte(digits) {
-		if i > 0 && (len(digits)-i)%3 == 0 {
-			out = append(out, '.')
-		}
-		out = append(out, c)
-	}
-	if neg {
-		return "-Rp " + string(out)
-	}
-	return "Rp " + string(out)
 }
