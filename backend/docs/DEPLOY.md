@@ -59,6 +59,7 @@ Gym pass renewals:
 | `NEXT_PUBLIC_APP_URL` (or `NEXT_PUBLIC_BASE_URL`) | none | Where Xendit sends members back after paying a renewal invoice. Any renewal can fall back to an invoice, so with auto-renewing passes and neither set, the renewal job logs an error at startup and on every run, counts `gym_credits_alerts_total{reason="renewal_invoice_no_app_url"}` and leaves the renewals for a later run instead of opening invoices. |
 | `XENDIT_SAVED_METHODS_ENABLED` | off | `1` lets members save a card or e-wallet (Metode pembayaran) and pick it for auto-renew. Needs the Xendit gateway active in Settings → Payment Gateways and the Payments API webhooks pointed at `/api/payments/xendit/webhook`; with the flag on and no active gateway the job logs an error and counts `reason="saved_methods_gateway_inactive"`. See [XENDIT_SAVED_METHODS.md](XENDIT_SAVED_METHODS.md). |
 | `XENDIT_SAVED_METHOD_CHANNELS` | all | Comma list of Xendit channel codes the hosted linking page offers, e.g. `CARDS,OVO,DANA,SHOPEEPAY`. |
+| `MIDTRANS_MOCK` | off | `1` (local dev only) answers every Midtrans call without the network. Keys live in Settings → Payment Gateways; the notification URL to register at Midtrans is `/api/payments/midtrans/webhook`. See [MIDTRANS.md](MIDTRANS.md). |
 
 ## Metrics
 
