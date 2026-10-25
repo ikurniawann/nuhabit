@@ -15,6 +15,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/paygate"
 )
 
 // Error is a credit rule failure that is safe to show (GymCreditError and
@@ -134,63 +135,11 @@ type ClassType struct {
 	Name string `json:"name"`
 }
 
-// XenditConfig is the active QRIS gateway configuration.
+// XenditConfig is the Xendit row saved payment methods run on.
 type XenditConfig struct {
 	SecretKey   string
 	CallbackURL string
 	Environment string
-}
-
-// QRRequest creates a dynamic QRIS.
-type QRRequest struct {
-	SecretKey   string
-	ReferenceID string
-	Amount      float64
-	CallbackURL string
-	Description string
-}
-
-// QRCode is a created dynamic QRIS.
-type QRCode struct {
-	ID        string
-	QRString  string
-	ExpiresAt string // "" when the gateway sent none
-}
-
-// QRISGateway is the payment provider (Xendit QRIS).
-type QRISGateway interface {
-	// ActiveConfig fails with a user-facing message when no active gateway exists.
-	ActiveConfig(ctx context.Context, db database.Querier) (*XenditConfig, error)
-	CreateDynamicQR(ctx context.Context, req QRRequest) (*QRCode, error)
-	// QRPayments lists the payments of a QR (GET /qr_codes/{id}/payments).
-	QRPayments(ctx context.Context, secretKey, qrID string) ([]map[string]any, error)
-}
-
-// InvoiceRequest creates a hosted Xendit invoice (checkout page).
-type InvoiceRequest struct {
-	ExternalID  string
-	Amount      float64
-	PayerName   string
-	Description string
-	RedirectURL string
-}
-
-// Invoice is a created invoice; Mock is set in XENDIT_MOCK mode.
-type Invoice struct {
-	ID        string
-	URL       string
-	ExpiresAt time.Time
-	Mock      bool
-}
-
-// InvoiceGateway is the Xendit invoice API (XENDIT_SECRET_KEY, XENDIT_MOCK).
-type InvoiceGateway interface {
-	// InvoiceConfigured reports whether invoices can be created.
-	InvoiceConfigured() bool
-	CreateInvoice(ctx context.Context, req InvoiceRequest) (*Invoice, error)
-	// InvoiceStatus is the upper-cased Xendit invoice status (PENDING, PAID,
-	// SETTLED, EXPIRED).
-	InvoiceStatus(ctx context.Context, invoiceID string) (string, error)
 }
 
 // Notice is an in-app message to a member.
@@ -213,8 +162,9 @@ type Ports struct {
 	Members   Members
 	Wallet    ArkWallet
 	Directory Directory
-	Gateway   QRISGateway
-	Invoices  InvoiceGateway
+	// Gateway is the payment gateway port (QRIS, hosted checkout, status,
+	// cancel) routed to the provider active in Settings → Payment Gateways.
+	Gateway paygate.Gateway
 	// Vouchers is the promo-code engine; nil turns voucher codes away.
 	Vouchers Vouchers
 	Notifier Notifier

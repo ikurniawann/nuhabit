@@ -2,6 +2,7 @@ package gymcredits
 
 import (
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/paygate"
 )
 
 // Name is the MODULES key.
@@ -39,8 +40,7 @@ func NewDefaultService(deps module.Deps, db DB) *Service {
 		Members:      SQLMembers{},
 		Wallet:       SQLArkWallet{Log: deps.Log},
 		Directory:    SQLDirectory{},
-		Gateway:      xendit,
-		Invoices:     xendit,
+		Gateway:      paygate.NewRouter(xendit, paygate.NewMidtrans(nil)),
 		Notifier:     SQLNotifier{},
 		Till:         SQLTill{},
 		SavedMethods: xendit,

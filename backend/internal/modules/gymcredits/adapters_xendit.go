@@ -14,14 +14,14 @@ import (
 	"strings"
 	"time"
 
-	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/paygate"
 )
 
-// XenditGateway is the QRIS adapter: the calls of
-// frontend/src/lib/payments/xendit.ts that gym purchases use, with the
-// gateway row read from configuration.payment_gateways. It is also the
-// invoice adapter (lib/xendit/client.ts): hosted checkout pages keyed by
-// XENDIT_SECRET_KEY, with the dev-only XENDIT_MOCK=1 mode.
+// XenditGateway is the Xendit adapter of the payment gateway port: dynamic
+// QRIS (the calls of frontend/src/lib/payments/xendit.ts, keyed by the
+// gateway row) and hosted invoices (lib/xendit/client.ts, keyed by
+// XENDIT_SECRET_KEY, with the dev-only XENDIT_MOCK=1 mode). It is also the
+// saved payment methods client (adapters_xendit_saved.go).
 type XenditGateway struct {
 	// BaseURL defaults to XENDIT_API_BASE_URL or https://api.xendit.co.
 	BaseURL string
@@ -29,10 +29,7 @@ type XenditGateway struct {
 	Getenv  func(string) string
 }
 
-var (
-	_ QRISGateway    = (*XenditGateway)(nil)
-	_ InvoiceGateway = (*XenditGateway)(nil)
-)
+var _ paygate.Adapter = (*XenditGateway)(nil)
 
 // NewXenditGateway reads XENDIT_API_BASE_URL (a local mock in tests).
 func NewXenditGateway() *XenditGateway {
@@ -43,28 +40,38 @@ func NewXenditGateway() *XenditGateway {
 	return &XenditGateway{BaseURL: strings.TrimRight(base, "/"), Client: &http.Client{Timeout: 30 * time.Second}, Getenv: os.Getenv}
 }
 
-const invoiceExpiryHours = 2
+func (g *XenditGateway) Provider() paygate.Provider { return paygate.Xendit }
+
+const (
+	invoiceExpiryHours = 2
+	msgNoXenditKey     = "XENDIT_SECRET_KEY belum dikonfigurasi"
+)
 
 // mockInvoices is isXenditMock.
 func (g *XenditGateway) mockInvoices() bool { return g.Getenv("XENDIT_MOCK") == "1" }
 
-func (g *XenditGateway) InvoiceConfigured() bool {
-	return g.Getenv("XENDIT_SECRET_KEY") != "" || g.mockInvoices()
+// HostedProblem: invoices need XENDIT_SECRET_KEY (or the mock mode); the
+// gateway row is not involved.
+func (g *XenditGateway) HostedProblem(*paygate.Config) string {
+	if g.Getenv("XENDIT_SECRET_KEY") != "" || g.mockInvoices() {
+		return ""
+	}
+	return msgNoXenditKey
 }
 
-// CreateInvoice mirrors createInvoice (POST /v2/invoices). In mock mode the
-// invoice URL is the redirect URL itself and InvoiceStatus reports it paid.
-func (g *XenditGateway) CreateInvoice(ctx context.Context, in InvoiceRequest) (*Invoice, error) {
+// CreateHosted mirrors createInvoice (POST /v2/invoices). In mock mode the
+// invoice URL is the redirect URL itself and Status reports it paid.
+func (g *XenditGateway) CreateHosted(ctx context.Context, _ *paygate.Config, in paygate.HostedRequest) (*paygate.Hosted, error) {
 	expiresAt := time.Now().Add(invoiceExpiryHours * time.Hour)
 	if g.mockInvoices() {
-		return &Invoice{ID: "mock-" + in.ExternalID, URL: in.RedirectURL, ExpiresAt: expiresAt, Mock: true}, nil
+		return &paygate.Hosted{ID: "mock-" + in.ReferenceID, URL: in.RedirectURL, ExpiresAt: expiresAt, Mock: true}, nil
 	}
 	secret := g.Getenv("XENDIT_SECRET_KEY")
 	if secret == "" {
-		return nil, errors.New("XENDIT_SECRET_KEY belum dikonfigurasi")
+		return nil, errors.New(msgNoXenditKey)
 	}
 	status, raw, err := g.do(ctx, http.MethodPost, "/v2/invoices", secret, map[string]any{
-		"external_id":          in.ExternalID,
+		"external_id":          in.ReferenceID,
 		"amount":               in.Amount,
 		"description":          in.Description,
 		"invoice_duration":     invoiceExpiryHours * 60 * 60,
@@ -80,7 +87,7 @@ func (g *XenditGateway) CreateInvoice(ctx context.Context, in InvoiceRequest) (*
 	if status < 200 || status > 299 {
 		return nil, fmt.Errorf("Xendit menolak pembuatan invoice (HTTP %d): %s", status, jsString(payload["message"]))
 	}
-	inv := &Invoice{ID: jsString(payload["id"]), URL: jsString(payload["invoice_url"]), ExpiresAt: expiresAt}
+	inv := &paygate.Hosted{ID: jsString(payload["id"]), URL: jsString(payload["invoice_url"]), ExpiresAt: expiresAt}
 	if inv.ID == "" || inv.URL == "" {
 		return nil, errors.New("Incomplete payment gateway response")
 	}
@@ -90,8 +97,8 @@ func (g *XenditGateway) CreateInvoice(ctx context.Context, in InvoiceRequest) (*
 	return inv, nil
 }
 
-// InvoiceStatus mirrors GET /v2/invoices/{id}.
-func (g *XenditGateway) InvoiceStatus(ctx context.Context, invoiceID string) (string, error) {
+// invoiceStatus mirrors GET /v2/invoices/{id}: PENDING, PAID, SETTLED or EXPIRED.
+func (g *XenditGateway) invoiceStatus(ctx context.Context, invoiceID string) (string, error) {
 	if g.mockInvoices() && strings.HasPrefix(invoiceID, "mock-") {
 		return "PAID", nil
 	}
@@ -104,35 +111,6 @@ func (g *XenditGateway) InvoiceStatus(ctx context.Context, invoiceID string) (st
 		return "", fmt.Errorf("Failed to fetch invoice (%d)", status)
 	}
 	return strings.ToUpper(jsString(payload["status"])), nil
-}
-
-// ActiveConfig mirrors loadActiveXenditConfig, with its error messages.
-func (g *XenditGateway) ActiveConfig(ctx context.Context, db database.Querier) (*XenditConfig, error) {
-	var active bool
-	var secret, callback *string
-	var environment string
-	err := db.QueryRow(ctx,
-		`SELECT is_active, secret_key, callback_url, environment
-		   FROM configuration.payment_gateways WHERE provider = 'xendit' LIMIT 1`,
-	).Scan(&active, &secret, &callback, &environment)
-	switch {
-	case database.IsNoRows(err):
-		return nil, errors.New("QRIS payment gateway is not configured. Set it in Settings → Payment Gateways.")
-	case err != nil:
-		return nil, err
-	case !active:
-		return nil, errors.New("QRIS payment gateway is inactive. Enable it in Settings → Payment Gateways.")
-	case secret == nil || strings.TrimSpace(*secret) == "":
-		return nil, errors.New("Payment gateway secret key is missing.")
-	}
-	cfg := &XenditConfig{SecretKey: strings.TrimSpace(*secret), Environment: "sandbox"}
-	if callback != nil {
-		cfg.CallbackURL = strings.TrimSpace(*callback)
-	}
-	if environment == "live" {
-		cfg.Environment = "live"
-	}
-	return cfg, nil
 }
 
 func (g *XenditGateway) do(ctx context.Context, method, path, secretKey string, body any) (int, any, error) {
@@ -175,8 +153,12 @@ func (g *XenditGateway) send(ctx context.Context, method, path, secretKey, apiVe
 	return res.StatusCode, payload, nil
 }
 
-// CreateDynamicQR mirrors createXenditDynamicQr.
-func (g *XenditGateway) CreateDynamicQR(ctx context.Context, in QRRequest) (*QRCode, error) {
+// CreateQR mirrors createXenditDynamicQr (POST /qr_codes) with the row's
+// secret key.
+func (g *XenditGateway) CreateQR(ctx context.Context, cfg *paygate.Config, in paygate.QRRequest) (*paygate.QR, error) {
+	if cfg == nil || cfg.SecretKey == "" {
+		return nil, errors.New(paygate.MsgNoSecret)
+	}
 	body := map[string]any{
 		"reference_id": in.ReferenceID,
 		"type":         "DYNAMIC",
@@ -189,7 +171,7 @@ func (g *XenditGateway) CreateDynamicQR(ctx context.Context, in QRRequest) (*QRC
 	if in.Description != "" {
 		body["description"] = in.Description
 	}
-	status, raw, err := g.do(ctx, http.MethodPost, "/qr_codes", in.SecretKey, body)
+	status, raw, err := g.do(ctx, http.MethodPost, "/qr_codes", cfg.SecretKey, body)
 	if err != nil {
 		return nil, err
 	}
@@ -203,15 +185,53 @@ func (g *XenditGateway) CreateDynamicQR(ctx context.Context, in QRRequest) (*QRC
 		}
 		return nil, fmt.Errorf("Failed to create QRIS (%d)", status)
 	}
-	qr := &QRCode{ID: jsString(payload["id"]), QRString: jsString(payload["qr_string"]), ExpiresAt: jsString(payload["expires_at"])}
+	qr := &paygate.QR{ID: jsString(payload["id"]), QRString: jsString(payload["qr_string"]), ExpiresAt: jsString(payload["expires_at"])}
 	if qr.ID == "" || qr.QRString == "" {
 		return nil, errors.New("Incomplete payment gateway response")
 	}
 	return qr, nil
 }
 
-// QRPayments mirrors getXenditQrPayments.
-func (g *XenditGateway) QRPayments(ctx context.Context, secretKey, qrID string) ([]map[string]any, error) {
+// Status reads a QR's payments (GET /qr_codes/{id}/payments) or an
+// invoice's status. A Xendit QR never reports expiry; the caller's own
+// expires_at closes it.
+func (g *XenditGateway) Status(ctx context.Context, cfg *paygate.Config, ref paygate.Ref) (*paygate.Status, error) {
+	if ref.QRID != "" {
+		if cfg == nil || cfg.SecretKey == "" {
+			return nil, errors.New(paygate.MsgNoSecret)
+		}
+		payments, err := g.qrPayments(ctx, cfg.SecretKey, ref.QRID)
+		if err != nil {
+			return nil, err
+		}
+		if paymentID, paid := pickPaidPayment(payments); paid {
+			return &paygate.Status{State: paygate.StatePaid, PaymentID: paymentID, Raw: "SUCCEEDED"}, nil
+		}
+		return &paygate.Status{State: paygate.StatePending}, nil
+	}
+	if ref.HostedID == "" {
+		return &paygate.Status{State: paygate.StatePending}, nil
+	}
+	status, err := g.invoiceStatus(ctx, ref.HostedID)
+	if err != nil {
+		return nil, err
+	}
+	st := &paygate.Status{State: paygate.StatePending, Raw: status}
+	switch status {
+	case "PAID", "SETTLED":
+		st.State = paygate.StatePaid
+	case "EXPIRED":
+		st.State = paygate.StateExpired
+	}
+	return st, nil
+}
+
+// Cancel is a no-op: a dynamic QR expires on its own and the webhook
+// still settles a late payment, which the purchase then honours.
+func (g *XenditGateway) Cancel(context.Context, *paygate.Config, paygate.Ref) error { return nil }
+
+// qrPayments mirrors getXenditQrPayments.
+func (g *XenditGateway) qrPayments(ctx context.Context, secretKey, qrID string) ([]map[string]any, error) {
 	status, raw, err := g.do(ctx, http.MethodGet, "/qr_codes/"+url.PathEscape(qrID)+"/payments", secretKey, nil)
 	if err != nil {
 		return nil, err
@@ -235,6 +255,24 @@ func (g *XenditGateway) QRPayments(ctx context.Context, secretKey, qrID string) 
 		return objects(list), nil
 	}
 	return nil, nil
+}
+
+// paidStatuses are the Xendit payment statuses that mean money arrived.
+var paidStatuses = map[string]bool{"SUCCEEDED": true, "SUCCESS": true, "COMPLETED": true, "PAID": true}
+
+// pickPaidPayment returns the id of the first successful payment, or "".
+func pickPaidPayment(rows []map[string]any) (string, bool) {
+	for _, row := range rows {
+		if !paidStatuses[strings.ToUpper(jsString(row["status"]))] {
+			continue
+		}
+		id := jsString(row["id"])
+		if id == "" {
+			id = jsString(row["payment_id"])
+		}
+		return id, true
+	}
+	return "", false
 }
 
 func objects(list []any) []map[string]any {

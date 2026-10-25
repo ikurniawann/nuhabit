@@ -10,6 +10,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/paygate"
 )
 
 /* ── Package catalog ─────────────────────────────────────────────────── */
@@ -370,12 +371,14 @@ func (s *Service) PortalPackages(ctx context.Context, customerID string) (*Porta
 	if err != nil {
 		return nil, err
 	}
+	_, gatewayCfg, _ := s.ports.Gateway.Resolve(ctx, s.db)
 	view := &PortalPackagesView{
 		Packages:      make([]PortalPackage, 0, len(packages)),
 		ArkEnabled:    s.ports.Wallet.Enabled(ctx, s.db),
 		ArkBalanceIdr: balance,
 		ArkRate:       rate,
 		CanSimulate:   s.canSimulate(),
+		Gateway:       paygate.Caps(gatewayCfg, savedMethodsFlagOn() && s.ports.SavedMethods != nil),
 	}
 	for _, p := range packages {
 		problem := domain.CheckPackagePurchase(domain.PurchasablePackage{

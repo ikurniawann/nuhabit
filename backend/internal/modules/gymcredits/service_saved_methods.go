@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/paygate"
 )
 
 // Saved payment methods: a member links a card or e-wallet on the Xendit
@@ -215,11 +216,13 @@ func (s *Service) savedRail(ctx context.Context, simulated bool) (savedRail, boo
 	if simulated {
 		return savedRail{gw: simulatedSavedMethods{}, simulated: true}, s.canSimulate()
 	}
-	cfg, err := s.ports.Gateway.ActiveConfig(ctx, s.db)
-	if err != nil {
+	// Saved methods are a Xendit Payments API feature: another active
+	// gateway turns them off.
+	_, cfg, err := s.ports.Gateway.Resolve(ctx, s.db)
+	if err != nil || cfg.Provider != paygate.Xendit {
 		return savedRail{}, false
 	}
-	return savedRail{cfg: cfg, gw: s.ports.SavedMethods}, true
+	return savedRail{cfg: &XenditConfig{SecretKey: cfg.SecretKey, CallbackURL: cfg.CallbackURL, Environment: cfg.Environment}, gw: s.ports.SavedMethods}, true
 }
 
 // linkRail is the rail new links use while the flag is on: the real

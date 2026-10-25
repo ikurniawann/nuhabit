@@ -7,19 +7,40 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/paygate"
 )
 
-// paidQR is a QRIS gateway whose every QR has a successful payment.
+// paidQR is an active Xendit gateway whose every QR has a successful payment.
 type paidQR struct{}
 
-func (paidQR) ActiveConfig(context.Context, database.Querier) (*XenditConfig, error) {
-	return &XenditConfig{SecretKey: "test"}, nil
+var paidQRConfig = &paygate.Config{Provider: paygate.Xendit, Environment: "sandbox", SecretKey: "test"}
+
+func (paidQR) Resolve(context.Context, database.Querier) (paygate.Adapter, *paygate.Config, error) {
+	return paidQR{}, paidQRConfig, nil
 }
 
-func (paidQR) CreateDynamicQR(context.Context, QRRequest) (*QRCode, error) { return nil, nil }
+func (paidQR) Lookup(context.Context, database.Querier, paygate.Provider) (paygate.Adapter, *paygate.Config, error) {
+	return paidQR{}, paidQRConfig, nil
+}
 
-func (paidQR) QRPayments(_ context.Context, _, qrID string) ([]map[string]any, error) {
-	return []map[string]any{{"status": "SUCCEEDED", "id": "pay_" + qrID}}, nil
+func (paidQR) Provider() paygate.Provider                                 { return paygate.Xendit }
+func (paidQR) HostedProblem(*paygate.Config) string                       { return "" }
+func (paidQR) Cancel(context.Context, *paygate.Config, paygate.Ref) error { return nil }
+
+func (paidQR) CreateQR(context.Context, *paygate.Config, paygate.QRRequest) (*paygate.QR, error) {
+	return nil, nil
+}
+
+// CreateHosted answers like XENDIT_MOCK: the page is the redirect URL.
+func (paidQR) CreateHosted(_ context.Context, _ *paygate.Config, req paygate.HostedRequest) (*paygate.Hosted, error) {
+	return &paygate.Hosted{ID: "mock-" + req.ReferenceID, URL: req.RedirectURL, ExpiresAt: time.Now().Add(2 * time.Hour), Mock: true}, nil
+}
+
+func (paidQR) Status(_ context.Context, _ *paygate.Config, ref paygate.Ref) (*paygate.Status, error) {
+	if ref.QRID == "" && ref.HostedID == "" {
+		return &paygate.Status{State: paygate.StatePending}, nil
+	}
+	return &paygate.Status{State: paygate.StatePaid, PaymentID: "pay_" + ref.QRID + ref.HostedID, Raw: "SUCCEEDED"}, nil
 }
 
 func (e *env) pendingPurchase(pkg, channel string, meta map[string]any, age time.Duration) string {

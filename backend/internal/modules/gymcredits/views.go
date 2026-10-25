@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/gymcredits/domain"
+	"nuhabit/backend/internal/platform/paygate"
 )
 
 // JSTime marshals like a JS Date through JSON.stringify: UTC, milliseconds, "Z".
@@ -76,22 +77,32 @@ type MemberPurchaseView struct {
 	ValidityDays  int     `json:"validity_days"`
 	TotalIdr      float64 `json:"total_idr"`
 	PaymentMethod *string `json:"payment_method"`
-	QRString      any     `json:"qr_string"`
-	InvoiceURL    any     `json:"invoice_url"`
-	ExpiresAt     any     `json:"expires_at"`
-	Simulated     bool    `json:"simulated"`
-	PaidAt        *JSTime `json:"paid_at"`
-	CreatedAt     JSTime  `json:"created_at"`
+	// Gateway is the provider the payment runs at (xendit, midtrans), or
+	// dev_simulated.
+	Gateway  string `json:"gateway"`
+	QRString any    `json:"qr_string"`
+	// QRImageURL is a rendered QR PNG when the gateway serves one (Midtrans).
+	QRImageURL any     `json:"qr_image_url"`
+	InvoiceURL any     `json:"invoice_url"`
+	ExpiresAt  any     `json:"expires_at"`
+	Simulated  bool    `json:"simulated"`
+	PaidAt     *JSTime `json:"paid_at"`
+	CreatedAt  JSTime  `json:"created_at"`
 }
 
 func memberPurchaseView(p *Purchase) *MemberPurchaseView {
 	meta := p.meta()
-	var qr, invoiceURL any
+	var qr, qrImage, invoiceURL any
 	if p.Status == "pending" {
 		qr = meta["qr_string"]
+		qrImage = meta["qr_image_url"]
 		invoiceURL = meta["invoice_url"]
 	}
 	simulated, _ := meta["simulated"].(bool)
+	gateway, _ := meta["gateway"].(string)
+	if gateway == "" {
+		gateway, _ = meta["provider"].(string)
+	}
 	return &MemberPurchaseView{
 		ID:            p.ID,
 		Status:        p.Status,
@@ -102,7 +113,9 @@ func memberPurchaseView(p *Purchase) *MemberPurchaseView {
 		ValidityDays:  p.ValidityDays,
 		TotalIdr:      p.TotalIdr,
 		PaymentMethod: p.PaymentMethod,
+		Gateway:       gateway,
 		QRString:      qr,
+		QRImageURL:    qrImage,
 		InvoiceURL:    invoiceURL,
 		ExpiresAt:     meta["expires_at"],
 		Simulated:     simulated,
@@ -334,4 +347,6 @@ type PortalPackagesView struct {
 	ArkBalanceIdr float64         `json:"ark_balance_idr"`
 	ArkRate       float64         `json:"ark_rate"`
 	CanSimulate   bool            `json:"can_simulate"`
+	// Gateway tells the member app which provider pays and what it offers.
+	Gateway paygate.Capabilities `json:"gateway"`
 }

@@ -17,6 +17,7 @@ import (
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/localtime"
+	"nuhabit/backend/internal/platform/paygate"
 )
 
 // Purchase lifecycle: pending -> paid -> refunded. Money and credits are
@@ -568,44 +569,58 @@ func (in MemberPurchase) tag(meta map[string]any) map[string]any {
 	return meta
 }
 
-// StartQRISPurchase buys a package through a dynamic QRIS. Without an active
-// gateway only local dev (the dev-bypass guard) gets a simulated QR.
-// callbackURL maps the configured gateway callback ("" when unset) to the
-// webhook URL Xendit should call.
+// StartQRISPurchase buys a package through a dynamic QRIS at the active
+// gateway. Without an active gateway only local dev (the dev-bypass guard)
+// gets a simulated QR. callbackURL maps the configured gateway callback (""
+// when unset) to the webhook URL Xendit should call. A Midtrans account
+// without a QRIS channel falls back to a hosted Snap page.
 func (s *Service) StartQRISPurchase(ctx context.Context, in MemberPurchase, callbackURL func(configured string) string) (*MemberPurchaseView, error) {
 	return s.startPendingPurchase(ctx, in, "qris", func(purchase *Purchase, referenceID string) (map[string]any, error) {
 		return s.createQR(ctx, purchase, referenceID, callbackURL)
 	})
 }
 
-// StartInvoicePurchase buys a package through a hosted Xendit invoice: the
-// member pays on the invoice URL and lands on redirectURL(purchaseID), the
-// status page, which polls until the invoice is paid.
+// StartInvoicePurchase buys a package through a hosted checkout page
+// (Xendit invoice or Midtrans Snap): the member pays there and lands on
+// redirectURL(purchaseID), the status page, which polls until paid.
 func (s *Service) StartInvoicePurchase(ctx context.Context, in MemberPurchase, redirectURL func(purchaseID string) string) (*MemberPurchaseView, error) {
-	if !s.ports.Invoices.InvoiceConfigured() {
-		return nil, failCode(http.StatusServiceUnavailable, "PAYMENT_UNAVAILABLE", "Pembayaran online belum tersedia: XENDIT_SECRET_KEY belum dikonfigurasi", nil)
+	gw, cfg, _ := s.ports.Gateway.Resolve(ctx, s.db)
+	if gw == nil {
+		return nil, failCode(http.StatusServiceUnavailable, "PAYMENT_UNAVAILABLE", "Pembayaran online belum tersedia", nil)
+	}
+	if problem := gw.HostedProblem(cfg); problem != "" {
+		return nil, failCode(http.StatusServiceUnavailable, "PAYMENT_UNAVAILABLE", "Pembayaran online belum tersedia: "+problem, nil)
 	}
 	return s.startPendingPurchase(ctx, in, "invoice", func(purchase *Purchase, referenceID string) (map[string]any, error) {
-		profile, err := s.ports.Members.Profile(ctx, s.db, purchase.CustomerID)
-		if err != nil {
-			return nil, err
-		}
-		payer := "Member"
-		if profile != nil && profile.Name != nil && *profile.Name != "" {
-			payer = *profile.Name
-		}
-		inv, err := s.ports.Invoices.CreateInvoice(ctx, InvoiceRequest{
-			ExternalID: referenceID, Amount: purchase.TotalIdr, PayerName: payer,
-			Description: "Paket " + purchase.PackageName, RedirectURL: redirectURL(purchase.ID),
-		})
-		if err != nil {
-			return nil, err
-		}
-		return map[string]any{
-			"provider": "xendit_invoice", "invoice_id": inv.ID, "invoice_url": inv.URL,
-			"expires_at": isoString(inv.ExpiresAt), "simulated": inv.Mock,
-		}, nil
+		return s.createHosted(ctx, gw, cfg, purchase, referenceID, redirectURL(purchase.ID))
 	})
+}
+
+// createHosted asks the gateway for a checkout page and returns its
+// payment_meta: invoice_id and invoice_url, as the member app reads them.
+func (s *Service) createHosted(ctx context.Context, gw paygate.Adapter, cfg *paygate.Config, purchase *Purchase, referenceID, redirectURL string) (map[string]any, error) {
+	profile, err := s.ports.Members.Profile(ctx, s.db, purchase.CustomerID)
+	if err != nil {
+		return nil, err
+	}
+	req := paygate.HostedRequest{
+		ReferenceID: referenceID, Amount: purchase.TotalIdr, PayerName: "Member",
+		Description: "Paket " + purchase.PackageName, RedirectURL: redirectURL, Expiry: invoiceExpiryHours * time.Hour,
+	}
+	if profile != nil {
+		if profile.Name != nil && *profile.Name != "" {
+			req.PayerName = *profile.Name
+		}
+		req.PayerEmail, req.PayerPhone = deref(profile.Email), profile.Phone
+	}
+	inv, err := gw.CreateHosted(ctx, cfg, req)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"provider": string(gw.Provider()) + "_invoice", "gateway": string(gw.Provider()), "invoice_id": inv.ID, "invoice_url": inv.URL,
+		"expires_at": isoString(inv.ExpiresAt), "simulated": inv.Mock,
+	}, nil
 }
 
 // startPendingPurchase records the purchase, settles a free one at once,
@@ -655,38 +670,48 @@ func (s *Service) startPendingPurchase(ctx context.Context, in MemberPurchase, m
 	return memberPurchaseView(reloaded), nil
 }
 
+// createQR asks the active gateway for a dynamic QR. The purchase keeps the
+// QR under qr_id; a gateway without QRIS gets a hosted page instead, kept
+// under invoice_id so the member app shows a checkout link.
 func (s *Service) createQR(ctx context.Context, purchase *Purchase, referenceID string, callbackURL func(string) string) (map[string]any, error) {
-	config, err := s.ports.Gateway.ActiveConfig(ctx, s.db)
+	gw, cfg, err := s.ports.Gateway.Resolve(ctx, s.db)
 	if err != nil {
 		if !s.canSimulate() {
 			return nil, failCode(http.StatusServiceUnavailable, "PAYMENT_UNAVAILABLE", "Pembayaran QRIS belum tersedia: "+err.Error(), nil)
 		}
-		config = nil
-	}
-	var qr *QRCode
-	if config != nil {
-		qr, err = s.ports.Gateway.CreateDynamicQR(ctx, QRRequest{
-			SecretKey: config.SecretKey, ReferenceID: referenceID, Amount: purchase.TotalIdr,
-			CallbackURL: callbackURL(config.CallbackURL), Description: "Paket kredit " + purchase.PackageName,
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-	if qr == nil {
 		return map[string]any{
 			"provider": "dev_simulated", "environment": "local", "qr_id": nil,
 			"qr_string": "DEV-SIMULATED-QRIS-" + referenceID, "expires_at": isoString(s.clock().Add(qrDisplayTTL)), "simulated": true,
 		}, nil
 	}
+	qr, err := gw.CreateQR(ctx, cfg, paygate.QRRequest{
+		ReferenceID: referenceID, Amount: purchase.TotalIdr, CallbackURL: callbackURL(cfg.CallbackURL),
+		Description: "Paket kredit " + purchase.PackageName, Expiry: qrDisplayTTL,
+	})
+	if errors.Is(err, paygate.ErrQRUnavailable) {
+		s.log.WarnContext(ctx, "[gym-credits] QRIS tidak aktif di gateway, memakai halaman checkout", "gateway", gw.Provider())
+		meta, err := s.createHosted(ctx, gw, cfg, purchase, referenceID, envOrigin()+"/member/wallet/pay/"+purchase.ID)
+		if err != nil {
+			return nil, err
+		}
+		meta["environment"] = cfg.Environment
+		return meta, nil
+	}
+	if err != nil {
+		return nil, err
+	}
 	expiresAt := qr.ExpiresAt
 	if expiresAt == "" {
 		expiresAt = isoString(s.clock().Add(qrDisplayTTL))
 	}
-	return map[string]any{
-		"provider": "xendit", "environment": config.Environment, "qr_id": qr.ID,
+	meta := map[string]any{
+		"provider": string(gw.Provider()), "gateway": string(gw.Provider()), "environment": cfg.Environment, "qr_id": qr.ID,
 		"qr_string": qr.QRString, "expires_at": expiresAt, "simulated": false,
-	}, nil
+	}
+	if qr.ImageURL != "" {
+		meta["qr_image_url"] = qr.ImageURL
+	}
+	return meta, nil
 }
 
 // SettleResult is the outcome of a gateway payment notification.
@@ -695,10 +720,9 @@ type SettleResult struct {
 	PurchaseID string `json:"purchase_id,omitempty"`
 }
 
-// SettleByReference marks the purchase with a QRIS reference_id paid. The
-// Xendit webhook (still in TS: /api/payments/xendit/webhook) calls the TS
-// twin of this for gymcp_ references; it is exposed here for when the
-// webhook moves to Go.
+// SettleByReference marks the purchase with a gateway reference paid. The
+// payment webhooks (/api/payments/xendit/webhook,
+// /api/payments/midtrans/webhook) call it for gymcp_ references.
 func (s *Service) SettleByReference(ctx context.Context, referenceID string, paymentID *string) (*SettleResult, error) {
 	var result *SettleResult
 	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
@@ -725,24 +749,6 @@ func (s *Service) SettleByReference(ctx context.Context, referenceID string, pay
 		return nil
 	})
 	return result, err
-}
-
-// paidStatuses are the Xendit payment statuses that mean money arrived.
-var paidStatuses = map[string]bool{"SUCCEEDED": true, "SUCCESS": true, "COMPLETED": true, "PAID": true}
-
-// pickPaidPayment returns the id of the first successful payment, or "".
-func pickPaidPayment(rows []map[string]any) (string, bool) {
-	for _, row := range rows {
-		if !paidStatuses[strings.ToUpper(jsString(row["status"]))] {
-			continue
-		}
-		id := jsString(row["id"])
-		if id == "" {
-			id = jsString(row["payment_id"])
-		}
-		return id, true
-	}
-	return "", false
 }
 
 // jsString is String(v || "") for the JSON scalars a gateway sends.
@@ -806,24 +812,17 @@ func (s *Service) ReconcilePendingPurchases(ctx context.Context, now time.Time) 
 	return errors.Join(errs...)
 }
 
-// reconcilePending asks Xendit about a pending purchase and settles a paid
-// one, then closes a QR or invoice past its expiry. It returns the purchase
-// as it stands afterwards. Gateway failures are logged, not returned, so the
-// expiry check still runs.
+// reconcilePending asks the gateway about a pending purchase and settles a
+// paid one, then closes a QR or hosted page past its expiry. It returns
+// the purchase as it stands afterwards. Gateway failures are logged, not
+// returned, so the expiry check still runs.
 func (s *Service) reconcilePending(ctx context.Context, row *Purchase) (*Purchase, error) {
 	meta := row.meta()
-	if qrID, _ := meta["qr_id"].(string); qrID != "" {
-		settled, err := s.reconcileQR(ctx, row.ID, qrID)
+	ref := gatewayRef(row, meta)
+	if ref.QRID != "" || ref.HostedID != "" {
+		settled, err := s.reconcileGateway(ctx, row, ref)
 		if err != nil {
-			s.log.WarnContext(ctx, "[gym-credits] rekonsiliasi QR gagal", "qr_id", qrID, "error", err)
-		} else if settled != nil {
-			return settled, nil
-		}
-	}
-	if invoiceID, _ := meta["invoice_id"].(string); invoiceID != "" {
-		settled, err := s.reconcileInvoice(ctx, row.ID, invoiceID)
-		if err != nil {
-			s.log.WarnContext(ctx, "[gym-credits] rekonsiliasi invoice gagal", "invoice_id", invoiceID, "error", err)
+			s.log.WarnContext(ctx, "[gym-credits] rekonsiliasi pembayaran gagal", "purchase_id", row.ID, "error", err)
 		} else if settled != nil {
 			return settled, nil
 		}
@@ -843,61 +842,120 @@ func (s *Service) reconcilePending(ctx context.Context, row *Purchase) (*Purchas
 	}
 	if expiresAt, ok := meta["expires_at"].(string); ok {
 		if t, err := time.Parse(time.RFC3339Nano, expiresAt); err == nil && t.Before(s.clock()) {
-			if err := s.closePurchase(ctx, row.ID, "expired"); err != nil {
-				return nil, err
-			}
-			return s.repo.Purchase(ctx, s.db, row.ID, false)
+			return s.expirePurchase(ctx, row, ref)
 		}
 	}
 	return row, nil
 }
 
-func (s *Service) reconcileQR(ctx context.Context, purchaseID, qrID string) (*Purchase, error) {
-	config, err := s.ports.Gateway.ActiveConfig(ctx, s.db)
+// gatewayRef is the gateway handle of a purchase: its reference plus the
+// QR or hosted page id from payment_meta.
+func gatewayRef(row *Purchase, meta map[string]any) paygate.Ref {
+	qrID, _ := meta["qr_id"].(string)
+	hostedID, _ := meta["invoice_id"].(string)
+	return paygate.Ref{ReferenceID: deref(row.ExternalID), QRID: qrID, HostedID: hostedID}
+}
+
+// gatewayOf is the provider a purchase was created at: payment_meta.gateway,
+// else the provider word (xendit_invoice is Xendit); Xendit for older rows.
+func gatewayOf(meta map[string]any) paygate.Provider {
+	if g, _ := meta["gateway"].(string); g != "" {
+		return paygate.Provider(g)
+	}
+	provider, _ := meta["provider"].(string)
+	if p := paygate.Provider(strings.TrimSuffix(provider, "_invoice")); p == paygate.Midtrans {
+		return p
+	}
+	return paygate.Xendit
+}
+
+// gatewayFor is the adapter and row a purchase reconciles against: the one
+// it was created at, even when another gateway is active now. A missing
+// row only stops QR reconciliation (a hosted Xendit invoice runs on
+// environment keys), so the adapter judges cfg itself.
+func (s *Service) gatewayFor(ctx context.Context, meta map[string]any) (paygate.Adapter, *paygate.Config, error) {
+	gw, cfg, err := s.ports.Gateway.Lookup(ctx, s.db, gatewayOf(meta))
+	if gw == nil {
+		return nil, nil, err
+	}
+	return gw, cfg, nil
+}
+
+// reconcileGateway reads the payment's status and settles a paid one or
+// closes an expired or canceled one; nil means still pending.
+func (s *Service) reconcileGateway(ctx context.Context, row *Purchase, ref paygate.Ref) (*Purchase, error) {
+	gw, cfg, err := s.gatewayFor(ctx, row.meta())
 	if err != nil {
 		return nil, err
 	}
-	payments, err := s.ports.Gateway.QRPayments(ctx, config.SecretKey, qrID)
+	st, err := gw.Status(ctx, cfg, ref)
 	if err != nil {
 		return nil, err
 	}
-	paymentID, paid := pickPaidPayment(payments)
-	if !paid {
-		return nil, nil
+	switch {
+	case st.State == paygate.StatePaid:
+		return s.settleReconciled(ctx, row.ID, st)
+	case st.State.Closed():
+		if err := s.closePurchase(ctx, row.ID, "expired"); err != nil {
+			return nil, err
+		}
+		return s.repo.Purchase(ctx, s.db, row.ID, false)
 	}
+	return nil, nil
+}
+
+func (s *Service) settleReconciled(ctx context.Context, purchaseID string, st *paygate.Status) (*Purchase, error) {
 	var settled *Purchase
-	err = database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		var err error
-		_, settled, err = s.markPaid(ctx, tx, purchaseID, map[string]any{"xendit_payment_id": paymentID, "reconciled": true})
+		_, settled, err = s.markPaid(ctx, tx, purchaseID, map[string]any{"gateway_payment_id": st.PaymentID, "gateway_status": st.Raw, "reconciled": true})
 		return err
 	})
 	return settled, err
 }
 
-// reconcileInvoice asks Xendit for the invoice status and settles a paid
-// one; nil means still pending (an expired invoice closes the purchase).
-func (s *Service) reconcileInvoice(ctx context.Context, purchaseID, invoiceID string) (*Purchase, error) {
-	status, err := s.ports.Invoices.InvoiceStatus(ctx, invoiceID)
+// expirePurchase closes a purchase whose QR or page passed its expiry. The
+// gateway is asked to cancel first so a late payment cannot land on a
+// closed purchase; one it can no longer cancel is read again and, if it
+// was paid meanwhile, settled instead.
+func (s *Service) expirePurchase(ctx context.Context, row *Purchase, ref paygate.Ref) (*Purchase, error) {
+	if ref.QRID != "" || ref.HostedID != "" {
+		if gw, cfg, err := s.gatewayFor(ctx, row.meta()); err == nil {
+			switch err := gw.Cancel(ctx, cfg, ref); {
+			case errors.Is(err, paygate.ErrNotCancelable):
+				if st, err := gw.Status(ctx, cfg, ref); err == nil && st.State == paygate.StatePaid {
+					return s.settleReconciled(ctx, row.ID, st)
+				}
+			case err != nil:
+				s.log.WarnContext(ctx, "[gym-credits] pembatalan di gateway gagal", "purchase_id", row.ID, "error", err)
+			}
+		}
+	}
+	if err := s.closePurchase(ctx, row.ID, "expired"); err != nil {
+		return nil, err
+	}
+	return s.repo.Purchase(ctx, s.db, row.ID, false)
+}
+
+// CloseByReference closes the pending purchase of a gateway reference as
+// expired or failed (a webhook's expire, cancel or deny). A purchase that
+// is no longer pending is left as it is.
+func (s *Service) CloseByReference(ctx context.Context, referenceID, status string) (*SettleResult, error) {
+	id, err := s.repo.PurchaseIDByReference(ctx, s.db, referenceID)
 	if err != nil {
 		return nil, err
 	}
-	switch status {
-	case "PAID", "SETTLED":
-	case "EXPIRED":
-		if err := s.closePurchase(ctx, purchaseID, "expired"); err != nil {
-			return nil, err
-		}
-		return s.repo.Purchase(ctx, s.db, purchaseID, false)
-	default:
-		return nil, nil
+	if id == "" {
+		return &SettleResult{Status: "not_found"}, nil
 	}
-	var settled *Purchase
-	err = database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
-		var err error
-		_, settled, err = s.markPaid(ctx, tx, purchaseID, map[string]any{"xendit_invoice_status": status, "reconciled": true})
-		return err
-	})
-	return settled, err
+	if err := s.closePurchase(ctx, id, status); err != nil {
+		return nil, err
+	}
+	row, err := s.repo.Purchase(ctx, s.db, id, false)
+	if err != nil {
+		return nil, err
+	}
+	return &SettleResult{Status: row.Status, PurchaseID: id}, nil
 }
 
 // SimulatePaid settles a simulated QR through the webhook path (local dev
@@ -910,7 +968,7 @@ func (s *Service) SimulatePaid(ctx context.Context, customerID, purchaseID strin
 	var paid *Purchase
 	err = database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		var err error
-		_, paid, err = s.markPaid(ctx, tx, purchaseID, map[string]any{"xendit_payment_id": "dev_sim_" + purchaseID})
+		_, paid, err = s.markPaid(ctx, tx, purchaseID, map[string]any{"gateway_payment_id": "dev_sim_" + purchaseID})
 		return err
 	})
 	if err != nil {
