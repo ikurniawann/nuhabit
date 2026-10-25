@@ -45,6 +45,48 @@ func withTierDiscount(c *Obj, discounts map[string]float64) *Obj {
 	return c.Set("discount_percent", discounts[strings.ToLower(domain.String(tier))])
 }
 
+// MemberDiscount is a discount a member holds beside their tier code's.
+type MemberDiscount struct {
+	Percent float64
+	// Frozen: the member is suspended or banned and gets no discount.
+	Frozen bool
+}
+
+// MemberDiscounts is an optional CRM method: per-member discounts (gym
+// membership tiers). The better of it and the tier code's applies.
+type MemberDiscounts interface {
+	MemberDiscounts(ctx context.Context, q database.Querier, customerIDs []string) (map[string]MemberDiscount, error)
+}
+
+// withMemberDiscounts raises discount_percent to the member's own discount
+// when it is better, and clears it for a frozen member. A failing read
+// leaves the tier discounts.
+func (s *Service) withMemberDiscounts(ctx context.Context, rows []*Obj) {
+	md, ok := s.ports.CRM.(MemberDiscounts)
+	if !ok || len(rows) == 0 {
+		return
+	}
+	ids := make([]string, len(rows))
+	for i, c := range rows {
+		ids[i] = c.Str("id")
+	}
+	found, err := md.MemberDiscounts(ctx, s.db, ids)
+	if err != nil {
+		return
+	}
+	for _, c := range rows {
+		d, ok := found[c.Str("id")]
+		if !ok {
+			continue
+		}
+		pct, _ := c.Get("discount_percent").(float64)
+		if d.Frozen {
+			pct = 0
+		}
+		c.Set("discount_percent", max(pct, d.Percent))
+	}
+}
+
 // ListCustomers mirrors GET /api/pos/customers.
 func (s *Service) ListCustomers(ctx context.Context, f customerFilter) ([]*Obj, error) {
 	rows, err := listCustomers(ctx, s.db, f)
@@ -55,6 +97,7 @@ func (s *Service) ListCustomers(ctx context.Context, f customerFilter) ([]*Obj, 
 	for _, c := range rows {
 		withTierDiscount(c, discounts)
 	}
+	s.withMemberDiscounts(ctx, rows)
 	return rows, nil
 }
 
@@ -156,7 +199,9 @@ func (s *Service) SaveCustomer(ctx context.Context, userID string, body any) (*S
 	if err != nil {
 		return nil, err
 	}
-	return &SavedCustomer{Customer: withTierDiscount(saved, s.tierDiscounts(ctx)), Created: existing == nil}, nil
+	customer := withTierDiscount(saved, s.tierDiscounts(ctx))
+	s.withMemberDiscounts(ctx, []*Obj{customer})
+	return &SavedCustomer{Customer: customer, Created: existing == nil}, nil
 }
 
 // firstTruthy is `a || b`.
