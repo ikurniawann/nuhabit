@@ -20,6 +20,8 @@ const ROLE_HOME: Record<string, string> = {
   pos: "/dashboard/pos",
   pos_supervisor: "/dashboard/pos",
   finance_staff: "/dashboard/hris/payroll",
+  // Investor hanya punya menu portal investor.
+  investor: "/dashboard/investor",
 };
 
 export default async function Page() {

@@ -10,6 +10,11 @@ const PAGES = [
   { path: "/dashboard/gym/reports", heading: "Laporan Gym" },
   { path: "/dashboard/gym/pt", heading: "Personal Training" },
   { path: "/dashboard/gym/assessments", heading: "Asesmen Kebugaran" },
+  { path: "/dashboard/investor", heading: "Ringkasan Investor" },
+  { path: "/dashboard/investor/performance", heading: "Laporan Kinerja" },
+  { path: "/dashboard/investor/progress", heading: "Progres" },
+  { path: "/dashboard/investor/documents", heading: "Dokumen" },
+  { path: "/dashboard/investor/updates", heading: "Update untuk Investor" },
 ];
 
 test.describe("staff dashboard", () => {

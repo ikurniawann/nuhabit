@@ -36,6 +36,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   employee: "Karyawan (ESS)",
   sales: "Sales",
   marketing: "Marketing",
+  investor: "Investor",
 };
 
 export const ROLE_OPTIONS = ADMIN_USER_ROLES.map((role) => ({
