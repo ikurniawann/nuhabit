@@ -194,14 +194,21 @@ func (p Postgres) DeleteArticle(ctx context.Context, id string) (bool, error) {
 
 /* ── events ──────────────────────────────────────────────────────────── */
 
-const eventColumns = `id::text, slug, title, starts_at, ends_at, location_text, cover_image_url, body_md, form_slug, status, created_at, updated_at`
+// eventColumns read from site.events alone, so RETURNING can use them too;
+// the names come from scalar subqueries.
+const eventColumns = `id::text, slug, title, starts_at, ends_at, location_text, cover_image_url, body_md, form_slug, status,
+	branch_id::text, (SELECT name FROM configuration.branches b WHERE b.id = branch_id), area,
+	coach_id::text, (SELECT name FROM gym.coaches c WHERE c.id = coach_id),
+	organiser_user_id::text, (SELECT full_name FROM configuration.users u WHERE u.id = organiser_user_id),
+	crm_event_id::text, created_at, updated_at`
 
 func scanEvent(row pgx.Row) (*Event, error) {
 	var e Event
 	var starts, created, updated time.Time
 	var ends *time.Time
 	if err := row.Scan(&e.ID, &e.Slug, &e.Title, &starts, &ends, &e.Location, &e.CoverImage, &e.BodyMD, &e.FormSlug,
-		&e.Status, &created, &updated); err != nil {
+		&e.Status, &e.BranchID, &e.BranchName, &e.Area, &e.CoachID, &e.CoachName, &e.OrganiserUserID, &e.OrganiserName,
+		&e.CRMEventID, &created, &updated); err != nil {
 		return nil, err
 	}
 	e.StartsAt, e.EndsAt = httpx.JSTime(starts), httpx.NewJSTime(ends)
@@ -229,9 +236,16 @@ func (p Postgres) EventBySlug(ctx context.Context, slug string, publishedOnly bo
 // InsertEvent writes a new event; ErrSlugTaken on a duplicate slug.
 func (p Postgres) InsertEvent(ctx context.Context, in EventInput, userID string, at time.Time) (*Event, error) {
 	return write(ctx, p.db, scanEvent, `INSERT INTO site.events
-		(slug, title, starts_at, ends_at, location_text, cover_image_url, body_md, form_slug, status, created_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11) RETURNING `+eventColumns,
-		in.Slug, in.Title, in.StartsAt, in.EndsAt, in.Location, in.CoverImage, in.BodyMD, in.FormSlug, in.Status, userID, at)
+		(slug, title, starts_at, ends_at, location_text, cover_image_url, body_md, form_slug, status, created_by, created_at, updated_at,
+		 branch_id, area, coach_id, organiser_user_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11, $12, $13, $14, $15) RETURNING `+eventColumns,
+		in.Slug, in.Title, in.StartsAt, in.EndsAt, in.Location, in.CoverImage, in.BodyMD, in.FormSlug, in.Status, userID, at,
+		in.BranchID, in.Area, in.CoachID, in.OrganiserUserID)
+}
+
+// InTx runs fn on one transaction (a savepoint inside a test transaction).
+func (p Postgres) InTx(ctx context.Context, fn func(Repository, database.Querier) error) error {
+	return database.WithTx(ctx, p.db, func(tx pgx.Tx) error { return fn(Postgres{db: tx}, tx) })
 }
 
 // UpdateEvent applies the set fields; nil when the event does not exist.
@@ -263,6 +277,18 @@ func (p Postgres) UpdateEvent(ctx context.Context, id string, in EventPatch, at 
 	}
 	if in.Status != nil {
 		s.add("status", *in.Status)
+	}
+	if in.BranchID != nil {
+		s.add("branch_id", *in.BranchID)
+	}
+	if in.Area != nil {
+		s.add("area", *in.Area)
+	}
+	if in.CoachID != nil {
+		s.add("coach_id", *in.CoachID)
+	}
+	if in.OrganiserUserID != nil {
+		s.add("organiser_user_id", *in.OrganiserUserID)
 	}
 	s.add("updated_at", at)
 	s.args = append(s.args, id)

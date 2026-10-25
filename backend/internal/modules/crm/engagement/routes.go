@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	eventsc "nuhabit/backend/internal/contracts/events"
 	"nuhabit/backend/internal/modules/crm/engagement/domain"
 	"nuhabit/backend/internal/modules/crm/internal/kit"
 	"nuhabit/backend/internal/modules/crm/xp"
@@ -47,6 +48,9 @@ type Ports struct {
 	Push   Pusher
 	// Gym sends gym notifications outside the app; nil sends none.
 	Gym GymChannels
+	// Calendar checks an event against classes, PT and other events and
+	// tells the involved staff about changes; nil skips both.
+	Calendar eventsc.Calendar
 }
 
 // GymChannels delivers a gym notification on WhatsApp and email, each only
@@ -57,12 +61,13 @@ type GymChannels interface {
 }
 
 type handler struct {
-	db     database.DB
-	guard  kit.Guard
-	orders OrderReads
-	push   Pusher
-	store  *storage.Store
-	now    func() time.Time
+	db       database.DB
+	guard    kit.Guard
+	orders   OrderReads
+	push     Pusher
+	calendar eventsc.Calendar
+	store    *storage.Store
+	now      func() time.Time
 }
 
 // Routes mounts the area's routes.
@@ -75,7 +80,8 @@ func newHandler(db database.DB, d module.Deps, p Ports) *handler {
 	if now == nil {
 		now = time.Now
 	}
-	return &handler{db: db, guard: kit.Guard{Auth: d.Auth, DB: db}, orders: p.Orders, push: p.Push, store: storage.FromEnv(), now: now}
+	return &handler{db: db, guard: kit.Guard{Auth: d.Auth, DB: db}, orders: p.Orders, push: p.Push, calendar: p.Calendar,
+		store: storage.FromEnv(), now: now}
 }
 
 func (h *handler) routes() []module.Route {

@@ -1,6 +1,10 @@
 package site
 
-import "context"
+import (
+	"context"
+
+	eventsc "nuhabit/backend/internal/contracts/events"
+)
 
 // Branch is a branch's public profile as the site shows it. The
 // configuration context owns the rows; internal/app adapts its reader.
@@ -81,4 +85,7 @@ type Branches interface {
 // Ports are the adapters internal/app wires.
 type Ports struct {
 	Branches Branches
+	// Calendar checks an event against the gym timetable and other events
+	// and tells the involved staff about changes; nil skips both.
+	Calendar eventsc.Calendar
 }

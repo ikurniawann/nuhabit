@@ -35,7 +35,7 @@ func setup(t *testing.T) *env {
 	}})
 	viewer := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"dashboard": nil}})
 	tx := testutil.Tx(t)
-	m := site.NewOn(deps, tx, app.SitePortsOn(tx))
+	m := site.NewOn(deps, tx, app.SitePortsOn(deps, tx))
 	return &env{t: t, ctx: context.Background(), tx: tx, mux: testutil.Mux(m), editor: editor, viewer: viewer}
 }
 

@@ -16,6 +16,9 @@ type FeedRepository interface {
 	MarkRead(ctx context.Context, customerID string, ids []string) error
 	TrackNotification(ctx context.Context, customerID, id, event string) (*string, bool, error)
 	InsertNotification(ctx context.Context, customerID, kind, title, body string) error
+	// NotifyMember writes the inbox row and publishes it for delivery
+	// outside the app (web push, WhatsApp, email) after commit.
+	NotifyMember(ctx context.Context, customerID, kind, title, body string) error
 	PushDeviceCount(ctx context.Context, customerID string) (int, error)
 	SavePushSubscription(ctx context.Context, customerID, endpoint, p256dh, auth string, userAgent *string) error
 	DeletePushSubscription(ctx context.Context, customerID, endpoint string) error

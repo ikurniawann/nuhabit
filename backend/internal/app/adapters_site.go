@@ -11,12 +11,12 @@ import (
 )
 
 // SitePorts wires the site module on the shared pool.
-func SitePorts(d module.Deps) site.Ports { return SitePortsOn(d.DB) }
+func SitePorts(d module.Deps) site.Ports { return SitePortsOn(d, d.DB) }
 
-// SitePortsOn wires the site module on q; integration tests pass their
+// SitePortsOn wires the site module on db; integration tests pass their
 // rolled-back transaction.
-func SitePortsOn(q database.Querier) site.Ports {
-	return site.Ports{Branches: siteBranches{db: q}}
+func SitePortsOn(d module.Deps, db database.DB) site.Ports {
+	return site.Ports{Branches: siteBranches{db: db}, Calendar: EventCalendar(d, db)}
 }
 
 // siteBranches reads public branch profiles from the configuration context.

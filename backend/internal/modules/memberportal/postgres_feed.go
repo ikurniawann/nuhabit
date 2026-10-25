@@ -12,6 +12,7 @@ import (
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/members"
 )
 
 // Notification is a member inbox row.
@@ -79,6 +80,12 @@ func (s *store) InsertNotification(ctx context.Context, customerID, kind, title,
 		`INSERT INTO crm.member_notifications (customer_id, type, title, body) VALUES ($1, $2, $3, $4)`,
 		customerID, kind, title, body)
 	return err
+}
+
+// NotifyMember is the shared member notice: inbox row now, push, WhatsApp
+// and email through the CRM subscriber after commit.
+func (s *store) NotifyMember(ctx context.Context, customerID, kind, title, body string) error {
+	return members.Notify(ctx, s.q, customerID, members.Notice{Type: kind, Title: title, Body: body})
 }
 
 func (s *store) PushDeviceCount(ctx context.Context, customerID string) (int, error) {
