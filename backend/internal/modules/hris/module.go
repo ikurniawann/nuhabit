@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/platform/auth"
+	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/storage"
@@ -44,6 +45,8 @@ type Ports struct {
 	Company CompanyProfile
 	// Files is the storage shared with Next; nil is STORAGE_DIR.
 	Files *storage.Store
+	// CoachLeaves applies the coach leave rules (gym-coach-leave); nil: none.
+	CoachLeaves CoachLeaves
 }
 
 // Service holds the HRIS use cases.
@@ -57,6 +60,7 @@ type Service struct {
 	calendar    HolidayCalendar
 	company     CompanyProfile
 	files       *storage.Store
+	coachLeaves CoachLeaves
 	limiter     *ratelimit.Limiter
 	log         *slog.Logger
 	now         func() time.Time
@@ -77,6 +81,13 @@ func New(deps module.Deps, ports Ports) module.Module {
 	return mod{handlers{svc: svc, auth: deps.Auth}}
 }
 
+// NewOn is New on db instead of the pool and without the outbox
+// subscription, for cross-module integration tests inside a rolled-back
+// transaction.
+func NewOn(deps module.Deps, db database.DB, ports Ports) module.Module {
+	return mod{handlers{svc: NewService(newStore(db), ports, deps.Log, deps.Now), auth: deps.Auth}}
+}
+
 // NewService wires the use cases; log and now may be nil.
 func NewService(repo Repository, ports Ports, log *slog.Logger, now func() time.Time) *Service {
 	if log == nil {
@@ -94,7 +105,7 @@ func NewService(repo Repository, ports Ports, log *slog.Logger, now func() time.
 	return &Service{
 		repo: repo, payroll: ports.Payroll, salary: ports.Salary, recruitment: ports.Recruitment,
 		directory: ports.Directory, whatsapp: ports.WhatsApp, calendar: ports.HolidayCalendar,
-		company: ports.Company, files: ports.Files, limiter: ratelimit.New(repo.querier()), log: log, now: now,
+		company: ports.Company, files: ports.Files, coachLeaves: ports.CoachLeaves, limiter: ratelimit.New(repo.querier()), log: log, now: now,
 	}
 }
 
