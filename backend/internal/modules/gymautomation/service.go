@@ -93,8 +93,6 @@ func status(st *jobState) string {
 	return "ok"
 }
 
-func jsTime(t *time.Time) *httpx.JSTime { return httpx.NewJSTime(t) }
-
 // intSetting is config[key] when it holds a whole number, else def.
 func intSetting(config map[string]any, key string, def int) int {
 	if v, ok := config[key].(float64); ok && v == float64(int(v)) {
@@ -128,7 +126,7 @@ func (s *Service) Jobs(ctx context.Context) ([]JobView, error) {
 		var config map[string]any
 		if st != nil {
 			config = st.config
-			v.LastStartedAt, v.LastFinishedAt, v.LastSucceededAt = jsTime(st.started), jsTime(st.finished), jsTime(st.succeeded)
+			v.LastStartedAt, v.LastFinishedAt, v.LastSucceededAt = httpx.NewJSTime(st.started), httpx.NewJSTime(st.finished), httpx.NewJSTime(st.succeeded)
 			v.LastError = st.lastError
 		}
 		for _, set := range info.Settings {

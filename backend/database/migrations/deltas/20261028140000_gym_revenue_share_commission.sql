@@ -40,9 +40,7 @@
 --      BANK (else POS_SALE_DEBIT BANK, else PAYROLL_PAYMENT BANK).
 --      Staff change any of it on the journal mapping page. Re-running finds
 --      the accounts it created by name and changes nothing.
---   5. Grants: approving and paying commission are update and create on
---      gym.incentives, which the incentive roles already hold.
--- Idempotent.
+-- Commission uses the gym.incentives menu and its grants. Idempotent.
 -- =============================================================================
 
 -- 1. Schemes -------------------------------------------------------------------

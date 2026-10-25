@@ -75,7 +75,6 @@ type commissionView struct {
 	Lines []storedLine `json:"lines"`
 
 	companyID *string
-	zone      *time.Location
 }
 
 func resolveCommissionScheme(schemes []commissionSchemeRow, branchID string) *commissionSchemeRow {
@@ -124,14 +123,13 @@ func (s *Service) commissionInputs(ctx context.Context, repo Repository) (commis
 // branchMonth computes one branch month from the books, or reads it once
 // approved.
 func (s *Service) branchMonth(ctx context.Context, repo Repository, in commissionInputs, b commissionBranch, month string, stored *storedStatement) (commissionView, error) {
-	zone := localtime.Zone(b.Timezone)
-	period, err := domain.MonthPeriodIn(month, zone)
+	period, err := domain.MonthPeriodIn(month, localtime.Zone(b.Timezone))
 	if err != nil {
 		return commissionView{}, err
 	}
 	v := commissionView{
 		BranchID: b.ID, BranchName: b.Name, PeriodMonth: month, Status: domain.CommissionPreview,
-		MonthOver: !s.now().Before(period.End), Lines: []storedLine{}, companyID: b.CompanyID, zone: zone,
+		MonthOver: !s.now().Before(period.End), Lines: []storedLine{}, companyID: b.CompanyID,
 	}
 	v.CommissionPool.Lines = []domain.CommissionLine{}
 	if stored != nil {
@@ -348,10 +346,9 @@ func (s *Service) PayCommissionLine(ctx context.Context, userID, lineID string, 
 			return httpx.Conflict(refusal)
 		}
 		now := s.now()
-		zone := localtime.Zone(line.Timezone)
 		journal := gym.CommissionJournal{
 			DocumentType: "gym_commission_line", DocumentID: line.ID, CompanyID: line.CompanyID, UserID: userID,
-			EntryDate: localtime.DayKey(now, zone), Amount: line.AmountIDR,
+			EntryDate: localtime.DayKey(now, localtime.Zone(line.Timezone)), Amount: line.AmountIDR,
 			Description: fmt.Sprintf("Komisi coach %s %s %s", line.CoachName, line.BranchName, line.PeriodMonth),
 		}
 		var period *string
