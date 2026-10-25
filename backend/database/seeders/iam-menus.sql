@@ -210,7 +210,12 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('gym.incentives', 'Insentif Coach', '/dashboard/gym/incentives', 'money', 'sidebar', 90, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.referrals', 'Referral', '/dashboard/gym/referrals', 'user-plus', 'sidebar', 90, '{"actions":["read","update"]}'::jsonb),
   ('gym.reports', 'Laporan Gym', '/dashboard/gym/reports', 'chart-bar', 'sidebar', 95, '{"actions":["read"]}'::jsonb),
-  ('gym.rules', 'Aturan Gym', '/dashboard/gym/rules', 'settings', 'sidebar', 100, '{"actions":["read","update"]}'::jsonb)
+  ('gym.rules', 'Aturan Gym', '/dashboard/gym/rules', 'settings', 'sidebar', 100, '{"actions":["read","update"]}'::jsonb),
+  -- Tugas (MOM item 13): daftar sendiri, papan tim, KPI & tugas
+  -- (internal/migrate/seeders_test.go checks every tasks menu is here).
+  ('tasks', 'Tugas Saya', '/dashboard/tasks', 'clipboard-document-check', 'sidebar', 4, '{"actions":["read","create","update"]}'::jsonb),
+  ('tasks.team', 'Papan Tim', '/dashboard/tasks/team', 'users', 'sidebar', 10, '{"actions":["read","create","update","delete","assign"]}'::jsonb),
+  ('tasks.kpi', 'KPI & Tugas', '/dashboard/tasks/kpi', 'chart', 'sidebar', 20, '{"actions":["read"]}'::jsonb)
 ON CONFLICT (code) DO UPDATE SET
   menu_name            = EXCLUDED.menu_name,
   route_path           = EXCLUDED.route_path,
@@ -344,6 +349,7 @@ WHERE deleted_at IS NULL
     -- assessments, coach portal, gate devices, referrals):
     'gym.members', 'gym.reports', 'gym.schedule.templates', 'gym.pt', 'gym.assessments',
     'gym.my-classes', 'gym.gate-devices', 'gym.referrals',
+    'tasks', 'tasks.team', 'tasks.kpi',
     'items.raw-material.inventory.expiry', 'items.raw-material.inventory.movements',
     'items.raw-material.inventory.scrap', 'pos.catalog.channel-prices',
     'pos.loyalty.wallet', 'pos.loyalty.wallet.packages', 'pos.loyalty.wallet.payments',
