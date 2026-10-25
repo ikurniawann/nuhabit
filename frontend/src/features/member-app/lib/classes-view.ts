@@ -138,7 +138,11 @@ export interface RawPurchase {
   validity_days: number;
   total_idr: number;
   payment_method: string;
+  /** Provider the payment runs at (xendit, midtrans) or dev_simulated. */
+  gateway?: string;
   qr_string: string | null;
+  /** Rendered QR PNG when the gateway serves one (Midtrans). */
+  qr_image_url?: string | null;
   invoice_url: string | null;
   expires_at: string | null;
   simulated: boolean;
@@ -255,7 +259,9 @@ export interface PaymentView {
     credits: number;
     validityDays: number;
     totalIdr: number;
+    gateway: string;
     qrString: string | null;
+    qrImageUrl: string | null;
     invoiceUrl: string | null;
     expiresAt: string | null;
     simulated: boolean;
@@ -453,7 +459,9 @@ export function toPaymentView(raw: RawPurchase): PaymentView {
       credits: raw.credits,
       validityDays: raw.validity_days,
       totalIdr: raw.total_idr,
+      gateway: raw.gateway ?? 'xendit',
       qrString: raw.qr_string,
+      qrImageUrl: raw.qr_image_url ?? null,
       invoiceUrl: raw.invoice_url ?? null,
       expiresAt: raw.expires_at,
       simulated: raw.simulated,

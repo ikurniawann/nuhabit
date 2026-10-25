@@ -23,9 +23,11 @@ const CHANNEL_TITLE: Record<PaymentView["payment"]["channel"], string> = {
 const DEFAULT_WINDOW_SEC = 15 * 60;
 
 /**
- * Checkout for a gym credit package purchase: the QRIS from Xendit (or the
- * local-dev simulated QR), polled until paid. In local dev "I've paid" settles
- * the simulated QR through the same path as the webhook.
+ * Checkout for a gym credit package purchase: the QRIS from the active
+ * gateway (Xendit or Midtrans), or the local-dev simulated QR, polled until
+ * paid. A gateway without a QRIS channel sends a hosted checkout page
+ * instead, shown as a link. In local dev "I've paid" settles the simulated
+ * QR through the same path as the webhook.
  */
 export function PaymentPage() {
   const t = useT();
@@ -140,17 +142,22 @@ export function PaymentPage() {
         </div>
       </div>
 
-      {payment.channel === "QRIS" && payment.qrString ? (
+      {payment.channel === "QRIS" && (payment.qrString || payment.qrImageUrl) ? (
         <div className="nh-card flex flex-col items-center gap-3 !p-6">
           <div className="rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgb(0_0_0/0.06)]">
-            <QRCodeSVG value={payment.qrString} size={190} />
+            {payment.qrString ? (
+              <QRCodeSVG value={payment.qrString} size={190} />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element -- the gateway renders the PNG
+              <img src={payment.qrImageUrl ?? ""} alt="QRIS" width={190} height={190} />
+            )}
           </div>
           <p className="text-center text-sm text-nh-muted">
             {t("Scan with any banking or e-wallet app that supports QRIS.")}
           </p>
         </div>
       ) : null}
-      {payment.channel === "INVOICE" && payment.invoiceUrl ? (
+      {payment.invoiceUrl && !payment.qrString && !payment.qrImageUrl ? (
         <a href={payment.invoiceUrl} className="nh-btn-ghost">
           {t("Open the payment page")}
         </a>
@@ -162,7 +169,7 @@ export function PaymentPage() {
       </button>
       {payment.simulated ? (
         <p className="text-center text-xs text-nh-muted">
-          {t("Demo checkout - no real money moves. Xendit replaces this screen in production.")}
+          {t("Demo checkout - no real money moves. The payment gateway replaces this screen in production.")}
         </p>
       ) : null}
       <Link href={m("/wallet")} className="text-center text-sm font-bold text-nh-muted">

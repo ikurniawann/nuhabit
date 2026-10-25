@@ -202,8 +202,8 @@ export const CLASSES_ID: Record<string, string> = {
   "Scan with any banking or e-wallet app that supports QRIS.":
     "Pindai dengan aplikasi bank atau e-wallet apa pun yang mendukung QRIS.",
   "I've paid - check status": "Sudah bayar - cek status",
-  "Demo checkout - no real money moves. Xendit replaces this screen in production.":
-    "Pembayaran demo - tidak ada uang yang berpindah. Xendit menggantikan layar ini di produksi.",
+  "Demo checkout - no real money moves. The payment gateway replaces this screen in production.":
+    "Pembayaran demo - tidak ada uang yang berpindah. Payment gateway menggantikan layar ini di produksi.",
   "Cancel and go back": "Batal dan kembali",
   // Status badges (ui/status-badge.tsx)
   Active: "Aktif",
