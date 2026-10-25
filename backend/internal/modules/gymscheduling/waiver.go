@@ -34,6 +34,16 @@ func (s *Service) requireWaiver(ctx context.Context, q Q, customerID string, bra
 	return nil
 }
 
+// parqMissing: the branch rules need a current PAR-Q declaration the member
+// does not have.
+func (s *Service) parqMissing(ctx context.Context, q Q, rules domain.Rules, customerID string, now time.Time) (bool, error) {
+	if !rules.RequireParq || s.Health == nil {
+		return false, nil
+	}
+	ok, err := s.Health.ParqCurrent(ctx, q, customerID, now)
+	return !ok, err
+}
+
 // WaiverRecord is the stored acceptance after the desk records it.
 type WaiverRecord struct {
 	Version    string    `json:"version"`

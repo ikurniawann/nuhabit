@@ -65,9 +65,14 @@ func (s *Service) memberFacts(ctx context.Context, q Q, customerID string, sessi
 	if err != nil {
 		return in, true, err
 	}
+	parqMissing, err := s.parqMissing(ctx, q, rules, customerID, now)
+	if err != nil {
+		return in, true, err
+	}
 	in = domain.EligibilityInput{
 		MemberActive:   member.Active(),
 		WaiverMissing:  s.waiverMissing(rules, member),
+		ParqMissing:    parqMissing,
 		Session:        session.bookable(),
 		Balance:        balance,
 		HasPass:        pass != nil,

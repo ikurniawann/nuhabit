@@ -86,6 +86,9 @@ type Rules struct {
 	// PtRescheduleLimit: how many times a member may move one PT session
 	// from the member app, before its free cancellation deadline. 0 = never.
 	PtRescheduleLimit int `json:"ptRescheduleLimit"`
+	// RequireParq: booking needs a PAR-Q health declaration filled in the
+	// last 12 months.
+	RequireParq bool `json:"requireParq"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
@@ -127,6 +130,7 @@ type RulesPatch struct {
 	MaxTransferCreditsPerMonth *int    `json:"maxTransferCreditsPerMonth,omitempty"`
 	DefaultCompanyID           *string `json:"defaultCompanyId,omitempty"`
 	PtRescheduleLimit          *int    `json:"ptRescheduleLimit,omitempty"`
+	RequireParq                *bool   `json:"requireParq,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -250,6 +254,7 @@ var ruleSpecs = []ruleSpec{
 	intRule("maxTransferCreditsPerMonth", 0, 1000, "Batas transfer kredit per bulan", func(p *RulesPatch) **int { return &p.MaxTransferCreditsPerMonth }),
 	uuidRule("defaultCompanyId", "Perusahaan default", func(p *RulesPatch) **string { return &p.DefaultCompanyID }),
 	intRule("ptRescheduleLimit", 0, 20, "Batas ubah jadwal PT", func(p *RulesPatch) **int { return &p.PtRescheduleLimit }),
+	boolRule("requireParq", "Wajib PAR-Q", func(p *RulesPatch) **bool { return &p.RequireParq }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -448,6 +453,7 @@ func (p RulesPatch) Over(base Rules) Rules {
 		base.DefaultCompanyID = *p.DefaultCompanyID
 	}
 	setInt(&base.PtRescheduleLimit, p.PtRescheduleLimit)
+	setBool(&base.RequireParq, p.RequireParq)
 	return base
 }
 

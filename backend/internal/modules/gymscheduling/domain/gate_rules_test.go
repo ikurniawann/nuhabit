@@ -51,6 +51,24 @@ func TestBookingDeniedWithoutWaiver(t *testing.T) {
 	}
 }
 
+func TestBookingDeniedWithoutParq(t *testing.T) {
+	in := EligibilityInput{MemberActive: true, ParqMissing: true, HasPass: true, Now: now,
+		Session: BookableSession{Status: SessionPublished, Capacity: 10, CreditCost: 1, StartsAt: start,
+			BookingOpensAt: now.Add(-time.Hour), BookingClosesAt: start}}
+	if got := EvaluateBookingEligibility(in); got.Kind != DecisionDeny || got.Reason != DenyParqRequired {
+		t.Errorf("booking: %+v", got)
+	}
+	// The waiver comes first.
+	in.WaiverMissing = true
+	if got := EvaluateMemberEligibility(in); got != DenyWaiverRequired {
+		t.Errorf("waiver first: %q", got)
+	}
+	in.WaiverMissing, in.ParqMissing = false, false
+	if got := EvaluateMemberEligibility(in); got != "" {
+		t.Errorf("declared: %q", got)
+	}
+}
+
 func TestGateDeniesWithoutWaiver(t *testing.T) {
 	want := GateScanEvaluation{Decision: Denied, Reason: GateWaiverRequired, Effects: []GateEffect{{Kind: EffectConsumeToken}}}
 	if got := scan(func(in *GateScanInput) { in.WaiverMissing = true }); !reflect.DeepEqual(got, want) {
