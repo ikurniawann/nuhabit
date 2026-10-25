@@ -91,9 +91,9 @@ func (in TierInput) validate() (tierWrite, error) {
 		return bad("Nama tier wajib diisi, maksimal 40 karakter")
 	case in.Color != nil && *in.Color != "" && !hexColor.MatchString(*in.Color):
 		return bad("Warna harus berformat #RRGGBB")
-	case math.IsNaN(in.MinSpend) || in.MinSpend < 0 || in.MinSpend > 1e12:
+	case in.MinSpend < 0 || in.MinSpend > 1e12:
 		return bad("Ambang belanja tidak valid")
-	case math.IsNaN(in.DiscountPercent) || in.DiscountPercent < 0 || in.DiscountPercent > 100:
+	case in.DiscountPercent < 0 || in.DiscountPercent > 100:
 		return bad("Diskon harus 0 sampai 100 persen")
 	case in.EarlyBookingDays < 0 || in.EarlyBookingDays > 14:
 		return bad("Booking lebih awal 0 sampai 14 hari")
@@ -141,7 +141,7 @@ func (s *Service) SaveTier(ctx context.Context, id string, in TierInput, actor A
 			if before == nil {
 				return errTierNotFound
 			}
-			if _, err := updateTier(ctx, q, id, w, actor.ID); err != nil {
+			if err := updateTier(ctx, q, id, w, actor.ID); err != nil {
 				return err
 			}
 		}
@@ -171,7 +171,7 @@ func (s *Service) DeleteTier(ctx context.Context, id string, actor Actor) error 
 		if before == nil {
 			return errTierNotFound
 		}
-		if _, err := retireTier(ctx, q, id, actor.ID); err != nil {
+		if err := retireTier(ctx, q, id, actor.ID); err != nil {
 			return err
 		}
 		return actor.audit(ctx, q, "delete", "gym_membership_tier", id, before, nil, nil)

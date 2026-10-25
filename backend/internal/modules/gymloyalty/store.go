@@ -92,19 +92,19 @@ func insertTier(ctx context.Context, q database.Querier, t tierWrite, actor stri
 	return id, err
 }
 
-func updateTier(ctx context.Context, q database.Querier, id string, t tierWrite, actor string) (bool, error) {
-	tag, err := q.Exec(ctx, `UPDATE gym.membership_tiers SET name = $2, color = $3, min_spend_idr = $4, discount_percent = $5,
+func updateTier(ctx context.Context, q database.Querier, id string, t tierWrite, actor string) error {
+	_, err := q.Exec(ctx, `UPDATE gym.membership_tiers SET name = $2, color = $3, min_spend_idr = $4, discount_percent = $5,
 		early_booking_days = $6, cancel_window_hours = $7, waitlist_priority = $8, perks = $9, updated_by = $10, updated_at = now()
 		WHERE id = $1 AND is_active`,
 		id, t.Name, t.Color, t.MinSpend, t.DiscountPercent, t.EarlyBookingDays, t.CancelWindowHours, t.WaitlistPriority, t.Perks, actor)
-	return tag.RowsAffected() == 1, err
+	return err
 }
 
 // retireTier takes the tier off the ladder; history keeps its name.
-func retireTier(ctx context.Context, q database.Querier, id, actor string) (bool, error) {
-	tag, err := q.Exec(ctx, `UPDATE gym.membership_tiers SET is_active = false, updated_by = $2, updated_at = now()
+func retireTier(ctx context.Context, q database.Querier, id, actor string) error {
+	_, err := q.Exec(ctx, `UPDATE gym.membership_tiers SET is_active = false, updated_by = $2, updated_at = now()
 		WHERE id = $1 AND is_active`, id, actor)
-	return tag.RowsAffected() == 1, err
+	return err
 }
 
 func loadSettings(ctx context.Context, q database.Querier) (domain.Settings, error) {
@@ -227,7 +227,6 @@ type storedMembership struct {
 	State       domain.State
 	Spend       float64
 	EvaluatedOn domain.Day
-	Found       bool
 }
 
 func loadMembership(ctx context.Context, q database.Querier, customerID string, lock bool) (storedMembership, error) {
@@ -246,7 +245,7 @@ func loadMembership(ctx context.Context, q database.Querier, customerID string, 
 		d := domain.Day(*until)
 		m.State.ValidUntil = &d
 	}
-	m.EvaluatedOn, m.Found = domain.Day(on), err == nil
+	m.EvaluatedOn = domain.Day(on)
 	return m, err
 }
 

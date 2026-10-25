@@ -25,7 +25,6 @@ import { useDebounced } from "@/features/gym/use-debounced";
 import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import {
   LOYALTY_KEYS,
-  STATUS_LABELS,
   loyaltyApi,
   minutesToTime,
   perkLines,
@@ -541,7 +540,6 @@ function LeaderboardSection() {
       </Card>
       <p className="text-xs text-muted-foreground">
         Member yang mematikan tampil di leaderboard (pengaturan aplikasi member) serta member yang ditangguhkan atau diblokir tidak ditampilkan.
-        {` Status: ${Object.values(STATUS_LABELS).join(", ")}.`}
       </p>
     </div>
   );

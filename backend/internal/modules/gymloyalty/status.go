@@ -74,11 +74,13 @@ func (s *Service) SetStatus(ctx context.Context, customerID string, in StatusInp
 	}
 	next := change.Normalized()
 	err := s.inTx(ctx, func(q database.DB) error {
-		if err := requireMember(ctx, q, customerID); err != nil {
+		// Locking the customer row serializes two managers changing one member.
+		tag, err := q.Exec(ctx, `SELECT 1 FROM pos.pos_customers WHERE id = $1 FOR UPDATE`, customerID)
+		if err != nil {
 			return err
 		}
-		if _, err := q.Exec(ctx, `SELECT 1 FROM pos.pos_customers WHERE id = $1 FOR UPDATE`, customerID); err != nil {
-			return err
+		if tag.RowsAffected() == 0 {
+			return errMemberNotFound
 		}
 		before, err := loadStanding(ctx, q, customerID)
 		if err != nil {
