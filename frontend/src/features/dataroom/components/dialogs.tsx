@@ -50,11 +50,12 @@ export function NameDialog({ open, title, initial, submitLabel, busy, onClose, o
 
 const NO_FOLDERS: FolderRow[] = [];
 
-/** Dialog "Pindahkan ke": pohon folder; folder sendiri & turunannya dinonaktifkan. */
-export function MoveDialog({ open, items, busy, onClose, onSubmit }: {
-  open: boolean; items: DataroomItem[]; busy: boolean;
+/** Dialog "Pindahkan ke" / "Salin ke": pohon folder; folder sendiri & turunannya dinonaktifkan. */
+export function MoveDialog({ open, mode = "move", items, busy, onClose, onSubmit }: {
+  open: boolean; mode?: "move" | "copy"; items: DataroomItem[]; busy: boolean;
   onClose: () => void; onSubmit: (targetId: string | null) => void;
 }) {
+  const verb = mode === "copy" ? "Salin" : "Pindahkan";
   const tree = useFolderTree();
   const folders = tree.isError ? NO_FOLDERS : (tree.data ?? null);
   const [selected, setSelected] = useState<string | null | undefined>(undefined);
@@ -122,7 +123,7 @@ export function MoveDialog({ open, items, busy, onClose, onSubmit }: {
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>Pindahkan {label}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{verb} {label}</DialogTitle></DialogHeader>
         <div className="max-h-[50vh] overflow-y-auto rounded-md border p-1">
           {folders === null ? (
             <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Memuat folder…</div>
@@ -144,10 +145,10 @@ export function MoveDialog({ open, items, busy, onClose, onSubmit }: {
           <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
           <Button
             type="button"
-            disabled={busy || selected === undefined || selected === currentParent}
+            disabled={busy || selected === undefined || (mode === "move" && selected === currentParent)}
             onClick={() => onSubmit(selected ?? null)}
           >
-            {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Pindahkan ke sini
+            {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{verb} ke sini
           </Button>
         </div>
       </DialogContent>
@@ -155,22 +156,23 @@ export function MoveDialog({ open, items, busy, onClose, onSubmit }: {
   );
 }
 
-export function DeleteDialog({ open, items, busy, onClose, onConfirm }: {
-  open: boolean; items: DataroomItem[]; busy: boolean; onClose: () => void; onConfirm: () => void;
+export function DeleteDialog({ open, items, permanent = false, busy, onClose, onConfirm }: {
+  open: boolean; items: DataroomItem[]; permanent?: boolean; busy: boolean; onClose: () => void; onConfirm: () => void;
 }) {
   const folders = items.filter((i) => i.kind === "folder").length;
   const label = items.length === 1 ? `"${items[0].name}"` : `${items.length} item`;
+  const scope = folders > 0 ? "Folder beserta seluruh subfolder dan file di dalamnya" : "File";
   return (
     <ConfirmDialog
       open={open}
       onOpenChange={(o) => { if (!o) onClose(); }}
-      title={`Hapus ${label}?`}
+      title={permanent ? `Hapus permanen ${label}?` : `Pindahkan ${label} ke sampah?`}
       description={
-        folders > 0
-          ? "Folder beserta seluruh subfolder dan file di dalamnya akan dihapus permanen. Link berbagi yang menunjuk ke item ini ikut mati."
-          : "File akan dihapus permanen dari Dataroom. Link berbagi yang menunjuk ke file ini ikut mati."
+        permanent
+          ? `${scope} akan dihapus permanen beserta semua versinya dan tidak bisa dipulihkan. Link berbagi yang menunjuk ke item ini ikut mati.`
+          : `${scope} dipindahkan ke sampah dan bisa dipulihkan dalam 30 hari; setelah itu dihapus otomatis. Link berbagi tidak bisa dibuka selama item di sampah.`
       }
-      confirmLabel="Hapus"
+      confirmLabel={permanent ? "Hapus permanen" : "Pindahkan ke sampah"}
       variant="danger"
       loading={busy}
       onConfirm={onConfirm}

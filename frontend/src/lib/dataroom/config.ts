@@ -89,8 +89,14 @@ export function isImageMime(mime: string | null | undefined): boolean {
   return /^image\/(jpeg|png|webp|gif|bmp|tiff)$/.test(String(mime ?? ""));
 }
 
+const MEDIA_PREVIEW = new Set([
+  "video/mp4", "video/webm", "video/quicktime", "audio/mpeg", "audio/mp4", "audio/wav", "audio/ogg", "audio/webm",
+  "text/plain", "text/markdown", "text/csv", "application/json",
+]);
+
+/** Gambar, PDF, video, audio dan teks dibuka inline (Go menyajikan teks sebagai text/plain). */
 export function isPreviewable(mime: string | null | undefined): boolean {
-  return isImageMime(mime) || mime === "application/pdf";
+  return isImageMime(mime) || mime === "application/pdf" || MEDIA_PREVIEW.has(String(mime ?? "").toLowerCase());
 }
 
 /** Watermark hanya untuk jpeg/png/webp (sharp) dan PDF (pdf-lib). */

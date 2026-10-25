@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { apiGet, apiPost } from "@/lib/api-client";
 import { brandName } from "@/lib/branding";
 import { formatBytes, isPreviewable } from "@/lib/dataroom/config";
+import { previewKind } from "@/lib/dataroom/drive";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { OTP_ENABLED } from "@/lib/otp-availability";
@@ -29,6 +30,7 @@ interface ShareMeta {
   access_type: "public" | "email";
   requires_pin: boolean;
   watermark: boolean;
+  allow_download?: boolean;
   expires_at: string;
   shared_by: string | null;
   steps: { needEmail: boolean; needPin: boolean };
@@ -61,6 +63,7 @@ export function SharePage({ token }: { token: string }) {
   }, [base]);
 
   const fileUrl = (item: DataroomItem, download: boolean) => `${base}/files/${item.id}${download ? "?download=1" : ""}`;
+  const canDownload = meta?.allow_download !== false;
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -93,12 +96,13 @@ export function SharePage({ token }: { token: string }) {
         ) : !meta.verified ? (
           <Gate token={token} meta={meta} onVerified={() => void metaQuery.refetch()} />
         ) : meta.kind === "file" && meta.root ? (
-          <FileCard item={meta.root} inlineUrl={fileUrl(meta.root, false)} downloadUrl={fileUrl(meta.root, true)} onPreview={() => setPreview(meta.root)} />
+          <FileCard item={meta.root} inlineUrl={fileUrl(meta.root, false)} downloadUrl={fileUrl(meta.root, true)} canDownload={canDownload} onPreview={() => setPreview(meta.root)} />
         ) : (
           <FolderBrowser
             root={meta.root as DataroomItem}
             rootItems={meta.items}
             listing={listing}
+            canDownload={canDownload}
             onOpenFolder={openFolder}
             onBackToRoot={() => setListing(null)}
             onPreview={setPreview}
@@ -110,7 +114,7 @@ export function SharePage({ token }: { token: string }) {
       {preview && (
         <PreviewDialog
           open name={preview.name} mime={preview.mime} size={preview.size_bytes}
-          inlineUrl={fileUrl(preview, false)} downloadUrl={fileUrl(preview, true)}
+          inlineUrl={fileUrl(preview, false)} downloadUrl={fileUrl(preview, true)} canDownload={canDownload}
           onClose={() => setPreview(null)}
         />
       )}
@@ -196,15 +200,22 @@ function Gate({ token, meta, onVerified }: { token: string; meta: ShareMeta; onV
   );
 }
 
-function FileCard({ item, inlineUrl, downloadUrl, onPreview }: { item: DataroomItem; inlineUrl: string; downloadUrl: string; onPreview: () => void }) {
+function FileCard({ item, inlineUrl, downloadUrl, canDownload, onPreview }: {
+  item: DataroomItem; inlineUrl: string; downloadUrl: string; canDownload: boolean; onPreview: () => void;
+}) {
   const previewable = isPreviewable(item.mime);
+  const kind = previewKind(item.mime);
   return (
     <div className="mx-auto max-w-2xl overflow-hidden rounded-xl border bg-white shadow-sm">
-      {previewable && item.mime?.startsWith("image/") ? (
+      {kind === "image" ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={inlineUrl} alt={item.name} className="max-h-[60vh] w-full bg-muted object-contain" />
-      ) : previewable ? (
+      ) : kind === "pdf" ? (
         <iframe src={inlineUrl} title={item.name} className="h-[60vh] w-full bg-white" />
+      ) : kind === "video" ? (
+        <video src={inlineUrl} controls className="max-h-[60vh] w-full bg-black" aria-label={item.name} />
+      ) : kind === "audio" ? (
+        <div className="p-6"><audio src={inlineUrl} controls className="w-full" aria-label={item.name} /></div>
       ) : null}
       <div className="flex flex-wrap items-center gap-3 p-4">
         <ItemIcon kind="file" mime={item.mime} name={item.name} className="h-10 w-10" />
@@ -213,14 +224,18 @@ function FileCard({ item, inlineUrl, downloadUrl, onPreview }: { item: DataroomI
           <p className="text-xs text-muted-foreground">{formatBytes(item.size_bytes)} · {formatDateTime(item.updated_at)}</p>
         </div>
         {previewable && <Button variant="outline" onClick={onPreview}><Eye className="mr-2 h-4 w-4" />Pratinjau</Button>}
-        <Button onClick={() => { window.location.assign(downloadUrl); }}><Download className="mr-2 h-4 w-4" />Unduh</Button>
+        {canDownload ? (
+          <Button onClick={() => { window.location.assign(downloadUrl); }}><Download className="mr-2 h-4 w-4" />Unduh</Button>
+        ) : (
+          <p className="text-xs text-muted-foreground">Pemilik link mematikan unduhan{previewable ? "" : "; jenis file ini tidak bisa dibuka di browser"}.</p>
+        )}
       </div>
     </div>
   );
 }
 
-function FolderBrowser({ root, rootItems, listing, onOpenFolder, onBackToRoot, onPreview, fileUrl }: {
-  root: DataroomItem; rootItems: DataroomItem[]; listing: Listing | null;
+function FolderBrowser({ root, rootItems, listing, canDownload, onOpenFolder, onBackToRoot, onPreview, fileUrl }: {
+  root: DataroomItem; rootItems: DataroomItem[]; listing: Listing | null; canDownload: boolean;
   onOpenFolder: (id: string) => void; onBackToRoot: () => void;
   onPreview: (item: DataroomItem) => void; fileUrl: (item: DataroomItem, download: boolean) => string;
 }) {
@@ -252,7 +267,12 @@ function FolderBrowser({ root, rootItems, listing, onOpenFolder, onBackToRoot, o
               <button
                 type="button"
                 className="min-w-0 flex-1 text-left"
-                onClick={() => (item.kind === "folder" ? onOpenFolder(item.id) : isPreviewable(item.mime) ? onPreview(item) : (window.location.assign(fileUrl(item, true))))}
+                onClick={() => {
+                  if (item.kind === "folder") onOpenFolder(item.id);
+                  else if (isPreviewable(item.mime)) onPreview(item);
+                  else if (canDownload) window.location.assign(fileUrl(item, true));
+                  else toast.error("Pemilik link mematikan unduhan; jenis file ini tidak bisa dibuka di browser");
+                }}
               >
                 <p className="truncate text-sm font-medium">{item.name}</p>
                 <p className="text-xs text-muted-foreground">{item.kind === "file" ? formatBytes(item.size_bytes) : "Folder"} · {formatDateTime(item.updated_at)}</p>
@@ -262,7 +282,9 @@ function FolderBrowser({ root, rootItems, listing, onOpenFolder, onBackToRoot, o
                   {isPreviewable(item.mime) && (
                     <Button variant="ghost" size="sm" onClick={() => onPreview(item)} title="Pratinjau"><Eye className="h-4 w-4" /></Button>
                   )}
-                  <Button variant="ghost" size="sm" onClick={() => { window.location.assign(fileUrl(item, true)); }} title="Unduh"><Download className="h-4 w-4" /></Button>
+                  {canDownload && (
+                    <Button variant="ghost" size="sm" onClick={() => { window.location.assign(fileUrl(item, true)); }} title="Unduh"><Download className="h-4 w-4" /></Button>
+                  )}
                 </div>
               )}
             </li>

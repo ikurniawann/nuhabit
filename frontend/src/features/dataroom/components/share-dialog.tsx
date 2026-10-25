@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Ban, Check, Copy, Droplets, Globe, Link2, Loader2, Lock, Mail, RefreshCw, ScrollText,
+  Ban, Check, Copy, Download, Droplets, Globe, Link2, Loader2, Lock, Mail, RefreshCw, ScrollText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ export function ShareDialog({ open, node, canManage, onClose }: {
   const [emails, setEmails] = useState("");
   const [pin, setPin] = useState("");
   const [watermark, setWatermark] = useState(false);
+  const [allowDownload, setAllowDownload] = useState(true);
   const [days, setDays] = useState(7);
   const [sendEmail, setSendEmail] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -75,7 +76,7 @@ export function ShareDialog({ open, node, canManage, onClose }: {
     try {
       const res = await apiPost<{ data: ShareRow }>("/api/dataroom/shares", {
         node_id: node.id, access_type: accessType, emails: list, pin: pin || null,
-        watermark, expires_days: days, send_email: accessType === "email" && sendEmail,
+        watermark, allow_download: allowDownload, expires_days: days, send_email: accessType === "email" && sendEmail,
       });
       setCreated(res.data);
       void refreshShares();
@@ -177,6 +178,14 @@ export function ShareDialog({ open, node, canManage, onClose }: {
                 </span>
               </label>
 
+              <label className="flex items-start gap-2 text-sm">
+                <input type="checkbox" className="mt-0.5 h-4 w-4" checked={allowDownload} onChange={(e) => setAllowDownload(e.target.checked)} />
+                <span>
+                  <span className="flex items-center gap-1 font-medium"><Download className="h-4 w-4" />Izinkan unduh</span>
+                  <span className="text-xs text-muted-foreground">Bila dimatikan, penerima hanya bisa melihat gambar, PDF, video, audio dan teks di browser; jenis lain tidak bisa dibuka.</span>
+                </span>
+              </label>
+
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs text-muted-foreground">Link akan aktif sampai {formatDateTime(openedAt + days * 86_400_000)}</p>
                 <Button type="button" onClick={submit} disabled={busy}>
@@ -223,6 +232,7 @@ export function ShareDialog({ open, node, canManage, onClose }: {
                         </span>
                         {s.has_pin && <span className="flex items-center gap-1 text-xs text-muted-foreground"><Lock className="h-3 w-3" />PIN</span>}
                         {s.watermark && <span className="flex items-center gap-1 text-xs text-muted-foreground"><Droplets className="h-3 w-3" />Watermark</span>}
+                        {s.allow_download === false && <span className="flex items-center gap-1 text-xs text-muted-foreground"><Ban className="h-3 w-3" />Tanpa unduh</span>}
                       </div>
                       <div className="flex items-center gap-2">
                         <Input readOnly value={s.url} onFocus={(e) => e.target.select()} className="h-8 font-mono text-xs" aria-label="Link berbagi" />
