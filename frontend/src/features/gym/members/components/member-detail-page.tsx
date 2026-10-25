@@ -22,12 +22,14 @@ import { GATE_DENIAL_LABEL } from "@/lib/gym/booking";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import { MEMBER_KEYS, membersApi, type Member360, type MemberBooking } from "../api";
 import { MemberAssessments } from "@/features/gym/coaching/components/member-assessments";
+import { MemberLoyalty } from "@/features/gym/loyalty/components/member-loyalty";
 import { MemberNotes } from "./member-notes";
 import { ProfileDialog } from "./profile-dialog";
 
 const TABS = [
   { value: "profil", label: "Profil" },
   { value: "membership", label: "Membership & kredit" },
+  { value: "tier", label: "Tier & status" },
   { value: "booking", label: "Booking" },
   { value: "checkin", label: "Check-in" },
   { value: "pembelian", label: "Pembelian" },
@@ -145,6 +147,9 @@ export function MemberDetailPage({ customerId }: { customerId: string }) {
         </TabsContent>
         <TabsContent value="membership" className="mt-4">
           <MembershipTab member={m} />
+        </TabsContent>
+        <TabsContent value="tier" className="mt-4">
+          <MemberLoyalty customerId={p.id} name={p.name} />
         </TabsContent>
         <TabsContent value="booking" className="mt-4 space-y-4">
           <BookingTable title="Booking mendatang" rows={m.upcoming_bookings} empty="Tidak ada booking mendatang." />
