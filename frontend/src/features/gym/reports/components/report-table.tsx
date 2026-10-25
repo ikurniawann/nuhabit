@@ -18,6 +18,7 @@ export function ReportTable<T>({
   rowKey,
   csvName,
   period,
+  filename = csvFilename(csvName, period.from, period.to),
   empty = "Tidak ada data di rentang ini.",
 }: {
   title: string;
@@ -27,6 +28,8 @@ export function ReportTable<T>({
   rowKey: (row: T, index: number) => string;
   csvName: string;
   period: { from: string; to: string };
+  /** Nama berkas CSV; default laporan-gym-<csvName>-<dari>-<sampai>.csv. */
+  filename?: string;
   empty?: string;
 }) {
   return (
@@ -40,7 +43,7 @@ export function ReportTable<T>({
           variant="outline"
           size="sm"
           disabled={rows.length === 0}
-          onClick={() => downloadCSV(tableCsv(rows, columns), csvFilename(csvName, period.from, period.to))}
+          onClick={() => downloadCSV(tableCsv(rows, columns), filename)}
         >
           <Download /> CSV<span className="sr-only"> {title}</span>
         </Button>

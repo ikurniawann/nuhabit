@@ -210,7 +210,15 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('gym.incentives', 'Insentif Coach', '/dashboard/gym/incentives', 'money', 'sidebar', 90, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.referrals', 'Referral', '/dashboard/gym/referrals', 'user-plus', 'sidebar', 90, '{"actions":["read","update"]}'::jsonb),
   ('gym.reports', 'Laporan Gym', '/dashboard/gym/reports', 'chart-bar', 'sidebar', 95, '{"actions":["read"]}'::jsonb),
-  ('gym.rules', 'Aturan Gym', '/dashboard/gym/rules', 'settings', 'sidebar', 100, '{"actions":["read","update"]}'::jsonb)
+  ('gym.rules', 'Aturan Gym', '/dashboard/gym/rules', 'settings', 'sidebar', 100, '{"actions":["read","update"]}'::jsonb),
+  -- Investor portal (27 Oct 2026): read-only pages for the investor role and
+  -- the directors' update editor (seeders_test.go checks every investor menu is here).
+  ('investor', 'Investor', NULL, 'chart-pie', 'group', 4, '{"actions":["read"]}'::jsonb),
+  ('investor.overview', 'Ringkasan', '/dashboard/investor', 'chart-bar', 'sidebar', 10, '{"actions":["read"]}'::jsonb),
+  ('investor.performance', 'Laporan Kinerja', '/dashboard/investor/performance', 'chart', 'sidebar', 20, '{"actions":["read"]}'::jsonb),
+  ('investor.progress', 'Progres', '/dashboard/investor/progress', 'megaphone', 'sidebar', 30, '{"actions":["read"]}'::jsonb),
+  ('investor.documents', 'Dokumen', '/dashboard/investor/documents', 'file-text', 'sidebar', 40, '{"actions":["read"]}'::jsonb),
+  ('investor.updates', 'Update untuk Investor', '/dashboard/investor/updates', 'paper-airplane', 'sidebar', 90, '{"actions":["read","create","update","delete"]}'::jsonb)
 ON CONFLICT (code) DO UPDATE SET
   menu_name            = EXCLUDED.menu_name,
   route_path           = EXCLUDED.route_path,
@@ -344,6 +352,9 @@ WHERE deleted_at IS NULL
     -- assessments, coach portal, gate devices, referrals):
     'gym.members', 'gym.reports', 'gym.schedule.templates', 'gym.pt', 'gym.assessments',
     'gym.my-classes', 'gym.gate-devices', 'gym.referrals',
+    -- Investor portal (27 Oct 2026):
+    'investor', 'investor.overview', 'investor.performance', 'investor.progress',
+    'investor.documents', 'investor.updates',
     'items.raw-material.inventory.expiry', 'items.raw-material.inventory.movements',
     'items.raw-material.inventory.scrap', 'pos.catalog.channel-prices',
     'pos.loyalty.wallet', 'pos.loyalty.wallet.packages', 'pos.loyalty.wallet.payments',
