@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Search, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Can } from "@/components/iam/can";
@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TableNote } from "@/features/crm/engagement/components/shared";
 import { SELECT } from "@/features/gym/shared";
+import { ImportButton } from "@/features/data-import/import-dialog";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
 import { MEMBER_KEYS, membersApi } from "../api";
@@ -30,6 +31,7 @@ import { RegisterMemberDialog } from "./register-member-dialog";
 
 /** Gym → Member: cari dan saring member, filter dan halaman tersimpan di URL. */
 export function MembersPage() {
+  const queryClient = useQueryClient();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -67,11 +69,21 @@ export function MembersPage() {
         title="Member"
         description="Cari member dengan nama, nomor HP, email, atau kode member. Klik nama untuk membuka profil lengkapnya."
         actions={
-          <Can menu="gym.members" action="create" mode="disable">
-            <Button onClick={() => setRegistering(true)}>
-              <UserPlus /> Tambah member
-            </Button>
-          </Can>
+          <>
+            <ImportButton
+              menu="gym.members"
+              title="Impor member"
+              description="Nomor telepon menjadi kunci, email kunci kedua. Saldo kredit dan pass yang diisi dicatat sekali sebagai saldo awal."
+              endpoint="/api/gym/members/import"
+              templateHref="/api/gym/members/import/template"
+              onImported={() => void queryClient.invalidateQueries({ queryKey: MEMBER_KEYS.all })}
+            />
+            <Can menu="gym.members" action="create" mode="disable">
+              <Button onClick={() => setRegistering(true)}>
+                <UserPlus /> Tambah member
+              </Button>
+            </Can>
+          </>
         }
       />
 

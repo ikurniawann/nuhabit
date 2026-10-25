@@ -24,6 +24,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { GYM_KEYS, schedulingApi, type Coach } from "../api";
 import { SELECT } from "@/features/gym/shared";
+import { ImportButton } from "@/features/data-import/import-dialog";
 import { useGymBranches } from "@/features/gym/branches";
 import { Combobox } from "@/components/ui/combobox";
 import { formatNumber } from "@/lib/format";
@@ -45,11 +46,21 @@ export function CoachesPage() {
         title="Coach"
         description="Profil coach tampil di portal member beserta kelas mendatangnya. Coach nonaktif tidak bisa dipilih untuk sesi baru."
         actions={
-          <Can menu="gym.coaches" action="create" mode="disable">
-            <Button onClick={() => setEditing("new")}>
-              <Plus /> Coach baru
-            </Button>
-          </Can>
+          <>
+            <ImportButton
+              menu="gym.coaches"
+              title="Impor coach"
+              description="Nama coach menjadi kunci. Kolom email_user menautkan akun staf untuk menu Kelas Saya, kolom cabang memakai kode cabang."
+              endpoint="/api/gym/coaches/import"
+              templateHref="/api/gym/coaches/import/template"
+              onImported={() => void queryClient.invalidateQueries({ queryKey: GYM_KEYS.coaches })}
+            />
+            <Can menu="gym.coaches" action="create" mode="disable">
+              <Button onClick={() => setEditing("new")}>
+                <Plus /> Coach baru
+              </Button>
+            </Can>
+          </>
         }
       />
 

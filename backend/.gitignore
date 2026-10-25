@@ -1,3 +1,6 @@
 bin/
 # Coordination marker for parallel agents; never commit.
 internal/platform/READY
+
+# Demo account passwords written by cmd/demo-users; never commit.
+.demo-users.local

@@ -21,9 +21,11 @@ func init() {
 		if now == nil {
 			now = time.Now
 		}
+		credits := gymcredits.NewDefaultService(d, d.DB)
 		return gymdesk.New(d, gymdesk.Ports{
 			Accounts:      gymDeskAccounts{now: now},
-			Credits:       gymDeskCredits{svc: gymcredits.NewDefaultService(d, d.DB)},
+			Credits:       gymDeskCredits{svc: credits},
+			Opening:       credits,
 			WaiverVersion: memberdomain.WaiverVersion,
 		})
 	})

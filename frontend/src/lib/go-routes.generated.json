@@ -1716,6 +1716,16 @@
   },
   {
     "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/class-types/import"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/class-types/import/template"
+  },
+  {
+    "module": "gym-scheduling",
     "method": "DELETE",
     "path": "/api/gym/class-types/{id}"
   },
@@ -1733,6 +1743,16 @@
     "module": "gym-scheduling",
     "method": "POST",
     "path": "/api/gym/coaches"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/coaches/import"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/coaches/import/template"
   },
   {
     "module": "gym-scheduling",
@@ -1916,6 +1936,16 @@
   },
   {
     "module": "gym-desk",
+    "method": "POST",
+    "path": "/api/gym/members/import"
+  },
+  {
+    "module": "gym-desk",
+    "method": "GET",
+    "path": "/api/gym/members/import/template"
+  },
+  {
+    "module": "gym-desk",
     "method": "GET",
     "path": "/api/gym/members/{id}"
   },
@@ -1968,6 +1998,16 @@
     "module": "gym-credits",
     "method": "POST",
     "path": "/api/gym/packages"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/packages/import"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/gym/packages/import/template"
   },
   {
     "module": "gym-credits",
@@ -2178,6 +2218,16 @@
     "module": "gym-scheduling",
     "method": "POST",
     "path": "/api/gym/session-templates/generate"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/session-templates/import"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/session-templates/import/template"
   },
   {
     "module": "gym-scheduling",
@@ -2433,6 +2483,16 @@
     "module": "hris",
     "method": "POST",
     "path": "/api/hris/employees/documents"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/employees/import"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/employees/import/template"
   },
   {
     "module": "hris",
@@ -3261,6 +3321,16 @@
   },
   {
     "module": "hris",
+    "method": "POST",
+    "path": "/api/master/departments/import"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/master/departments/import/template"
+  },
+  {
+    "module": "hris",
     "method": "DELETE",
     "path": "/api/master/departments/{id}"
   },
@@ -3298,6 +3368,16 @@
     "module": "hris",
     "method": "POST",
     "path": "/api/master/positions"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/master/positions/import"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/master/positions/import/template"
   },
   {
     "module": "hris",

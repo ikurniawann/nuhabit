@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BuildingOfficeIcon, PlusIcon, UserGroupIcon } from "@heroicons/react/24/outline";
@@ -9,6 +10,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDepartmentList } from "@/features/master-data/departments";
+import { ImportButton } from "@/features/data-import/import-dialog";
 import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
 import { useIamAccess } from "@/components/iam/iam-access-provider";
@@ -16,6 +18,7 @@ import { IAM } from "@/lib/iam/prefixes";
 import { OS_PATH } from "@/lib/desktop/deep-link";
 import { impersonateUser } from "../api";
 import { useUserDirectoryStats, useUserList } from "../queries";
+import { usersQueryKeys } from "../query-keys";
 import { EMPLOYEES_ROUTES } from "../constants";
 import { ContractExpiryBanner } from "./contract-expiry-banner";
 import { ResetPasswordDialog, type ResetPasswordTarget } from "./reset-password-dialog";
@@ -39,6 +42,7 @@ interface UsersListPageProps {
 }
 
 export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
+  const queryClient = useQueryClient();
   const isAccountsView = variant === "accounts";
   const showAppActions = isAccountsView;
   const router = useRouter();
@@ -137,12 +141,22 @@ export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
           </p>
         </div>
         {!isAccountsView && (
-          <Link href={EMPLOYEES_ROUTES.insert}>
-            <Button className="h-10 w-full gap-2 rounded-lg bg-pink-600 px-3 text-sm font-semibold text-white shadow-sm hover:bg-pink-700 sm:w-auto">
-              <PlusIcon className="h-4 w-4" />
-              Add Employee
-            </Button>
-          </Link>
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            <ImportButton
+              menu={["hris.kepegawaian", "settings.users"]}
+              title="Impor karyawan"
+              description="Email karyawan menjadi kunci, NIP kunci kedua. Departemen memakai kode, jabatan memakai nama, atasan dan akun login memakai email."
+              endpoint="/api/hris/employees/import"
+              templateHref="/api/hris/employees/import/template"
+              onImported={() => void queryClient.invalidateQueries({ queryKey: usersQueryKeys.all })}
+            />
+            <Link href={EMPLOYEES_ROUTES.insert}>
+              <Button className="h-10 w-full gap-2 rounded-lg bg-pink-600 px-3 text-sm font-semibold text-white shadow-sm hover:bg-pink-700 sm:w-auto">
+                <PlusIcon className="h-4 w-4" />
+                Add Employee
+              </Button>
+            </Link>
+          </div>
         )}
       </div>
 

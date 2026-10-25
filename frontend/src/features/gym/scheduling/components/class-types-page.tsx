@@ -26,6 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { CLASS_COLOR, GYM_KEYS, schedulingApi, type ClassColor, type ClassType } from "../api";
 import { SELECT } from "@/features/gym/shared";
+import { ImportButton } from "@/features/data-import/import-dialog";
 import { formatNumber } from "@/lib/format";
 
 /** Gym → Jenis Kelas: template durasi, kapasitas, dan biaya kredit untuk sesi baru. */
@@ -54,11 +55,21 @@ export function ClassTypesPage() {
         title="Jenis Kelas"
         description="Template kelas. Sesi menyalin kapasitas dan biaya kredit saat dibuat, jadi mengubah template tidak mengubah sesi yang sudah ada."
         actions={
-          <Can menu="gym.class-types" action="create" mode="disable">
-            <Button onClick={() => setEditing("new")}>
-              <Plus /> Jenis kelas baru
-            </Button>
-          </Can>
+          <>
+            <ImportButton
+              menu="gym.class-types"
+              title="Impor jenis kelas"
+              description="Nama jenis kelas menjadi kunci: nama yang sudah ada diperbarui, yang baru dibuat."
+              endpoint="/api/gym/class-types/import"
+              templateHref="/api/gym/class-types/import/template"
+              onImported={refresh}
+            />
+            <Can menu="gym.class-types" action="create" mode="disable">
+              <Button onClick={() => setEditing("new")}>
+                <Plus /> Jenis kelas baru
+              </Button>
+            </Can>
+          </>
         }
       />
 
