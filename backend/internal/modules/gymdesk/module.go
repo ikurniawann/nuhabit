@@ -71,9 +71,14 @@ func (m mod) Routes() []module.Route { return m.h.Routes() }
 
 // New builds the module.
 func New(deps module.Deps, ports Ports) module.Module {
-	now := deps.Now
+	return mod{h: &handler{svc: NewService(deps.DB, ports, deps.Now), guard: deps.Auth}}
+}
+
+// NewService builds the service on db (a pool, or a tx in tests), for the
+// module and for contexts that read the gym reports through a port.
+func NewService(db database.DB, ports Ports, now func() time.Time) *Service {
 	if now == nil {
 		now = time.Now
 	}
-	return mod{h: &handler{svc: &Service{db: deps.DB, ports: ports, now: now}, guard: deps.Auth}}
+	return &Service{db: db, ports: ports, now: now}
 }

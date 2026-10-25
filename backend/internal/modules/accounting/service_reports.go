@@ -330,6 +330,67 @@ func (s *Service) GeneralLedger(ctx context.Context, companyID, accountID string
 	return l, nil
 }
 
+// MonthIncome is one month of the posted income statement of a company:
+// revenue, cost of sales, operating expenses and the other lines.
+type MonthIncome struct {
+	Month         string  `json:"month"`
+	Revenue       float64 `json:"revenue"`
+	Cogs          float64 `json:"cogs"`
+	Expenses      float64 `json:"expenses"`
+	OtherIncome   float64 `json:"other_income"`
+	OtherExpenses float64 `json:"other_expenses"`
+}
+
+// MonthlyIncome is the income statement of companyIDs per month between
+// dateFrom and dateTo (YYYY-MM-DD, inclusive): one row per month of the
+// span, months without entries at zero.
+func (s *Service) MonthlyIncome(ctx context.Context, companyIDs []string, dateFrom, dateTo string) ([]MonthIncome, error) {
+	type row struct{ Month, Revenue, Cogs, Expenses, OtherIncome, OtherExpenses string }
+	// sum is the signed total of the lines on accounts of one type; income
+	// types grow on the credit side, cost types on the debit side.
+	sum := func(typeCode string, credit bool) string {
+		plus, minus := "DEBIT", "CREDIT"
+		if credit {
+			plus, minus = "CREDIT", "DEBIT"
+		}
+		return `COALESCE(SUM(CASE WHEN t.code = '` + typeCode + `' THEN
+         CASE WHEN l.entry_side = '` + plus + `' THEN l.amount WHEN l.entry_side = '` + minus + `' THEN -l.amount ELSE 0 END
+       ELSE 0 END), 0)::text`
+	}
+	rows, err := collect[row](ctx, s.db, `
+WITH months AS (
+  SELECT to_char(d, 'YYYY-MM') AS month,
+         date_trunc('month', d)::date AS start_date,
+         (date_trunc('month', d) + interval '1 month' - interval '1 day')::date AS end_date
+    FROM generate_series(date_trunc('month', $2::date), date_trunc('month', $3::date), interval '1 month') AS d
+)
+SELECT m.month,
+       `+sum("REVENUE", true)+`,
+       `+sum("COGS", false)+`,
+       `+sum("EXPENSE", false)+`,
+       `+sum("OTHER_INCOME", true)+`,
+       `+sum("OTHER_EXPENSE", false)+`
+  FROM months m
+  LEFT JOIN accounting.journal_entries e
+    ON e.deleted_at IS NULL AND e.status = 'POSTED' AND e.company_id = ANY($1::uuid[])
+   AND e.entry_date >= GREATEST(m.start_date, $2::date) AND e.entry_date <= LEAST(m.end_date, $3::date)
+  LEFT JOIN accounting.journal_entry_lines l ON l.entry_id = e.id
+  LEFT JOIN accounting.chart_of_accounts coa ON coa.id = l.account_id
+  LEFT JOIN accounting.account_types t ON t.id = coa.account_type_id
+ GROUP BY m.month
+ ORDER BY m.month ASC`, companyIDs, dateFrom, dateTo)
+	if err != nil {
+		return nil, err
+	}
+	n := func(s string) float64 { return domain.Round2(domain.ParseNumber(s)) }
+	out := make([]MonthIncome, len(rows))
+	for i, r := range rows {
+		out[i] = MonthIncome{Month: r.Month, Revenue: n(r.Revenue), Cogs: n(r.Cogs), Expenses: n(r.Expenses),
+			OtherIncome: n(r.OtherIncome), OtherExpenses: n(r.OtherExpenses)}
+	}
+	return out, nil
+}
+
 /* ── Dashboard ───────────────────────────────────────────────────────── */
 
 // NameValue is a chart slice.

@@ -149,19 +149,31 @@ const visitorsCTEs = `
     SELECT customer_id, max(created_at) AS last_visit FROM visits WHERE created_at < $5 GROUP BY customer_id
   )`
 
-// MembersReport builds the member report. New members and the expiring
-// lists cover every branch; activity and churn follow the branch filter.
-func (s *Service) MembersReport(ctx context.Context, p domain.Period, branchID *string) (*MembersReport, error) {
-	out := &MembersReport{Timezone: p.ZoneName()}
+// MemberStats are the member counts of a period: registrations per day, the
+// members who visited, the members of the previous period and how many of
+// them did not come back. No names: contexts outside the desk read them.
+type MemberStats struct {
+	New            int
+	NewPerDay      []DayCount
+	Active         int
+	PreviousActive int
+	Churned        int
+	ChurnRate      float64
+}
+
+// MemberStats counts new members over p (every branch) and the visitors and
+// churn of p against the previous period (branch filter applies).
+func (s *Service) MemberStats(ctx context.Context, p domain.Period, branchID *string) (MemberStats, error) {
+	var out MemberStats
 	rows, err := s.db.Query(ctx, `
 		SELECT to_char(created_at AT TIME ZONE $3, 'YYYY-MM-DD'), count(*)::int
 		  FROM pos.pos_customers WHERE created_at >= $1 AND created_at < $2 GROUP BY 1`, p.From, p.To, p.ZoneName())
 	if err != nil {
-		return nil, err
+		return out, err
 	}
 	counts, err := pgx.CollectRows(rows, pgx.RowToStructByPos[DayCount])
 	if err != nil {
-		return nil, err
+		return out, err
 	}
 	byDay := map[string]int{}
 	for _, c := range counts {
@@ -177,11 +189,24 @@ func (s *Service) MembersReport(ctx context.Context, p domain.Period, branchID *
 		SELECT (SELECT count(*) FROM cur)::int, (SELECT count(*) FROM prev)::int,
 		       (SELECT count(*) FROM prev WHERE customer_id NOT IN (SELECT customer_id FROM cur))::int`,
 		p.From, p.To, branchID, prev.From, prev.To).Scan(&out.Active, &out.PreviousActive, &out.Churned); err != nil {
-		return nil, err
+		return out, err
 	}
 	out.ChurnRate = domain.Rate(out.Churned, out.PreviousActive)
+	return out, nil
+}
 
-	rows, err = s.db.Query(ctx, visitorsCTEs+`
+// MembersReport builds the member report. New members and the expiring
+// lists cover every branch; activity and churn follow the branch filter.
+func (s *Service) MembersReport(ctx context.Context, p domain.Period, branchID *string) (*MembersReport, error) {
+	stats, err := s.MemberStats(ctx, p, branchID)
+	if err != nil {
+		return nil, err
+	}
+	out := &MembersReport{Timezone: p.ZoneName(), New: stats.New, NewPerDay: stats.NewPerDay, Active: stats.Active,
+		PreviousActive: stats.PreviousActive, Churned: stats.Churned, ChurnRate: stats.ChurnRate}
+
+	prev := p.Previous()
+	rows, err := s.db.Query(ctx, visitorsCTEs+`
 		SELECT c.id::text, c.name, c.phone, prev.last_visit
 		  FROM prev JOIN pos.pos_customers c ON c.id = prev.customer_id
 		 WHERE prev.customer_id NOT IN (SELECT customer_id FROM cur)

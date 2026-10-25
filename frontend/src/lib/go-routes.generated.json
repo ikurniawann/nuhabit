@@ -2960,6 +2960,76 @@
     "path": "/api/inventory/{id}/{sub}"
   },
   {
+    "module": "investor",
+    "method": "GET",
+    "path": "/api/investor/branches"
+  },
+  {
+    "module": "investor",
+    "method": "GET",
+    "path": "/api/investor/digest"
+  },
+  {
+    "module": "investor",
+    "method": "PUT",
+    "path": "/api/investor/digest"
+  },
+  {
+    "module": "investor",
+    "method": "GET",
+    "path": "/api/investor/documents"
+  },
+  {
+    "module": "investor",
+    "method": "GET",
+    "path": "/api/investor/overview"
+  },
+  {
+    "module": "investor",
+    "method": "GET",
+    "path": "/api/investor/performance"
+  },
+  {
+    "module": "investor",
+    "method": "GET",
+    "path": "/api/investor/updates"
+  },
+  {
+    "module": "investor",
+    "method": "POST",
+    "path": "/api/investor/updates"
+  },
+  {
+    "module": "investor",
+    "method": "GET",
+    "path": "/api/investor/updates/manage"
+  },
+  {
+    "module": "investor",
+    "method": "DELETE",
+    "path": "/api/investor/updates/{id}"
+  },
+  {
+    "module": "investor",
+    "method": "PATCH",
+    "path": "/api/investor/updates/{id}"
+  },
+  {
+    "module": "investor",
+    "method": "POST",
+    "path": "/api/investor/updates/{id}/attachments"
+  },
+  {
+    "module": "investor",
+    "method": "DELETE",
+    "path": "/api/investor/updates/{id}/attachments/{attachmentId}"
+  },
+  {
+    "module": "investor",
+    "method": "PUT",
+    "path": "/api/investor/updates/{id}/published"
+  },
+  {
     "module": "recruitment",
     "method": "GET",
     "path": "/api/job-openings/public"
