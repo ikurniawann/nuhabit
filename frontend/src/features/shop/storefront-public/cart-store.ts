@@ -44,12 +44,16 @@ function emit() {
   for (const listener of listeners) listener();
 }
 
+/** Fired on every cart write; the site navbar badge listens for it. */
+export const CART_CHANGE_EVENT = "shop-cart-change";
+
 function write(key: string, value: unknown) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
     /* storage full or blocked */
   }
+  window.dispatchEvent(new Event(CART_CHANGE_EVENT));
 }
 
 function read(key: string): string | null {

@@ -7,14 +7,11 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
-  ArrowUp,
   BriefcaseBusiness,
   ChevronDown,
   Clock3,
   MapPin,
 } from "lucide-react";
-
-const logoUrl = "/brand/wordmark-black.png";
 
 const studioImages = [
   "https://lh3.googleusercontent.com/aida-public/AB6AXuDJr8IKAu_mCH2MXuI0aBsNIWp2CsmUx2bPP--qivo51UWxxyAdNGCKrk_1XY7XHmZ_wAZLFWYTKuFjdHi0-4zAZanbIiUxWbpBU-ZkJedhWA7FCcObdBkJaLGL3PHefi86Y984mxF1mw843hAo6Ip1R4ia5c_LN2Pv1hLYMDdwBC9rQEjdxterd171OS-FTEK2sYSDoW1aagus7Gp-WoN9KGhI5NmQt8HqbJmn9xoVU5Om859B60lbw67wnqYWuS7LhAnmXiLIeGc",
@@ -62,25 +59,9 @@ export default function CareerPage() {
   }, [jobs]);
 
   return (
-    <div id="top" lang="en" className="min-h-screen bg-white text-[#131a1c] career-roundo">
-      <nav className="fixed top-0 z-50 w-full border-b border-[#e3dbcc] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-4 sm:px-6 lg:px-10">
-          <Link href="/career" className="flex h-full items-center" aria-label="NüHabit careers">
-            <img src={logoUrl} alt="NüHabit" className="h-7 w-auto sm:h-8" />
-          </Link>
-          <div className="flex items-center gap-3 sm:gap-5">
-            <Link href="/" className="text-sm font-semibold text-forest underline-offset-4 hover:underline">Home</Link>
-            <a
-              href="#open-roles"
-              className="rounded-full bg-[#00281a] px-6 py-2 text-sm font-semibold uppercase tracking-[0.08em] text-white transition hover:bg-[#203b32] active:scale-95"
-            >
-              Open Roles
-            </a>
-          </div>
-        </div>
-      </nav>
+    <div className="bg-white text-[#131a1c] career-roundo">
 
-      <main className="overflow-x-hidden pb-20 pt-36 sm:pt-40">
+      <div className="overflow-x-hidden pb-20 pt-10 sm:pt-14">
         <section className="mx-auto mb-20 max-w-[1280px] px-4 text-center sm:px-6 lg:px-10">
           <h1 className="mb-6 text-4xl font-semibold leading-tight tracking-normal sm:text-5xl lg:text-6xl">
             Join our team
@@ -207,36 +188,8 @@ export default function CareerPage() {
             </Link>
           </div>
         </section>
-      </main>
+      </div>
 
-      <footer className="w-full border-t border-[#e3dbcc] bg-white py-20">
-        <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-10 px-4 sm:px-6 md:grid-cols-2 lg:px-10">
-          <div className="space-y-6">
-            <div className="flex h-12 items-center">
-              <img src={logoUrl} alt="NüHabit" className="h-7 w-auto sm:h-8" />
-            </div>
-            <p className="max-w-sm text-base leading-relaxed text-[#2a332e]">
-              Designing emotional experiences at the intersection of technology, art, and service.
-            </p>
-            <p className="text-base text-[#2a332e]">© 2026 NüHabit. All rights reserved.</p>
-          </div>
-          <div className="flex flex-col justify-between gap-10 md:items-end">
-            <div className="flex flex-wrap gap-6">
-              {["LinkedIn", "Instagram", "Vimeo", "Privacy Policy", "Terms"].map((item) => (
-                <a key={item} href="#" className="text-base text-[#2a332e] transition-colors hover:text-[#203b32]">
-                  {item}
-                </a>
-              ))}
-            </div>
-            <a href="#top" className="group flex items-center gap-1 text-[#2a332e]">
-              <span className="text-sm font-semibold uppercase tracking-[0.12em] transition-colors group-hover:text-[#203b32]">
-                Back to top
-              </span>
-              <ArrowUp className="h-4 w-4 text-[#203b32]" />
-            </a>
-          </div>
-        </div>
-      </footer>
 
       {showNotice && (
         <div className="fixed bottom-4 right-4 z-50 max-w-sm px-2 sm:bottom-6 sm:right-6">

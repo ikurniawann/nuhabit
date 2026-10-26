@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
+import { CART_CHANGE_EVENT } from "@/features/shop/storefront-public/cart-store";
 import { parseStoredCart } from "@/lib/shop/storefront-cart";
 
 const CART_KEY_PREFIX = "shop-cart-";
@@ -16,12 +17,13 @@ export function readCartCount(storage: Pick<Storage, "length" | "key" | "getItem
   return total;
 }
 
+// "storage" covers other tabs, CART_CHANGE_EVENT this tab's storefront.
+const EVENTS = ["storage", "focus", CART_CHANGE_EVENT] as const;
+
 function subscribe(onChange: () => void) {
-  window.addEventListener("storage", onChange);
-  window.addEventListener("focus", onChange);
+  for (const name of EVENTS) window.addEventListener(name, onChange);
   return () => {
-    window.removeEventListener("storage", onChange);
-    window.removeEventListener("focus", onChange);
+    for (const name of EVENTS) window.removeEventListener(name, onChange);
   };
 }
 

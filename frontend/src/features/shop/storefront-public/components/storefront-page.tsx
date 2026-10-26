@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Loader2, Package, Search, ShoppingBag, ShoppingCart, UserRound } from 'lucide-react';
+import { Loader2, Package, Search, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   addCartLine,
@@ -50,12 +50,6 @@ import { ProductRow } from './product-row';
 import { PromoBanner } from './promo-banner';
 import { StorefrontHero } from './storefront-hero';
 
-const SITE_LINKS = [
-  { href: '/training', label: 'Training' },
-  { href: '/locations', label: 'Locations' },
-  { href: '/news', label: 'News' },
-] as const;
-
 export function ShopStorefrontPage({ slug }: { slug: string }) {
   const catalog = useStorefrontCatalog(slug);
   const cart = useCart();
@@ -79,6 +73,14 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
       bindSaved(shopSlug);
     }
   }, [shopSlug]);
+
+  // The site navbar's cart button opens this drawer while the shop is open.
+  useEffect(() => {
+    window.nhStorefront = { openCart };
+    return () => {
+      delete window.nhStorefront;
+    };
+  }, []);
 
   useEffect(() => {
     const query = catalogFiltersQuery(filters);
@@ -171,7 +173,6 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
     : [{ id: 'results', name: 'Results', products: visibleProducts }];
   const grouped = groups.length > 1;
   const sections = browsing ? catalogSections(products) : [];
-  const count = cartCount(cart.lines);
   const checkoutLines = buyNow ? buyNow.lines : cart.lines;
   const cardActions = { onSelect: openProduct, isSaved: wishlist.has, onToggleSaved: wishlist.toggle, onQuickAdd: quickAdd };
 
@@ -181,48 +182,14 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="theme-light min-h-screen bg-background pb-24">
-      <header className="sticky top-0 z-30 px-3 pt-3 md:px-4">
-        <div className="mx-auto flex h-16 items-center gap-3 rounded-2xl bg-card/95 px-4 shadow-float backdrop-blur lg:px-5">
-          <Link href="/" className="flex shrink-0 items-center" aria-label="NüHabit, go to the home page">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/wordmark-black.png" alt="" className="h-6 w-auto" />
-          </Link>
-          <span className="rounded-full bg-lime px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-forest">Shop</span>
-          <nav aria-label="Site" className="ml-4 hidden items-center gap-1 text-sm md:flex">
-            {SITE_LINKS.map((link) => (
-              <Link key={link.href} href={link.href} className="whitespace-nowrap rounded-full px-3 py-1.5 text-body transition-colors hover:bg-surface-2">
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-          <Link
-            href="/member/auth/login"
-            aria-label="Member login"
-            className="ml-auto inline-flex size-10 items-center justify-center gap-2 rounded-full border border-border text-sm font-semibold whitespace-nowrap text-foreground transition-colors hover:bg-surface-2 lg:size-auto lg:px-4 lg:py-2"
-          >
-            <UserRound className="h-4 w-4" />
-            <span className="hidden lg:inline">Member login</span>
-          </Link>
-          <button
-            type="button"
-            onClick={openCart}
-            className="relative inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold uppercase tracking-wide text-on-ink hover:bg-ink-3"
-            aria-label={`Cart, ${count} ${count === 1 ? 'item' : 'items'}`}
-          >
-            <ShoppingCart className="h-4 w-4" />
-            <span className="hidden sm:inline">Cart</span>
-            {count > 0 ? (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-strong px-1 text-xs font-bold text-accent-foreground">
-                {count}
-              </span>
-            ) : null}
-          </button>
+    <div className="theme-light bg-background pb-24">
+      {grouped ? (
+        <div className="sticky top-[5.25rem] z-20 px-3 md:px-4">
+          <CollectionNav groups={groups} />
         </div>
-        {grouped ? <CollectionNav groups={groups} /> : null}
-      </header>
+      ) : null}
 
-      <main className=" px-3 py-3 md:px-4">
+      <div className="px-3 py-3 md:px-4">
         <StorefrontHero storefront={storefront} products={products} onSelect={openProduct} />
 
         {storefront.banner ? <PromoBanner banner={storefront.banner} onCopyCode={copyBannerCode} /> : null}
@@ -265,7 +232,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
             </section>
           ))
         )}
-      </main>
+      </div>
 
       {detailProduct ? (
         <ProductDetailSheet
