@@ -21,31 +21,11 @@ import {
   useUpdateInvoiceStatus,
   useUploadFakturPajak,
 } from "../queries";
+import { INVOICE_PAYMENT_BADGES, INVOICE_STATUS_BADGES, PAYMENT_METHOD_LABELS } from "../status";
 import { InvoiceSheet, type InvoiceSheetValues } from "./invoice-sheet";
 
 const FAKTUR_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp";
 const FAKTUR_MAX_BYTES = 10 * 1024 * 1024;
-
-const STATUS_BADGES: Record<string, string> = {
-  diajukan: "bg-amber-100 text-amber-700",
-  draft: "bg-gray-100 text-gray-600",
-  terkirim: "bg-blue-100 text-blue-700",
-  batal: "bg-red-100 text-red-600",
-};
-
-const PAYMENT_BADGES: Record<string, string> = {
-  lunas: "bg-emerald-100 text-emerald-700",
-  sebagian: "bg-amber-100 text-amber-700",
-  belum: "bg-gray-100 text-gray-500",
-};
-
-const METHOD_LABELS: Record<string, string> = {
-  cash: "Tunai",
-  transfer: "Transfer",
-  qris: "QRIS",
-  edc: "Kartu / EDC",
-  lainnya: "Lainnya",
-};
 
 const valuesOf = (detail: InvoiceDetail): InvoiceSheetValues => ({
   label: detail.label,
@@ -115,9 +95,9 @@ function InvoiceDocument({ detail }: { detail: InvoiceDetail }) {
         description={`${detail.org_name} · ${detail.deal_title}`}
         actions={
           <>
-            <Badge className={`border-0 font-normal ${STATUS_BADGES[detail.status]}`}>{detail.status}</Badge>
+            <Badge className={`border-0 font-normal ${INVOICE_STATUS_BADGES[detail.status]}`}>{detail.status}</Badge>
             {detail.status !== "batal" ? (
-              <Badge className={`border-0 font-normal ${PAYMENT_BADGES[detail.payment_status]}`}>
+              <Badge className={`border-0 font-normal ${INVOICE_PAYMENT_BADGES[detail.payment_status]}`}>
                 {detail.payment_status}
               </Badge>
             ) : null}
@@ -307,7 +287,7 @@ function PaymentHistoryCard({ invoiceId }: { invoiceId: string }) {
           {payments.map((payment) => (
             <li key={payment.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-surface-2 px-3 py-2">
               <span className="font-semibold tabular-nums">{formatRupiah(payment.amount)}</span>
-              <Badge variant="muted">{METHOD_LABELS[payment.method] ?? payment.method}</Badge>
+              <Badge variant="muted">{PAYMENT_METHOD_LABELS[payment.method] ?? payment.method}</Badge>
               <span className="text-xs text-muted-foreground">
                 {formatDate(payment.paid_on, "—")}
                 {payment.note ? ` · ${payment.note}` : ""}

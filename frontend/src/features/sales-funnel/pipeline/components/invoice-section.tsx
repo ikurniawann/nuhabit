@@ -6,6 +6,7 @@ import { FileCheck2, FileDown, Loader2, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDealInvoices, useDeleteDealInvoice } from "../queries";
+import { INVOICE_PAYMENT_BADGES, INVOICE_STATUS_BADGES } from "@/features/finance/invoices/status";
 import { InvoiceRequestSheet } from "./invoice-request-sheet";
 
 /**
@@ -15,19 +16,6 @@ import { InvoiceRequestSheet } from "./invoice-request-sheet";
  * setelan quotation: nominal termin sudah termasuk PPN, rincian DPP/PPN
  * hanya informatif.
  */
-
-const STATUS_BADGES: Record<string, string> = {
-  diajukan: "bg-amber-100 text-amber-700",
-  draft: "bg-gray-100 text-gray-600",
-  terkirim: "bg-blue-100 text-blue-700",
-  batal: "bg-red-100 text-red-600",
-};
-
-const PAYMENT_BADGES: Record<string, string> = {
-  lunas: "bg-emerald-100 text-emerald-700",
-  sebagian: "bg-amber-100 text-amber-700",
-  belum: "bg-gray-100 text-gray-500",
-};
 
 export function InvoiceSection({
   dealId,
@@ -103,12 +91,12 @@ export function InvoiceSection({
               </div>
               <div className="shrink-0 text-right">
                 <div className="flex items-center justify-end gap-1">
-                  <Badge className={`border-0 font-normal ${STATUS_BADGES[invoice.status]}`}>
+                  <Badge className={`border-0 font-normal ${INVOICE_STATUS_BADGES[invoice.status]}`}>
                     {invoice.status}
                   </Badge>
                   {invoice.status !== "batal" ? (
                     <Badge
-                      className={`border-0 font-normal ${PAYMENT_BADGES[invoice.payment_status]}`}
+                      className={`border-0 font-normal ${INVOICE_PAYMENT_BADGES[invoice.payment_status]}`}
                     >
                       {invoice.payment_status}
                     </Badge>
