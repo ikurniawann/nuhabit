@@ -1,5 +1,6 @@
 "use client";
 
+import type { ComponentProps } from "react";
 import { formatRupiah } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 
@@ -12,17 +13,16 @@ export function RupiahInput({
   value,
   onValueChange,
   placeholder = "Rp 0",
-  className,
-}: {
+  ...props
+}: Omit<ComponentProps<typeof Input>, "value" | "onChange" | "type"> & {
   value: string;
   onValueChange: (digits: string) => void;
-  placeholder?: string;
-  className?: string;
 }) {
   const display = value ? formatRupiah(value) : "";
 
   return (
     <Input
+      {...props}
       type="text"
       inputMode="numeric"
       value={display}
@@ -31,7 +31,6 @@ export function RupiahInput({
         onValueChange(digits);
       }}
       placeholder={placeholder}
-      className={className}
     />
   );
 }

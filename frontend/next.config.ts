@@ -155,7 +155,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/dashboard/finance/invoices/:path*",
-        destination: "/dashboard/accounting/receivable/invoices-b2b",
+        destination: "/dashboard/accounting/receivable/invoices-b2b/:path*",
         permanent: false,
       },
       {

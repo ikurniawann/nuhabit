@@ -3,17 +3,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  createInvoicePayment,
   deleteFakturPajak,
   deleteInvoice,
-  deleteInvoicePayment,
   fetchFinanceInvoices,
   fetchInvoiceDetail,
   fetchInvoicePayments,
   reviseInvoice,
   updateInvoiceStatus,
   uploadFakturPajak,
-  type CreateInvoicePaymentValues,
   type FinanceInvoiceFilters,
   type ReviseInvoiceValues,
 } from "./api";
@@ -122,32 +119,3 @@ export const useInvoicePayments = (invoiceId: string, enabled: boolean) =>
     queryFn: () => fetchInvoicePayments(invoiceId),
     enabled: enabled && invoiceId !== "",
   });
-
-export const useCreateInvoicePayment = (
-  invoiceId: string,
-  onSuccess?: () => void
-) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (values: CreateInvoicePaymentValues) =>
-      createInvoicePayment(invoiceId, values),
-    onSuccess: () => {
-      toast.success("Pembayaran tercatat");
-      queryClient.invalidateQueries({ queryKey: financeQueryKeys.all });
-      onSuccess?.();
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-};
-
-export const useDeleteInvoicePayment = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (paymentId: string) => deleteInvoicePayment(paymentId),
-    onSuccess: () => {
-      toast.success("Catatan pembayaran dihapus");
-      queryClient.invalidateQueries({ queryKey: financeQueryKeys.all });
-    },
-    onError: (error: Error) => toast.error(error.message),
-  });
-};

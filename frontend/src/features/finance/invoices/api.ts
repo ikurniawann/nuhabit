@@ -50,13 +50,6 @@ export interface InvoicePayment {
   created_at: string;
 }
 
-export interface CreateInvoicePaymentValues {
-  amount: number;
-  method: string;
-  paid_on: string;
-  note?: string | null;
-}
-
 export interface InvoiceQuotationRef {
   id: string;
   quote_number: string | null;
@@ -84,6 +77,8 @@ export interface InvoiceDetail {
   note: string | null;
   created_at: string;
   created_by_name: string | null;
+  /** Perusahaan venue: konteks kop dokumen. */
+  company_id: string | null;
   deal_id: string;
   deal_title: string;
   event_type: string;
@@ -188,26 +183,4 @@ export async function fetchInvoicePayments(
   if (!res.ok) await parseError(res, "Gagal memuat pembayaran invoice");
   const body = (await res.json()) as { data: InvoicePayment[] };
   return body.data;
-}
-
-export async function createInvoicePayment(
-  invoiceId: string,
-  values: CreateInvoicePaymentValues
-) {
-  const res = await fetch(`/api/finance/invoices/${invoiceId}/payments`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(values),
-  });
-  if (!res.ok) await parseError(res, "Gagal mencatat pembayaran");
-  return res.json();
-}
-
-export async function deleteInvoicePayment(paymentId: string) {
-  const res = await fetch(`/api/finance/payments/${paymentId}`, {
-    method: "DELETE",
-  });
-  if (!res.ok && res.status !== 204) {
-    await parseError(res, "Gagal menghapus catatan pembayaran");
-  }
 }

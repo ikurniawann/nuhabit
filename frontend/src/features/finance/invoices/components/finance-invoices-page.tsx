@@ -13,14 +13,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogFooter,
-  DialogPanel,
-  DialogPanelBody,
-  DialogPanelHeader,
-  DialogPanelTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -30,18 +22,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
-import { RupiahInput } from "@/features/sales-funnel/pipeline/components/rupiah-input";
-import { InvoiceDetailDialog } from "./invoice-detail-dialog";
-import {
-  useCreateInvoicePayment,
-  useDeleteInvoice,
-  useDeleteInvoicePayment,
-  useFinanceInvoices,
-  useInvoicePayments,
-  useUpdateInvoiceStatus,
-} from "../queries";
-import type { FinanceInvoice } from "../api";
+import { useDeleteInvoice, useFinanceInvoices, useUpdateInvoiceStatus } from "../queries";
 import { formatDate, formatRupiah } from "@/lib/format";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AR_ROUTES } from "@/features/accounting/ar/api";
 
@@ -64,14 +47,6 @@ const PAYMENT_BADGES: Record<string, string> = {
   belum: "bg-gray-100 text-gray-500",
 };
 
-const METHOD_LABELS: Record<string, string> = {
-  cash: "Tunai",
-  transfer: "Transfer",
-  qris: "QRIS",
-  edc: "Kartu / EDC",
-  lainnya: "Lainnya",
-};
-
 const STATUS_FILTERS = [
   { value: "semua", label: "Semua status" },
   { value: "diajukan", label: "Diajukan" },
@@ -80,188 +55,12 @@ const STATUS_FILTERS = [
   { value: "batal", label: "Batal" },
 ];
 
-const todayInput = () => {
-  const now = new Date(Date.now() + 7 * 60 * 60 * 1000);
-  return now.toISOString().slice(0, 10);
-};
-
-
-/** Popup catat pembayaran + riwayat per invoice. */
-function PaymentDialog({
-  invoice,
-  onClose,
-}: {
-  invoice: FinanceInvoice | null;
-  onClose: () => void;
-}) {
-  const open = invoice !== null;
-  const invoiceId = invoice?.id ?? "";
-  const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState("transfer");
-  const [paidOn, setPaidOn] = useState(todayInput);
-  const [note, setNote] = useState("");
-
-  const paymentsQuery = useInvoicePayments(invoiceId, open);
-  const createMutation = useCreateInvoicePayment(invoiceId, () => {
-    setAmount("");
-    setNote("");
-  });
-  const deleteMutation = useDeleteInvoicePayment();
-
-  const payments = paymentsQuery.data ?? [];
-
-  const handleOpenChange = (next: boolean) => {
-    if (!next) {
-      setAmount("");
-      setNote("");
-      onClose();
-    }
-  };
-
-  const handleSubmit = () => {
-    const value = Number(amount) || 0;
-    if (value <= 0 || !paidOn || createMutation.isPending) return;
-    createMutation.mutate({
-      amount: value,
-      method,
-      paid_on: paidOn,
-      note: note.trim() || null,
-    });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogPanel size="sm">
-        {invoice ? (
-          <>
-            <DialogPanelHeader>
-              <DialogPanelTitle>
-                Pembayaran {invoice.invoice_number}
-              </DialogPanelTitle>
-              <p className="text-xs text-gray-500">
-                {invoice.org_name} · {invoice.label} —{" "}
-                {formatRupiah(invoice.amount)}
-                {invoice.outstanding > 0
-                  ? ` · sisa ${formatRupiah(invoice.outstanding)}`
-                  : " · lunas"}
-              </p>
-            </DialogPanelHeader>
-            <DialogPanelBody className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <RupiahInput
-                  value={amount}
-                  onValueChange={setAmount}
-                  placeholder="Nominal (Rp)"
-                  className="h-9 text-sm"
-                />
-                <Select value={method} onValueChange={setMethod}>
-                  <SelectTrigger className="h-9" aria-label="Metode pembayaran">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(METHOD_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  type="date"
-                  value={paidOn}
-                  onChange={(e) => setPaidOn(e.target.value)}
-                  aria-label="Tanggal bayar"
-                  className="h-9 text-sm"
-                />
-                <Button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={
-                    createMutation.isPending || !(Number(amount) > 0) || !paidOn
-                  }
-                  className="h-9 rounded-lg bg-pink-600 text-white hover:bg-pink-700"
-                >
-                  {createMutation.isPending ? "Menyimpan…" : "Catat"}
-                </Button>
-              </div>
-              <Input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Catatan (mis. transfer BCA a.n. Budi)"
-                className="h-9 text-sm"
-              />
-
-              <div>
-                <p className="mb-1.5 text-xs font-medium text-gray-600">
-                  Riwayat pembayaran
-                </p>
-                {paymentsQuery.isLoading ? (
-                  <div className="py-3 text-center">
-                    <Loader2 className="mx-auto h-5 w-5 animate-spin text-pink-600" />
-                  </div>
-                ) : payments.length === 0 ? (
-                  <p className="text-xs text-gray-400">
-                    Belum ada pembayaran untuk invoice ini.
-                  </p>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {payments.map((payment) => (
-                      <li
-                        key={payment.id}
-                        className="flex items-center gap-2 rounded-lg border border-gray-200/70 px-3 py-2 text-sm"
-                      >
-                        <span className="font-semibold text-gray-900">
-                          {formatRupiah(payment.amount)}
-                        </span>
-                        <Badge className="border-0 bg-gray-100 font-normal text-gray-600">
-                          {METHOD_LABELS[payment.method] ?? payment.method}
-                        </Badge>
-                        <span className="text-xs text-gray-500">
-                          {formatDate(payment.paid_on, "—")}
-                          {payment.note ? ` · ${payment.note}` : ""}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => deleteMutation.mutate(payment.id)}
-                          title="Hapus catatan (salah catat)"
-                          className="ml-auto shrink-0 text-gray-300 hover:text-red-500"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </DialogPanelBody>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                className="h-9 rounded-lg"
-              >
-                Tutup
-              </Button>
-            </DialogFooter>
-          </>
-        ) : null}
-      </DialogPanel>
-    </Dialog>
-  );
-}
-
 export function FinanceInvoicesPage() {
   const router = useRouter();
   const [status, setStatus] = useState("semua");
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
-  const [paymentInvoice, setPaymentInvoice] = useState<FinanceInvoice | null>(
-    null
-  );
-  const [detailInvoiceId, setDetailInvoiceId] = useState<string | null>(null);
+  const detailHref = (id: string) => `${AR_ROUTES.invoicesB2b}/${id}`;
 
   const filters = { status: status === "semua" ? "" : status, q };
   const invoicesQuery = useFinanceInvoices(filters);
@@ -337,17 +136,16 @@ export function FinanceInvoicesPage() {
                 className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200/80 bg-white p-3.5"
               >
                 <div className="min-w-0 flex-1">
-                  <button
-                    type="button"
-                    onClick={() => setDetailInvoiceId(invoice.id)}
-                    title="Lihat detail invoice"
+                  <Link
+                    href={detailHref(invoice.id)}
+                    title="Buka dokumen invoice"
                     className="text-left text-sm font-semibold text-gray-900 hover:text-pink-600 hover:underline"
                   >
                     {invoice.invoice_number}
                     <span className="ml-1.5 font-normal text-gray-500">
                       {invoice.label}
                     </span>
-                  </button>
+                  </Link>
                   <p className="mt-0.5 text-xs text-gray-500">
                     {invoice.org_name} · {invoice.deal_title}
                     {invoice.quote_number ? ` · ${invoice.quote_number}` : ""}
@@ -415,16 +213,9 @@ export function FinanceInvoicesPage() {
                     </Button>
                   ) : null}
                   {invoice.paid > 0 ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      // Riwayat = lihat saja → dialog detail (read-only,
-                      // form pembayaran ada di "Catat Bayar" terpisah)
-                      onClick={() => setDetailInvoiceId(invoice.id)}
-                      className="h-8 rounded-lg"
-                    >
-                      Riwayat
+                    <Button asChild size="sm" variant="outline" className="h-8 rounded-lg">
+                      {/* Riwayat pembayaran ada di halaman dokumen invoice */}
+                      <Link href={detailHref(invoice.id)}>Riwayat</Link>
                     </Button>
                   ) : null}
                   <a
@@ -468,14 +259,6 @@ export function FinanceInvoicesPage() {
         )}
       </PurchasingListSection>
 
-      <PaymentDialog
-        invoice={paymentInvoice}
-        onClose={() => setPaymentInvoice(null)}
-      />
-      <InvoiceDetailDialog
-        invoiceId={detailInvoiceId}
-        onClose={() => setDetailInvoiceId(null)}
-      />
     </div>
   );
 }
