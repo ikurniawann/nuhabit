@@ -1,5 +1,10 @@
 import { SalesFunnelPipelinePage } from "@/features/sales-funnel/pipeline";
 
-export default function SalesFunnelPipelineRoute() {
-  return <SalesFunnelPipelinePage />;
+export default async function SalesFunnelPipelineRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ deal?: string | string[] }>;
+}) {
+  const { deal } = await searchParams;
+  return <SalesFunnelPipelinePage initialDealId={typeof deal === "string" ? deal : null} />;
 }

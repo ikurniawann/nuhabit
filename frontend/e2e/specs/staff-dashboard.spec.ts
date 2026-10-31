@@ -15,6 +15,7 @@ const PAGES = [
   { path: "/dashboard/investor/progress", heading: "Progres" },
   { path: "/dashboard/investor/documents", heading: "Dokumen" },
   { path: "/dashboard/investor/updates", heading: "Update untuk Investor" },
+  { path: "/dashboard/sales-funnel/pipeline/quotations/new", heading: "Buat Quotation" },
 ];
 
 test.describe("staff dashboard", () => {

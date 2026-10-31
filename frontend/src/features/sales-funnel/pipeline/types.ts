@@ -61,6 +61,14 @@ export interface SalesDeal {
   custom?: Record<string, unknown>;
 }
 
+/** GET /api/sales-funnel/deals/[id]: deal plus kolom untuk kop dokumen. */
+export interface SalesDealDocument extends SalesDeal {
+  pic_title: string | null;
+  pic_email: string | null;
+  company_name: string | null;
+  branch_name: string | null;
+}
+
 export interface SalesLostReason {
   id: string;
   code: string;

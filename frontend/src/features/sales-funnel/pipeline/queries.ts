@@ -8,6 +8,7 @@ import {
   deleteDeal,
   deleteDealInvoice,
   fetchDealInvoices,
+  fetchDeal,
   fetchDealPayments,
   fetchDeals,
   fetchLostReasons,
@@ -33,6 +34,7 @@ export const pipelineQueryKeys = {
   lostReasons: ["sales-funnel", "pipeline", "lost-reasons"] as const,
   deals: (filters: DealFilters) =>
     ["sales-funnel", "pipeline", "deals", filters] as const,
+  deal: (id: string) => ["sales-funnel", "pipeline", "deal", id] as const,
   payments: (dealId: string) =>
     ["sales-funnel", "pipeline", "payments", dealId] as const,
   invoices: (dealId: string) =>
@@ -100,10 +102,18 @@ export const useLostReasons = () =>
     staleTime: 5 * 60 * 1000,
   });
 
-export const useDeals = (filters: DealFilters) =>
+export const useDeals = (filters: DealFilters, enabled = true) =>
   useQuery({
     queryKey: pipelineQueryKeys.deals(filters),
     queryFn: () => fetchDeals(filters),
+    enabled,
+  });
+
+export const useDeal = (id: string) =>
+  useQuery({
+    queryKey: pipelineQueryKeys.deal(id),
+    queryFn: () => fetchDeal(id),
+    enabled: id !== "",
   });
 
 export function useCreateDeal(onSuccess?: () => void) {

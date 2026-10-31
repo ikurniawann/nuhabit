@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Check,
   FileDown,
@@ -31,7 +32,7 @@ import {
   type Quotation,
   type RealizeConflictError,
 } from "../types";
-import { QuotationBuilderDialog } from "./quotation-builder-dialog";
+import { newQuotationPath, quotationPath } from "../paths";
 import { RealizeDialog } from "./realize-dialog";
 
 interface QuotationSectionProps {
@@ -40,8 +41,6 @@ interface QuotationSectionProps {
 }
 
 export function QuotationSection({ dealId, enabled }: QuotationSectionProps) {
-  const [builderOpen, setBuilderOpen] = useState(false);
-  const [editing, setEditing] = useState<Quotation | null>(null);
   const [deleting, setDeleting] = useState<Quotation | null>(null);
   const [conflict, setConflict] = useState<
     (RealizeConflictError & { quotationId: string }) | null
@@ -70,16 +69,10 @@ export function QuotationSection({ dealId, enabled }: QuotationSectionProps) {
         <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-900">
           <FileText className="h-4 w-4 text-pink-500" /> Quotation
         </p>
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => {
-            setEditing(null);
-            setBuilderOpen(true);
-          }}
-          className="h-8 gap-1 rounded-lg bg-pink-600 text-white hover:bg-pink-700"
-        >
-          <Plus className="h-3.5 w-3.5" /> Buat Quotation
+        <Button asChild size="sm">
+          <Link href={newQuotationPath(dealId)}>
+            <Plus /> Buat Quotation
+          </Link>
         </Button>
       </div>
 
@@ -98,12 +91,9 @@ export function QuotationSection({ dealId, enabled }: QuotationSectionProps) {
               key={quotation.id}
               className="flex items-center justify-between gap-2 rounded-xl border border-gray-200/80 bg-white px-3 py-2.5"
             >
-              <button
-                type="button"
-                onClick={() => {
-                  setEditing(quotation);
-                  setBuilderOpen(true);
-                }}
+              <Link
+                href={quotationPath(quotation.id)}
+                title={quotation.status === "draft" ? "Buka dokumen untuk diedit" : "Lihat dokumen"}
                 className="min-w-0 flex-1 text-left"
               >
                 <p className="text-sm font-medium text-gray-900 hover:text-pink-600">
@@ -118,7 +108,7 @@ export function QuotationSection({ dealId, enabled }: QuotationSectionProps) {
                     ? ` · s/d ${formatDate(quotation.valid_until)}`
                     : ""}
                 </p>
-              </button>
+              </Link>
               <div className="shrink-0 text-right">
                 <div className="flex items-center justify-end gap-1">
                   {quotation.bom_status ? (
@@ -253,15 +243,6 @@ export function QuotationSection({ dealId, enabled }: QuotationSectionProps) {
         </ul>
       )}
 
-      <QuotationBuilderDialog
-        open={builderOpen}
-        onOpenChange={(open) => {
-          setBuilderOpen(open);
-          if (!open) setEditing(null);
-        }}
-        dealId={dealId}
-        quotation={editing}
-      />
       <RealizeDialog
         conflict={conflict}
         onClose={() => setConflict(null)}

@@ -23,6 +23,9 @@ export interface QuotationTerm {
 
 export interface Quotation {
   id: string;
+  deal_id: string;
+  company_id: string | null;
+  branch_id: string | null;
   quote_number: string;
   status: QuotationStatus;
   use_ppn: boolean;

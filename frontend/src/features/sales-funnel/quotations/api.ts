@@ -15,6 +15,13 @@ export async function fetchQuotations(dealId: string): Promise<Quotation[]> {
   return body.data;
 }
 
+export async function fetchQuotation(id: string): Promise<Quotation> {
+  const res = await fetch(`/api/sales-funnel/quotations/${id}`);
+  if (!res.ok) await parseError(res, "Gagal memuat quotation");
+  const body = (await res.json()) as { data: Quotation };
+  return body.data;
+}
+
 export async function fetchCatalogProducts(): Promise<CatalogProduct[]> {
   const res = await fetch("/api/sales-funnel/products");
   if (!res.ok) await parseError(res, "Gagal memuat katalog produk");
@@ -22,7 +29,10 @@ export async function fetchCatalogProducts(): Promise<CatalogProduct[]> {
   return body.data;
 }
 
-export async function createQuotation(dealId: string, form: QuotationFormValues) {
+export async function createQuotation(
+  dealId: string,
+  form: QuotationFormValues
+): Promise<{ message?: string; data: { id: string } }> {
   const res = await fetch(`/api/sales-funnel/deals/${dealId}/quotations`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

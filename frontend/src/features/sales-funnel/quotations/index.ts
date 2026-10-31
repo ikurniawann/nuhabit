@@ -1,2 +1,2 @@
 export { QuotationSection } from "./components/quotation-section";
-export { QuotationBuilderDialog } from "./components/quotation-builder-dialog";
+export { QuotationDocumentPage } from "./components/quotation-document-page";

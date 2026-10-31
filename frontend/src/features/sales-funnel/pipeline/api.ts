@@ -4,6 +4,7 @@ import type {
   DealFormValues,
   DealUpdatePayload,
   SalesDeal,
+  SalesDealDocument,
   SalesLostReason,
   SalesStage,
   StageUpdatePayload,
@@ -46,6 +47,14 @@ export async function fetchDeals(filters: DealFilters): Promise<SalesDeal[]> {
   const res = await fetch(`/api/sales-funnel/deals${qs ? `?${qs}` : ""}`);
   if (!res.ok) await parseError(res, "Gagal memuat deals");
   const body = (await res.json()) as { data: SalesDeal[] };
+  return body.data;
+}
+
+/** Satu deal beserta data kop dokumen (PIC, perusahaan, cabang). */
+export async function fetchDeal(id: string): Promise<SalesDealDocument> {
+  const res = await fetch(`/api/sales-funnel/deals/${id}`);
+  if (!res.ok) await parseError(res, "Gagal memuat deal");
+  const body = (await res.json()) as { data: SalesDealDocument };
   return body.data;
 }
 

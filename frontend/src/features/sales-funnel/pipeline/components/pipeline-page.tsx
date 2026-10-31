@@ -22,7 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useLinkLeadCustomer } from "../../leads/queries";
-import { useDeals, useDeleteDeal, usePipelines, useStages, useUpdateDeal } from "../queries";
+import { useRouter } from "next/navigation";
+import { useDeal, useDeals, useDeleteDeal, usePipelines, useStages, useUpdateDeal } from "../queries";
 import {
   EVENT_TYPE_LABELS,
   type DealFilters,
@@ -41,7 +42,9 @@ const STAGE_HEADER: Record<string, string> = {
   kalah: "text-red-600",
 };
 
-export function SalesFunnelPipelinePage() {
+/** `initialDealId` (?deal=) membuka dialog deal, mis. sekembali dari dokumen quotation. */
+export function SalesFunnelPipelinePage({ initialDealId = null }: { initialDealId?: string | null }) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [search, setSearch] = useState("");
   const [eventType, setEventType] = useState(ALL);
@@ -50,7 +53,7 @@ export function SalesFunnelPipelinePage() {
   const pipelines = pipelinesQuery.data ?? [];
   const activePipelineId = pipelineId || pipelines.find((p) => p.is_default)?.id || pipelines[0]?.id || "";
   const [formOpen, setFormOpen] = useState(false);
-  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(initialDealId);
   const [detailSnapshot, setDetailSnapshot] = useState<SalesDeal | null>(null);
   const [editingDeal, setEditingDeal] = useState<SalesDeal | null>(null);
   const [deletingDeal, setDeletingDeal] = useState<SalesDeal | null>(null);
@@ -86,9 +89,10 @@ export function SalesFunnelPipelinePage() {
   // Detail diambil dari cache agar tetap segar setelah mutasi (pola HRIS);
   // snapshot saat buka jadi cadangan supaya Sheet tidak tertutup sendiri
   // ketika deal-nya keluar dari hasil filter/pencarian yang sedang aktif.
-  const detailDeal = detailId
-    ? (deals.find((d) => d.id === detailId) ?? detailSnapshot)
-    : null;
+  const boardDeal = detailId ? deals.find((d) => d.id === detailId) : undefined;
+  // Deal dari tautan (?deal=) bisa berada di pipeline lain: ambil per id.
+  const linkedDeal = useDeal(detailId && !boardDeal && !detailSnapshot && !dealsQuery.isLoading ? detailId : "");
+  const detailDeal = detailId ? (boardDeal ?? detailSnapshot ?? linkedDeal.data ?? null) : null;
 
   const openDeals = deals.filter((d) => !d.closed_at);
   const pipelineValue = openDeals.reduce(
@@ -271,6 +275,7 @@ export function SalesFunnelPipelinePage() {
         onClose={() => {
           setDetailId(null);
           setDetailSnapshot(null);
+          if (initialDealId) router.replace("/dashboard/sales-funnel/pipeline", { scroll: false });
         }}
         onEdit={(deal) => setEditingDeal(deal)}
       />

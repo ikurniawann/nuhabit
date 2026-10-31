@@ -6,6 +6,7 @@ import {
   createQuotation,
   deleteQuotation,
   fetchCatalogProducts,
+  fetchQuotation,
   fetchQuotations,
   realizeQuotation,
   sendQuotationWa,
@@ -18,8 +19,16 @@ import { RealizeConflictError } from "./types";
 export const quotationQueryKeys = {
   all: ["sales-funnel", "quotations"] as const,
   byDeal: (dealId: string) => ["sales-funnel", "quotations", dealId] as const,
+  detail: (id: string) => ["sales-funnel", "quotations", "detail", id] as const,
   products: ["sales-funnel", "catalog-products"] as const,
 };
+
+export const useQuotation = (id: string) =>
+  useQuery({
+    queryKey: quotationQueryKeys.detail(id),
+    queryFn: () => fetchQuotation(id),
+    enabled: id !== "",
+  });
 
 export const useQuotations = (dealId: string, enabled = true) =>
   useQuery({
@@ -45,14 +54,13 @@ function invalidateQuotationCaches(
   queryClient.invalidateQueries({ queryKey: ["sales-funnel", "leads"] });
 }
 
-export function useCreateQuotation(dealId: string, onSuccess?: () => void) {
+export function useCreateQuotation(dealId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (form: QuotationFormValues) => createQuotation(dealId, form),
-    onSuccess: (body: { message?: string }) => {
+    onSuccess: (body) => {
       toast.success(body.message ?? "Quotation dibuat");
       invalidateQuotationCaches(queryClient);
-      onSuccess?.();
     },
     onError: (error: Error) => toast.error(error.message),
   });
