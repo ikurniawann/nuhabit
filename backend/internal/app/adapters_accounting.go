@@ -309,7 +309,7 @@ SELECT i.id::text, i.invoice_number, i.label, i.amount::text, i.due_date::text, 
        l.org_name, l.pic_name, l.pic_phone, l.pic_title,
        qt.id::text, qt.quote_number, qt.status, qt.total::text, qt.use_ppn, qt.ppn_persen::text,
        t.id::text, t.label, t.percent::text, t.due_date::text,
-       `+paidSubquery+`::text
+       `+paidSubquery+`::text, i.company_id::text
   FROM crm.crm_sales_invoices i
   JOIN crm.crm_sales_deals d ON d.id = i.deal_id
   JOIN crm.crm_sales_leads l ON l.id = d.lead_id

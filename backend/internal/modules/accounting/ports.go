@@ -217,6 +217,7 @@ type FinanceInvoiceDetailRow struct {
 	TermPercent        *string
 	TermDueDate        *string
 	Paid               string
+	CompanyID          *string
 }
 
 // RevisedInvoice is the revise route's data.

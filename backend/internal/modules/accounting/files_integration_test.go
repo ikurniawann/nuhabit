@@ -188,6 +188,12 @@ VALUES ($1, $2, $3, 'Event', (SELECT id FROM crm.crm_sales_stages ORDER BY sort_
 	_, body := e.send(&e.staff, testutil.Request("GET", "/api/finance/invoices/00000000-0000-0000-0000-000000000000/faktur-pajak", nil), 404)
 	wantError(t, body, "Invoice tidak ditemukan")
 
+	// The detail names the venue company, the letterhead's context.
+	_, body = e.send(&e.staff, testutil.Request("GET", "/api/finance/invoices/"+invoice, nil), 200)
+	if d := body["data"].(map[string]any); d["company_id"] != e.company || d["has_faktur_pajak"] != false {
+		t.Fatalf("detail %v", d)
+	}
+
 	_, body = e.send(&e.staff, testutil.Request("GET", path, nil), 404)
 	wantError(t, body, "Invoice ini belum punya lampiran faktur pajak")
 	_, body = e.send(&e.staff, testutil.Request("DELETE", path, nil), 409)

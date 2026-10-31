@@ -153,6 +153,7 @@ type FinanceInvoiceDetail struct {
 	Note           *string       `json:"note"`
 	CreatedAt      httpx.JSTime  `json:"created_at"`
 	CreatedByName  *string       `json:"created_by_name"`
+	CompanyID      *string       `json:"company_id"`
 	DealID         string        `json:"deal_id"`
 	DealTitle      *string       `json:"deal_title"`
 	EventType      *string       `json:"event_type"`
@@ -193,7 +194,7 @@ func (s *Service) FinanceInvoiceDetail(ctx context.Context, id string, u Finance
 	ps, outstanding := domain.InvoicePaymentSummary(amount, paid)
 	d := &FinanceInvoiceDetail{ID: r.ID, InvoiceNumber: r.InvoiceNumber, Label: r.Label, Amount: amount, DueDate: r.DueDate,
 		Status: r.Status, SentAt: httpx.NewJSTime(r.SentAt), Note: r.Note, CreatedAt: httpx.JSTime(r.CreatedAt),
-		CreatedByName: r.CreatedByName, DealID: r.DealID, DealTitle: r.DealTitle, EventType: r.EventType, EventDate: r.EventDate,
+		CreatedByName: r.CreatedByName, CompanyID: r.CompanyID, DealID: r.DealID, DealTitle: r.DealTitle, EventType: r.EventType, EventDate: r.EventDate,
 		OrgName: r.OrgName, PicName: r.PicName, PicPhone: r.PicPhone, PicTitle: r.PicTitle, HasFakturPajak: r.FakturPajakURL != nil,
 		Paid: paid, PaymentStatus: ps, Outstanding: outstanding}
 	if r.QuotationID != nil && *r.QuotationID != "" {
