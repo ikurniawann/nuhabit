@@ -1,6 +1,10 @@
 package salesfunnel
 
 import (
+	"bytes"
+	"image"
+	"image/color"
+	"image/png"
 	"strings"
 	"testing"
 	"time"
@@ -56,9 +60,9 @@ func TestQuotationPDFLayout(t *testing.T) {
 	}
 	// An empty company name falls back to the document title; no owner
 	// signs with the branch.
-	inOrder(t, text, "PENAWARAN HARGA", "Cabang Dago", "QUOTATION QT-2610-0001",
-		"Kepada", "PT Maju — up. Budi (HR)", "Tanggal", "5 Oktober 2026",
-		"Acara", "Gathering Akhir Tahun (Gathering)", "Tanggal Acara / Berlaku s.d.", "1 Desember 2026 / —",
+	inOrder(t, text, "PENAWARAN HARGA", "Cabang Dago", "QUOTATION", "Nomor : QT-2610-0001",
+		"KEPADA", ":", "PT Maju", "PIC", "Budi (HR)", "ACARA", "Gathering Akhir Tahun (Gathering)",
+		"TANGGAL PENAWARAN", "5 Oktober 2026", "TANGGAL ACARA", "1 Desember 2026", "BERLAKU S.D.", "—",
 		"DESKRIPSI", "QTY", "HARGA", "JUMLAH", "Paket makan siang nomor 1", "1,5 pax", "Rp20.000", "Rp30.000",
 		"Paket makan siang nomor 60", "Sewa venue", "1", "Rp1.000.000",
 		"Subtotal", "Rp2.000.000", "Diskon 10%", "- Rp200.000", "PPN 11%", "Rp198.000", "TOTAL", "Rp1.998.000",
@@ -78,8 +82,9 @@ func TestInvoicePDFLayout(t *testing.T) {
 		QuoteNumber: sp("QT-2610-0001"), TermPercent: func() *float64 { p := 50.0; return &p }(),
 	}
 	text, _ := renderText(t, buildInvoicePDF(inv))
-	inOrder(t, text, "PT Nuhabit", "INVOICE INV-2610-0007", "Ditagihkan kepada", "SD Harapan — up. Ibu Sari",
-		"Tanggal Invoice", "5 Oktober 2026", "Field trip (Field Trip)", "Tanggal Acara / Jatuh Tempo", "— / 20 Oktober 2026",
+	inOrder(t, text, "PT Nuhabit", "INVOICE", "Nomor : INV-2610-0007", "KEPADA", "SD Harapan", "PIC", "Ibu Sari",
+		"ACARA", "Field trip (Field Trip)", "REFERENSI", "QT-2610-0001",
+		"TANGGAL INVOICE", "5 Oktober 2026", "JATUH TEMPO", "20 Oktober 2026", "TERMIN", "DP 50% (50%)", "TANGGAL ACARA", "—",
 		"KETERANGAN", "JUMLAH", "DP 50% (50% dari nilai kesepakatan) — sesuai QT-2610-0001", "Rp5.550.000",
 		"DPP", "Rp5.000.000", "PPN 11%", "Rp550.000", "TOTAL TAGIHAN", "Rp5.550.000",
 		"Sudah dibayar", "Rp6.000.000", "SISA TAGIHAN", "Rp0", "Hormat kami,", "Rina")
@@ -89,12 +94,49 @@ func TestInvoicePDFLayout(t *testing.T) {
 
 	inv.UsePPN, inv.Paid, inv.TermPercent, inv.QuoteNumber, inv.OwnerName, inv.BranchName = false, 0, nil, nil, nil, nil
 	text, _ = renderText(t, buildInvoicePDF(inv))
-	inOrder(t, text, "DP 50% Rp5.550.000", "TOTAL TAGIHAN", "Tim Sales")
+	inOrder(t, text, "REFERENSI", "—", "TERMIN", "Nominal bebas", "DP 50% Rp5.550.000", "TOTAL TAGIHAN", "Tim Sales")
 	for _, absent := range []string{"DPP", "Sudah dibayar", "kesepakatan", "sesuai"} {
 		if strings.Contains(text, absent) {
 			t.Fatalf("%q printed: %s", absent, text)
 		}
 	}
+}
+
+func TestPDFLetterhead(t *testing.T) {
+	var logo bytes.Buffer
+	img := image.NewRGBA(image.Rect(0, 0, 4, 2))
+	img.Set(0, 0, color.RGBA{0, 40, 26, 255})
+	if err := png.Encode(&logo, img); err != nil {
+		t.Fatal(err)
+	}
+	head := docHead{Number: "QT-2610-0002", OrgName: "PT Maju", PicName: "Budi", DealTitle: "Outing", EventLabel: "Outing",
+		CreatedAt: "5 Oktober 2026", EventDate: "—", CompanyName: sp("Venue Co"), BranchName: sp("Cabang Dago"),
+		Kop: Letterhead{LegalName: "PT NüHabit Indonesia", Address: "Jl. Merdeka 1", City: "Bandung", Email: "halo@nuhabit.id",
+			Phone: "022-123", NPWP: "01.234.567.8-901.000"},
+		Logo: logo.Bytes()}
+	doc := buildQuotationPDF(quotationDoc{docHead: head, ValidUntil: "—"})
+	data, err := doc.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(data, []byte("/Subtype /Image")) {
+		t.Fatal("logo not embedded")
+	}
+	text, err := extract.PDFText(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The profile's legal name wins over the venue company.
+	inOrder(t, text, "PT NüHabit Indonesia", "Cabang Dago", "Jl. Merdeka 1, Bandung", "halo@nuhabit.id",
+		"Telp. 022-123", "NPWP: 01.234.567.8-901.000", "QUOTATION", "Nomor : QT-2610-0002", "KEPADA", "PT Maju")
+	if strings.Contains(text, "Venue Co") {
+		t.Fatal("company name printed beside the legal name")
+	}
+
+	// An unreadable logo is skipped and the rest still prints.
+	head.Logo = []byte("not an image")
+	text, _ = renderText(t, buildInvoicePDF(invoiceDoc{docHead: head, Label: "DP", DueDate: "—", Amount: 1000}))
+	inOrder(t, text, "PT NüHabit Indonesia", "NPWP: 01.234.567.8-901.000", "INVOICE", "Nomor : QT-2610-0002")
 }
 
 func TestDocumentHelpers(t *testing.T) {

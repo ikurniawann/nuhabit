@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/accounting"
+	"nuhabit/backend/internal/modules/configuration/settings"
 	"nuhabit/backend/internal/modules/salesfunnel"
 	sfdomain "nuhabit/backend/internal/modules/salesfunnel/domain"
 	"nuhabit/backend/internal/modules/salesfunnel/pgrow"
@@ -28,7 +29,27 @@ var (
 	_ salesfunnel.Members     = salesFunnelMembers{}
 	_ salesfunnel.CRM         = salesFunnelCRM{}
 	_ salesfunnel.Receivables = salesFunnelReceivables{}
+	_ salesfunnel.Company     = salesFunnelCompany{}
 )
+
+/* ── Company (configuration.app_settings company profile) ────────────── */
+
+type salesFunnelCompany struct{}
+
+func (salesFunnelCompany) Letterhead(ctx context.Context, q database.Querier) (salesfunnel.Letterhead, error) {
+	lh, err := settings.LoadLetterhead(ctx, q)
+	if err != nil {
+		return salesfunnel.Letterhead{}, err
+	}
+	str := func(p *string) string {
+		if p == nil {
+			return ""
+		}
+		return *p
+	}
+	return salesfunnel.Letterhead{LegalName: lh.LegalName, Address: str(lh.Address), City: str(lh.City),
+		Email: str(lh.Email), Phone: str(lh.Phone), NPWP: str(lh.NPWP), LogoURL: lh.LogoURL}, nil
+}
 
 /* ── Directory (configuration.users) ─────────────────────────────────── */
 

@@ -6756,6 +6756,11 @@
   },
   {
     "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/deals/{id}"
+  },
+  {
+    "module": "sales-funnel",
     "method": "PATCH",
     "path": "/api/sales-funnel/deals/{id}"
   },
@@ -6916,6 +6921,11 @@
   },
   {
     "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/quotations/{id}"
+  },
+  {
+    "module": "sales-funnel",
     "method": "PATCH",
     "path": "/api/sales-funnel/quotations/{id}"
   },
@@ -7070,6 +7080,16 @@
     "path": "/api/settings/company-profile"
   },
   {
+    "module": "configuration",
+    "method": "DELETE",
+    "path": "/api/settings/company-profile/logo"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/settings/company-profile/logo"
+  },
+  {
     "module": "integrations",
     "method": "GET",
     "path": "/api/settings/email"
@@ -7208,6 +7228,11 @@
     "module": "integrations",
     "method": "PUT",
     "path": "/api/settings/integrations"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/letterhead"
   },
   {
     "module": "configuration",

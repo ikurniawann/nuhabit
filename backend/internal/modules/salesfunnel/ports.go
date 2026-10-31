@@ -21,6 +21,8 @@ type Ports struct {
 	Members     Members
 	CRM         CRM
 	Receivables Receivables
+	// Company reads the letterhead; nil prints the PDFs without one.
+	Company Company
 	// Gateway resolves the WhatsApp gateway; nil uses platform/whatsapp.
 	Gateway Gateway
 }
@@ -148,4 +150,15 @@ type Receivables interface {
 // Gateway resolves the self-hosted WhatsApp gateway (nil when unset).
 type Gateway interface {
 	LoadGateway(ctx context.Context, q database.Querier) *whatsapp.Gateway
+}
+
+// Letterhead is the stored company profile the PDF kop prints. Every field
+// is "" when unset; LogoURL is an /api/files URL.
+type Letterhead struct {
+	LegalName, Address, City, Email, Phone, NPWP, LogoURL string
+}
+
+// Company reads the company profile (configuration.app_settings).
+type Company interface {
+	Letterhead(ctx context.Context, q database.Querier) (Letterhead, error)
 }

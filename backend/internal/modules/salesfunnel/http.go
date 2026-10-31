@@ -8,7 +8,8 @@ import (
 )
 
 // routes lists every /api/sales-funnel route; none is left in Next. The
-// lead import and the PDFs live in leadimport.go and pdf.go.
+// lead import and the PDFs live in leadimport.go and pdf.go, the
+// document page reads in documents.go.
 func (h *handler) routes() []module.Route {
 	r := func(pattern string, fn httpx.HandlerFunc) module.Route {
 		return module.Route{Pattern: pattern, Handler: httpx.Handle(fn)}
@@ -27,6 +28,7 @@ func (h *handler) routes() []module.Route {
 
 		r("GET "+p+"/deals", h.listDeals),
 		r("POST "+p+"/deals", h.createDeal),
+		r("GET "+p+"/deals/{id}", h.dealDetail),
 		r("PATCH "+p+"/deals/{id}", h.updateDeal),
 		r("DELETE "+p+"/deals/{id}", h.deleteDeal),
 		r("GET "+p+"/deals/{id}/members", h.listDealMembers),
@@ -41,6 +43,7 @@ func (h *handler) routes() []module.Route {
 		r("POST "+p+"/deals/{id}/payments", h.createPayment),
 		r("DELETE "+p+"/deals/{id}/payments/{paymentId}", h.deletePayment),
 
+		r("GET "+p+"/quotations/{id}", h.quotationDetail),
 		r("PATCH "+p+"/quotations/{id}", h.updateQuotation),
 		r("DELETE "+p+"/quotations/{id}", h.deleteQuotation),
 		r("POST "+p+"/quotations/{id}/revise", h.reviseQuotation),

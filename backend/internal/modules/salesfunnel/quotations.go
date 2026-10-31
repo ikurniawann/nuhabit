@@ -31,16 +31,10 @@ func (h *handler) requireQuotation(ctx context.Context, id string, u user) (*pgr
 	return row, deal, err
 }
 
-func (h *handler) listDealQuotations(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.requireUser(r)
-	if err != nil {
-		return err
-	}
-	ctx, id := r.Context(), r.PathValue("id")
-	if _, err := h.require(ctx, "deal", id, u); err != nil {
-		return err
-	}
-	rows, err := pgrow.Query(ctx, h.db, `SELECT q.id, q.quote_number, q.status, q.use_ppn, q.ppn_persen,
+// quotationColumns is one quotation row as the deal list and the document
+// page read it, items and terms included.
+const quotationColumns = `q.id, q.deal_id, q.company_id, q.branch_id,
+            q.quote_number, q.status, q.use_ppn, q.ppn_persen,
             q.subtotal, q.ppn_nominal, q.total, q.notes, q.valid_until,
             q.discount_percent, q.discount_nominal, q.approval_status, q.approval_request_id,
             q.version, q.parent_quotation_id, q.superseded_at,
@@ -64,7 +58,18 @@ func (h *handler) listDealQuotations(w http.ResponseWriter, r *http.Request) err
                FROM crm.crm_sales_quotation_terms t
                WHERE t.quotation_id = q.id),
               '[]'::json
-            ) AS terms
+            ) AS terms`
+
+func (h *handler) listDealQuotations(w http.ResponseWriter, r *http.Request) error {
+	u, err := h.requireUser(r)
+	if err != nil {
+		return err
+	}
+	ctx, id := r.Context(), r.PathValue("id")
+	if _, err := h.require(ctx, "deal", id, u); err != nil {
+		return err
+	}
+	rows, err := pgrow.Query(ctx, h.db, `SELECT `+quotationColumns+`
      FROM crm.crm_sales_quotations q
      WHERE q.deal_id = $1 AND q.deleted_at IS NULL
      ORDER BY q.created_at DESC

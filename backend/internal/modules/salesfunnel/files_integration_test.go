@@ -155,8 +155,8 @@ func TestQuotationAndInvoicePDF(t *testing.T) {
 	e.expect(e.do(&s, "GET", "/api/sales-funnel/quotations/00000000-0000-0000-0000-000000000000/pdf", nil), 404, "Quotation tidak ditemukan")
 
 	text := pdfOf(t, e.do(&s, "GET", target, nil), number+"-PT-Maju-Jaya.pdf")
-	inOrder(t, text, company, "QUOTATION "+number, "PT. Maju & Jaya — up. Budi (HRD)", "Gathering (Field Trip)",
-		"1 Desember 2026 / 15 November 2026", "Paket Makan", "50 pax", "Rp20.000", "Rp1.000.000", "Sewa venue",
+	inOrder(t, text, company, "QUOTATION", "Nomor : "+number, "PT. Maju & Jaya", "Budi (HRD)", "Gathering (Field Trip)",
+		"TANGGAL ACARA", "1 Desember 2026", "BERLAKU S.D.", "15 November 2026", "Paket Makan", "50 pax", "Rp20.000", "Rp1.000.000", "Sewa venue",
 		"Subtotal", "Rp2.000.000", "Diskon 10%", "- Rp200.000", "PPN 11%", "Rp198.000", "TOTAL", "Rp1.998.000",
 		"DP (50%)", "Rp999.000", "Pelunasan (50%) — jatuh tempo 1 Desember 2026", "Rp999.000",
 		"CATATAN", "Termasuk sound system", "Hormat kami,")
@@ -174,12 +174,22 @@ func TestQuotationAndInvoicePDF(t *testing.T) {
 	e.expect(e.do(&nomenu, "GET", target, nil), 403, "Insufficient permissions")
 	e.expect(e.do(&fin, "GET", "/api/sales-funnel/invoices/00000000-0000-0000-0000-000000000000/pdf", nil), 404, "Invoice tidak ditemukan")
 	text = pdfOf(t, e.do(&fin, "GET", target, nil), invoiceNo+"-PT-Maju-Jaya.pdf")
-	inOrder(t, text, company, "INVOICE "+invoiceNo, "Ditagihkan kepada", "PT. Maju & Jaya — up. Budi (HRD)",
-		"Tanggal Acara / Jatuh Tempo", "1 Desember 2026 / 1 November 2026",
+	inOrder(t, text, company, "INVOICE", "Nomor : "+invoiceNo, "KEPADA", "PT. Maju & Jaya", "Budi (HRD)",
+		"REFERENSI", number, "JATUH TEMPO", "1 November 2026", "TERMIN", "DP 50% (50%)", "TANGGAL ACARA", "1 Desember 2026",
 		"DP 50% (50% dari nilai kesepakatan) — sesuai "+number, "Rp999.000",
 		"DPP", "Rp900.000", "PPN 11%", "Rp99.000", "TOTAL TAGIHAN", "Rp999.000",
 		"Sudah dibayar", "Rp400.000", "SISA TAGIHAN", "Rp599.000", "Hormat kami,")
 	pdfOf(t, e.do(&s, "GET", target, nil), invoiceNo+"-PT-Maju-Jaya.pdf")
+
+	// The company profile is the letterhead; a logo URL outside storage is
+	// skipped.
+	for key, value := range map[string]string{"company_legal_name": "PT Kop Resmi", "company_npwp": "01.234.567.8-901.000",
+		"company_email": "halo@kop.id", "company_logo_url": "/api/files/site/letterhead/missing.png"} {
+		e.exec(`INSERT INTO configuration.app_settings (key, value) VALUES ($1, $2)
+			ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, key, value)
+	}
+	text = pdfOf(t, e.do(&s, "GET", "/api/sales-funnel/quotations/"+qid+"/pdf", nil), number+"-PT-Maju-Jaya.pdf")
+	inOrder(t, text, "PT Kop Resmi", "halo@kop.id", "NPWP: 01.234.567.8-901.000", "QUOTATION", "Nomor : "+number)
 }
 
 // inOrder fails unless every part appears in text, each after the previous.

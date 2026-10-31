@@ -4,6 +4,8 @@ import (
 	"context"
 	"math"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"nuhabit/backend/internal/modules/salesfunnel/domain"
@@ -11,6 +13,7 @@ import (
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/jsmath"
 	"nuhabit/backend/internal/platform/pdfgen"
+	"nuhabit/backend/internal/platform/storage"
 )
 
 // GET quotations/{id}/pdf and invoices/{id}/pdf: renderQuotationPdf and
@@ -23,6 +26,8 @@ const (
 	pdfMuted  = "#6b7280"
 	pdfLine   = "#d1d5db"
 	pdfAccent = "#00281a"
+	pdfLink   = "#203b32"
+	pdfBand   = "#f3f4f6"
 )
 
 func (h *handler) quotationPDF(w http.ResponseWriter, r *http.Request) error {
@@ -36,6 +41,9 @@ func (h *handler) quotationPDF(w http.ResponseWriter, r *http.Request) error {
 	}
 	q, err := h.loadQuotationPDF(ctx, id)
 	if err != nil {
+		return err
+	}
+	if q.Kop, q.Logo, err = h.letterhead(ctx); err != nil {
 		return err
 	}
 	return writePDF(w, buildQuotationPDF(q), domain.DocumentFileName(q.Number, q.OrgName, "quotation"))
@@ -54,7 +62,32 @@ func (h *handler) invoicePDF(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if inv.Kop, inv.Logo, err = h.letterhead(ctx); err != nil {
+		return err
+	}
 	return writePDF(w, buildInvoicePDF(inv), domain.DocumentFileName(inv.Number, inv.OrgName, "invoice"))
+}
+
+// letterhead is the company profile and the uploaded logo's bytes; a logo
+// that is not in storage is left out.
+func (h *handler) letterhead(ctx context.Context) (Letterhead, []byte, error) {
+	if h.ports.Company == nil {
+		return Letterhead{}, nil, nil
+	}
+	kop, err := h.ports.Company.Letterhead(ctx, h.db)
+	if err != nil || kop.LogoURL == "" {
+		return kop, nil, err
+	}
+	path, ok := storage.FromEnv().UploadPath(kop.LogoURL)
+	if !ok {
+		return kop, nil, nil
+	}
+	logo, err := os.ReadFile(path)
+	if err != nil {
+		h.log.WarnContext(ctx, "[sales-funnel/pdf] logo kop tidak terbaca", "url", kop.LogoURL, "error", err)
+		return kop, nil, nil
+	}
+	return kop, logo, nil
 }
 
 func writePDF(w http.ResponseWriter, doc *pdfgen.Doc, fileName string) error {
@@ -71,10 +104,13 @@ func writePDF(w http.ResponseWriter, doc *pdfgen.Doc, fileName string) error {
 /* ── Data ─────────────────────────────────────────────────────────────── */
 
 // docHead is what both documents print in the letterhead, the info grid and
-// the signature. Dates are already formatted.
+// the signature. Dates are already formatted. Kop and Logo come from the
+// company profile; a zero Kop prints the company or the document name.
 type docHead struct {
 	Number, OrgName, PicName, DealTitle, EventLabel, CreatedAt, EventDate string
 	CompanyName, BranchName, PicTitle, OwnerName, Notes                   *string
+	Kop                                                                   Letterhead
+	Logo                                                                  []byte
 }
 
 func headOf(row *pgrow.Row, number, notesKey string) docHead {
@@ -237,55 +273,102 @@ func rule(d *pdfgen.Doc) { d.HLine(d.Y, pdfLine, 0.7) }
 
 func truthy(s *string) bool { return s != nil && *s != "" }
 
-// writeKop is the centered letterhead and the document title.
-func writeKop(d *pdfgen.Doc, h docHead, fallback, title string) {
-	company := ""
+// legalName is the profile's legal name, else the venue company, else the
+// document's own name.
+func (h docHead) legalName(fallback string) string {
+	if h.Kop.LegalName != "" {
+		return h.Kop.LegalName
+	}
 	if h.CompanyName != nil {
-		company = domain.JSTrim(*h.CompanyName)
-	}
-	if company == "" {
-		company = fallback
-	}
-	d.Font(pdfgen.HelveticaBold, 14).Color(pdfText)
-	d.Para(company, pdfgen.TextOpts{Align: pdfgen.AlignCenter})
-	if truthy(h.BranchName) {
-		d.Font(pdfgen.Helvetica, 9).Color(pdfMuted)
-		d.Para(*h.BranchName, pdfgen.TextOpts{Align: pdfgen.AlignCenter})
-	}
-	d.MoveDown(0.5)
-	d.Font(pdfgen.HelveticaBold, 12).Color(pdfAccent)
-	d.Para(title, pdfgen.TextOpts{Align: pdfgen.AlignCenter})
-	d.MoveDown(0.5)
-	rule(d)
-	d.MoveDown(0.6)
-}
-
-// writeInfo is the two-column info grid: four label/value pairs, top-left,
-// top-right, bottom-left, bottom-right.
-func writeInfo(d *pdfgen.Doc, pairs [4][2]string) {
-	top, half := d.Y, d.ContentWidth()/2
-	for i, p := range pairs {
-		x, y := d.Left()+float64(i%2)*half, top+float64(i/2)*30
-		d.Font(pdfgen.Helvetica, 8.5).Color(pdfMuted)
-		d.Text(p[0], x, y, pdfgen.TextOpts{Width: half - 10})
-		value := p[1]
-		if value == "" {
-			value = "—"
+		if company := domain.JSTrim(*h.CompanyName); company != "" {
+			return company
 		}
-		d.Font(pdfgen.HelveticaBold, 9.5).Color(pdfText)
-		d.Text(value, x, y+11, pdfgen.TextOpts{Width: half - 10})
 	}
-	d.Y = top + 62
+	return fallback
+}
+
+// writeKop is the letterhead (logo on the left, the company block right
+// aligned) and the title band with the document number, as on screen.
+func writeKop(d *pdfgen.Doc, h docHead, fallback, title string) {
+	const logoW, logoH, gap = 140.0, 56.0, 16.0
+	left, top, width := d.Left(), d.Y, d.ContentWidth()
+	textX, textW, logoBottom := left, width, top
+	if len(h.Logo) > 0 && d.Image(h.Logo, left, top, logoW, logoH) == nil {
+		textX, textW, logoBottom = left+logoW+gap, width-logoW-gap, top+logoH
+	}
+	line := func(s string, font pdfgen.Font, size float64, color string) {
+		if s == "" {
+			return
+		}
+		d.Font(font, size).Color(color)
+		d.Text(s, textX, d.Y, pdfgen.TextOpts{Width: textW, Align: pdfgen.AlignRight})
+	}
+	d.Y = top
+	line(h.legalName(fallback), pdfgen.HelveticaBold, 13, pdfText)
+	if h.BranchName != nil {
+		line(*h.BranchName, pdfgen.Helvetica, 9, pdfMuted)
+	}
+	address := h.Kop.Address
+	if h.Kop.City != "" && address != "" {
+		address += ", " + h.Kop.City
+	} else if h.Kop.City != "" {
+		address = h.Kop.City
+	}
+	line(address, pdfgen.Helvetica, 8.5, pdfMuted)
+	line(h.Kop.Email, pdfgen.Helvetica, 8.5, pdfLink)
+	if h.Kop.Phone != "" {
+		line("Telp. "+h.Kop.Phone, pdfgen.Helvetica, 8.5, pdfMuted)
+	}
+	if h.Kop.NPWP != "" {
+		line("NPWP: "+h.Kop.NPWP, pdfgen.Helvetica, 8.5, pdfMuted)
+	}
+	d.Y = math.Max(d.Y, logoBottom) + 8
+	rule(d)
+
+	bandY := d.Y + 8
+	d.Rect(left, bandY, width, 42, pdfBand)
+	d.Font(pdfgen.HelveticaBold, 14).Color(pdfAccent)
+	d.Text(title, left, bandY+7, pdfgen.TextOpts{Width: width, Align: pdfgen.AlignCenter})
+	d.Font(pdfgen.Helvetica, 9).Color(pdfText)
+	d.Text("Nomor : "+h.Number, left, bandY+25, pdfgen.TextOpts{Width: width, Align: pdfgen.AlignCenter})
+	d.Y = bandY + 42 + 12
+}
+
+// writeInfo is the two-column info block: "LABEL : value" rows on each side
+// of a vertical divider, as on the on-screen document.
+func writeInfo(d *pdfgen.Doc, leftRows, rightRows [][2]string) {
+	const labelW = 92.0
+	top, half := d.Y, d.ContentWidth()/2
+	column := func(x float64, rows [][2]string) float64 {
+		y := top
+		valueX, valueW := x+labelW+8, half-labelW-20
+		for _, row := range rows {
+			value := row[1]
+			if value == "" {
+				value = "—"
+			}
+			d.Font(pdfgen.HelveticaOblique, 7.5).Color(pdfMuted)
+			d.Text(strings.ToUpper(row[0]), x, y+1, pdfgen.TextOpts{Width: labelW - 6})
+			d.Text(":", x+labelW, y+1, pdfgen.TextOpts{NoWrap: true})
+			d.Font(pdfgen.HelveticaBold, 9.5).Color(pdfText)
+			height := d.HeightOf(value, valueW)
+			d.Text(value, valueX, y, pdfgen.TextOpts{Width: valueW})
+			y += math.Max(height, 12) + 6
+		}
+		return y
+	}
+	bottom := math.Max(column(d.Left(), leftRows), column(d.Left()+half+12, rightRows))
+	d.Line(d.Left()+half, top-2, d.Left()+half, bottom-4, pdfLine, 0.7)
+	d.Y = bottom + 2
 	rule(d)
 	d.MoveDown(0.5)
 }
 
-func (h docHead) recipient() string {
-	s := h.OrgName + " — up. " + h.PicName
+func (h docHead) pic() string {
 	if truthy(h.PicTitle) {
-		s += " (" + *h.PicTitle + ")"
+		return h.PicName + " (" + *h.PicTitle + ")"
 	}
-	return s
+	return h.PicName
 }
 
 func (h docHead) event() string { return h.DealTitle + " (" + h.EventLabel + ")" }
@@ -348,11 +431,10 @@ func alignRight(w float64) pdfgen.TextOpts {
 func buildQuotationPDF(q quotationDoc) *pdfgen.Doc {
 	d := newSalesDoc()
 	left, rightX, width := d.Left(), d.Right(), d.ContentWidth()
-	writeKop(d, q.docHead, "PENAWARAN HARGA", "QUOTATION "+q.Number)
-	writeInfo(d, [4][2]string{
-		{"Kepada", q.recipient()}, {"Tanggal", q.CreatedAt},
-		{"Acara", q.event()}, {"Tanggal Acara / Berlaku s.d.", q.EventDate + " / " + q.ValidUntil},
-	})
+	writeKop(d, q.docHead, "PENAWARAN HARGA", "QUOTATION")
+	writeInfo(d,
+		[][2]string{{"Kepada", q.OrgName}, {"PIC", q.pic()}, {"Acara", q.event()}},
+		[][2]string{{"Tanggal penawaran", q.CreatedAt}, {"Tanggal acara", q.EventDate}, {"Berlaku s.d.", q.ValidUntil}})
 
 	colQty, colPrice, colTotal := left+width*0.52, left+width*0.64, left+width*0.84
 	descW, qtyW, priceW, totalW := colQty-left-8, colPrice-colQty-8, colTotal-colPrice-8, rightX-colTotal
@@ -430,11 +512,18 @@ func buildQuotationPDF(q quotationDoc) *pdfgen.Doc {
 func buildInvoicePDF(inv invoiceDoc) *pdfgen.Doc {
 	d := newSalesDoc()
 	left, rightX := d.Left(), d.Right()
-	writeKop(d, inv.docHead, "INVOICE", "INVOICE "+inv.Number)
-	writeInfo(d, [4][2]string{
-		{"Ditagihkan kepada", inv.recipient()}, {"Tanggal Invoice", inv.CreatedAt},
-		{"Acara", inv.event()}, {"Tanggal Acara / Jatuh Tempo", inv.EventDate + " / " + inv.DueDate},
-	})
+	writeKop(d, inv.docHead, "INVOICE", "INVOICE")
+	reference := "—"
+	if truthy(inv.QuoteNumber) {
+		reference = *inv.QuoteNumber
+	}
+	term := "Nominal bebas"
+	if inv.TermPercent != nil {
+		term = inv.Label + " (" + pdfgen.Thousands(*inv.TermPercent) + "%)"
+	}
+	writeInfo(d,
+		[][2]string{{"Kepada", inv.OrgName}, {"PIC", inv.pic()}, {"Acara", inv.event()}, {"Referensi", reference}},
+		[][2]string{{"Tanggal invoice", inv.CreatedAt}, {"Jatuh tempo", inv.DueDate}, {"Termin", term}, {"Tanggal acara", inv.EventDate}})
 
 	colAmount := left + d.ContentWidth()*0.7
 	descW, amountW := colAmount-left-8, rightX-colAmount

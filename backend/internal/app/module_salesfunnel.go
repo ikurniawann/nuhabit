@@ -23,5 +23,6 @@ func SalesFunnelPorts(d module.Deps) salesfunnel.Ports {
 		Members:     salesFunnelMembers{},
 		CRM:         salesFunnelCRM{},
 		Receivables: salesFunnelReceivables{svc: accounting.NewService(d.DB, AccountingPorts(d), d.Log, d.Now)},
+		Company:     salesFunnelCompany{},
 	}
 }
