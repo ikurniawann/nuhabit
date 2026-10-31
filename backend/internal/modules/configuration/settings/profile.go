@@ -14,24 +14,38 @@ import (
 /* ── company profile ─────────────────────────────────────────────────── */
 
 // companyFields are the profile fields in schema order with their
-// configuration.app_settings keys.
+// configuration.app_settings keys. The contract PDF prints the first five;
+// the quotation and invoice letterhead adds the contact fields. The logo
+// has its own upload route (company_logo.go).
 var companyFields = [][2]string{
 	{"legal_name", "company_legal_name"},
 	{"address", "company_address"},
 	{"city", "company_city"},
 	{"signer_name", "company_signer_name"},
 	{"signer_title", "company_signer_title"},
+	{"email", "company_email"},
+	{"phone", "company_phone"},
+	{"npwp", "company_npwp"},
+	{"website", "company_website"},
+}
+
+// optionalEmail passes "" (the field is cleared) and checks anything else.
+func optionalEmail(s string) (string, string, bool) {
+	if t := validate.JSTrim(s); t != "" {
+		return kit.EmailCheck(t)
+	}
+	return "", "", true
 }
 
 func (h *handler) getCompanyProfile(w http.ResponseWriter, r *http.Request) error {
 	if _, err := h.d.Auth.RequireMenuPrefix(r, iam.SettingsBusiness...); err != nil {
 		return err
 	}
-	keys := make([]string, len(companyFields))
+	keys := make([]string, len(companyFields), len(companyFields)+1)
 	for i, f := range companyFields {
 		keys[i] = f[1]
 	}
-	stored, err := h.settings.GetMany(r.Context(), h.db, keys)
+	stored, err := h.settings.GetMany(r.Context(), h.db, append(keys, companyLogoKey))
 	if err != nil {
 		return err
 	}
@@ -39,6 +53,7 @@ func (h *handler) getCompanyProfile(w http.ResponseWriter, r *http.Request) erro
 	for _, f := range companyFields {
 		data.Set(f[0], stored[f[1]])
 	}
+	data.Set("logo_url", stored[companyLogoKey])
 	return httpx.JSON(w, http.StatusOK, dataBody{data})
 }
 
@@ -57,7 +72,11 @@ func (h *handler) putCompanyProfile(w http.ResponseWriter, r *http.Request) erro
 	var updates []update
 	for _, field := range companyFields {
 		_, sent := f.Fields()[field[0]]
-		v := f.Str(field[0], validate.Rule{Optional: true, Nullable: true}, validate.StrOpts{Max: 500})
+		opts := validate.StrOpts{Max: 500}
+		if field[0] == "email" {
+			opts.Check = optionalEmail
+		}
+		v := f.Str(field[0], validate.Rule{Optional: true, Nullable: true}, opts)
 		if !sent {
 			continue
 		}

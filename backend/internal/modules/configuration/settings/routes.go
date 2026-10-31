@@ -1,6 +1,6 @@
 // Package settings is the dashboard settings area kept in
 // configuration.app_settings and the configuration business tables:
-// company profile, sales target, static QRIS, AI voice (TTS), company
+// company profile and letterhead, sales target, static QRIS, AI voice (TTS), company
 // appearance, the business tree, receipt header/footer and order alerts
 // (frontend/src/app/api/settings/*). The static QRIS image goes to the
 // shared storage (static_qris_upload.go).
@@ -108,6 +108,9 @@ func Routes(d module.Deps, db database.DB, p Ports) []module.Route {
 	return []module.Route{
 		route("GET /api/settings/company-profile", h.getCompanyProfile),
 		route("PUT /api/settings/company-profile", h.putCompanyProfile),
+		route("POST /api/settings/company-profile/logo", h.postCompanyLogo),
+		route("DELETE /api/settings/company-profile/logo", h.deleteCompanyLogo),
+		route("GET /api/settings/letterhead", h.getLetterhead),
 		route("GET /api/settings/sales-target", h.getSalesTarget),
 		route("PUT /api/settings/sales-target", h.putSalesTarget),
 		route("GET /api/settings/static-qris", h.getStaticQris),

@@ -136,6 +136,7 @@ func TestGuards(t *testing.T) {
 	e := newEnv(t)
 	for _, rt := range []struct{ method, path string }{
 		{"GET", "/api/settings/company-profile"}, {"PUT", "/api/settings/company-profile"},
+		{"POST", "/api/settings/company-profile/logo"}, {"DELETE", "/api/settings/company-profile/logo"},
 		{"GET", "/api/settings/sales-target"}, {"PUT", "/api/settings/sales-target"},
 		{"GET", "/api/settings/static-qris"}, {"PUT", "/api/settings/static-qris"},
 		{"GET", "/api/settings/tts"}, {"PUT", "/api/settings/tts"}, {"POST", "/api/settings/tts/preview"},
@@ -155,7 +156,7 @@ func TestCompanyProfileSalesTargetStaticQris(t *testing.T) {
 	e := newEnv(t)
 
 	expect(t, e.do(&admin, "GET", "/api/settings/company-profile", nil), 200,
-		`{"data":{"legal_name":null,"address":null,"city":null,"signer_name":null,"signer_title":null}}`)
+		`{"data":{"legal_name":null,"address":null,"city":null,"signer_name":null,"signer_title":null,"email":null,"phone":null,"npwp":null,"website":null,"logo_url":null}}`)
 	expect(t, e.do(&admin, "PUT", "/api/settings/company-profile", "{bad"), 500, serverError)
 	expect(t, e.do(&admin, "PUT", "/api/settings/company-profile", map[string]any{"legal_name": 5, "city": strings.Repeat("x", 501)}), 400,
 		`{"success":false,"error":"Validation failed","details":[{"code":"invalid_type","path":["legal_name"],"message":"Invalid input: expected string, received number"},{"code":"too_big","path":["city"],"message":"Too big: expected string to have <=500 characters"}]}`)
@@ -164,7 +165,14 @@ func TestCompanyProfileSalesTargetStaticQris(t *testing.T) {
 		map[string]any{"legal_name": "  PT Sulu  ", "address": "", "signer_name": "   ", "signer_title": nil}), 200,
 		`{"message":"Profil perusahaan tersimpan"}`)
 	expect(t, e.do(&admin, "GET", "/api/settings/company-profile", nil), 200,
-		`{"data":{"legal_name":"PT Sulu","address":null,"city":"Bandung","signer_name":"","signer_title":null}}`)
+		`{"data":{"legal_name":"PT Sulu","address":null,"city":"Bandung","signer_name":"","signer_title":null,"email":null,"phone":null,"npwp":null,"website":null,"logo_url":null}}`)
+	expect(t, e.do(&admin, "PUT", "/api/settings/company-profile", map[string]any{"email": "bukan email"}), 400,
+		`{"success":false,"error":"Validation failed","details":[{"code":"invalid_format","path":["email"],"message":"Invalid email address"}]}`)
+	expect(t, e.do(&admin, "PUT", "/api/settings/company-profile",
+		map[string]any{"email": " halo@sulu.id ", "phone": "022-123", "npwp": "01.234.567.8-901.000", "website": ""}), 200,
+		`{"message":"Profil perusahaan tersimpan"}`)
+	expect(t, e.do(&admin, "GET", "/api/settings/company-profile", nil), 200,
+		`{"data":{"legal_name":"PT Sulu","address":null,"city":"Bandung","signer_name":"","signer_title":null,"email":"halo@sulu.id","phone":"022-123","npwp":"01.234.567.8-901.000","website":null,"logo_url":null}}`)
 
 	expect(t, e.do(&admin, "GET", "/api/settings/sales-target", nil), 200, `{"data":{"config":{"harianRp":0,"bulananRp":0}}}`)
 	expect(t, e.do(&admin, "PUT", "/api/settings/sales-target", map[string]any{"harianRp": "abc"}), 400,
