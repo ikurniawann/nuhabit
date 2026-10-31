@@ -4,11 +4,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createBusinessEntity,
   deleteBusinessEntity,
+  deleteCompanyLogo,
   saveCompanyProfile,
+  uploadCompanyLogo,
   saveReceiptSettings,
   updateBusinessEntity,
   type ReceiptSettingsData,
 } from "./api";
+import { letterheadQueryKeys } from "@/features/documents";
 import { businessQueryKeys } from "./query-keys";
 import type {
   CreateBusinessPayload,
@@ -69,13 +72,19 @@ export const useSaveReceiptSettings = () => {
   });
 };
 
-export const useSaveCompanyProfile = () => {
+/** Profil perusahaan juga kop quotation dan invoice: segarkan keduanya. */
+function useProfileMutation<T>(mutationFn: (input: T) => Promise<unknown>) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: saveCompanyProfile,
+    mutationFn,
     onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: businessQueryKeys.companyProfile(),
-      }),
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: businessQueryKeys.companyProfile() }),
+        queryClient.invalidateQueries({ queryKey: letterheadQueryKeys.all }),
+      ]),
   });
-};
+}
+
+export const useSaveCompanyProfile = () => useProfileMutation(saveCompanyProfile);
+export const useUploadCompanyLogo = () => useProfileMutation(uploadCompanyLogo);
+export const useDeleteCompanyLogo = () => useProfileMutation<void>(() => deleteCompanyLogo());

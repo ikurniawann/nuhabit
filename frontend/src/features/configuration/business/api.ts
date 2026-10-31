@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut } from "@/lib/api-client";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api-client";
 import type { PosReceiptSettings } from "@/lib/pos/receipt-settings";
 import type {
   BusinessTree,
@@ -77,7 +77,15 @@ export interface CompanyProfile {
   city: string | null;
   signer_name: string | null;
   signer_title: string | null;
+  email: string | null;
+  phone: string | null;
+  npwp: string | null;
+  website: string | null;
+  /** Diatur lewat unggah/hapus logo, bukan PUT profil. */
+  logo_url: string | null;
 }
+
+export type CompanyProfileField = Exclude<keyof CompanyProfile, "logo_url">;
 
 export const fetchCompanyProfile = () =>
   apiGet<{ data: CompanyProfile }>("/api/settings/company-profile").then(
@@ -85,8 +93,20 @@ export const fetchCompanyProfile = () =>
   );
 
 export const saveCompanyProfile = (
-  body: Partial<Record<keyof CompanyProfile, string>>,
+  body: Partial<Record<CompanyProfileField, string>>,
 ) => apiPut("/api/settings/company-profile", body);
+
+const LOGO_URL = "/api/settings/company-profile/logo";
+
+export async function uploadCompanyLogo(file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch(LOGO_URL, { method: "POST", body });
+  const json = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) throw new Error(json.error || "Gagal mengunggah logo");
+}
+
+export const deleteCompanyLogo = () => apiDelete(LOGO_URL);
 
 /** Public profile of a branch (configuration.branches public columns). */
 export interface BranchProfile {
