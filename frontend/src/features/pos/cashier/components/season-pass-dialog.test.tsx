@@ -48,7 +48,7 @@ describe("SeasonPassDialog", () => {
     expect(screen.getByText("Season Pass 2026")).toBeInTheDocument();
     expect(screen.getByText("Tanpa batas")).toBeInTheDocument();
     fireEvent.click(apply);
-    expect(handlers.onApply).toHaveBeenCalledWith({ code: "SP-0042", holderName: "Budi", discountPercent: 15 });
+    expect(handlers.onApply).toHaveBeenCalledWith({ holderName: "Budi", discountPercent: 15 });
     expect(handlers.onClose).toHaveBeenCalled();
   });
 
@@ -61,7 +61,7 @@ describe("SeasonPassDialog", () => {
   });
 
   it("releases the active pass", async () => {
-    const handlers = renderDialog({ code: "SP-1", holderName: "Ani", discountPercent: 10 });
+    const handlers = renderDialog({ holderName: "Ani", discountPercent: 10 });
     expect(screen.getByText("Pass aktif: Ani (10%)")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Lepas pass" }));
     await waitFor(() => expect(handlers.onClear).toHaveBeenCalled());

@@ -256,10 +256,8 @@ export async function listPurchasingProductOptions(): Promise<PurchasingProductO
 export const purchasingSyncSku = (option: PurchasingProductOption) =>
   `PUR-${option.kode || option.id.slice(0, 8)}`;
 
-export type PurchasingSyncSummary = { created: number; updated: number };
-
 /** Buat atau perbarui produk POS dari master purchasing (harga jual, HPP, kategori). */
-export async function syncPurchasingProducts(ids: string[]): Promise<PurchasingSyncSummary> {
+export async function syncPurchasingProducts(ids: string[]): Promise<{ created: number; updated: number }> {
   const response = await fetch("/api/pos/products/sync-purchasing", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

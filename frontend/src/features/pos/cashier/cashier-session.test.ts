@@ -177,7 +177,7 @@ describe("cashierSessionReducer: side data", () => {
 });
 
 describe("cashierSessionReducer: season pass", () => {
-  const pass = { code: "SP-1", holderName: "Budi", discountPercent: 15 };
+  const pass = { holderName: "Budi", discountPercent: 15 };
   const withPass = () => run([{ type: "passApplied", pass }]);
 
   it("keeps the pass until the transaction ends", () => {

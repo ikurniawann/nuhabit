@@ -22,7 +22,6 @@ export interface GiftCardBuyer {
 
 /** Pass musiman yang discan kasir: diskon member pass berlaku untuk transaksi ini. */
 export interface SeasonPassDiscount {
-  code: string;
   holderName: string;
   discountPercent: number;
 }

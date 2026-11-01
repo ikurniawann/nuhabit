@@ -119,11 +119,7 @@ export function SeasonPassDialog(props: {
             disabled={!result?.found || result.discount_percent <= 0}
             onClick={() => {
               if (!result?.found) return;
-              props.onApply({
-                code: result.pass_code,
-                holderName: result.holder_name,
-                discountPercent: result.discount_percent,
-              });
+              props.onApply({ holderName: result.holder_name, discountPercent: result.discount_percent });
               close();
             }}
           >
