@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { AdditionalCostReferenceType } from "@/lib/purchasing/cogs-additional-cost-ui";
 import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import { recipeOwnerId, type RecipeOwner } from "@/lib/purchasing/production-recipe-settings";
@@ -15,6 +15,7 @@ import {
   getProductionWip,
   listProductionBatches,
   getProductionBatch,
+  getBomExplosion,
   getRecipeSettings,
 } from "./api";
 import { productionQueryKeys } from "./query-keys";
@@ -87,6 +88,15 @@ export const useAdditionalCosts = (referenceType?: AdditionalCostReferenceType) 
   useQuery({
     queryKey: productionQueryKeys.additionalCosts(referenceType ?? "all"),
     queryFn: () => listAdditionalCosts(referenceType),
+  });
+
+/** qty null (isian belum valid) menahan permintaan. */
+export const useBomExplosion = (owner: RecipeOwner, qty: number | null) =>
+  useQuery({
+    queryKey: productionQueryKeys.bomExplosion(recipeOwnerId(owner), qty ?? 0),
+    queryFn: () => getBomExplosion(owner, qty as number),
+    enabled: !!recipeOwnerId(owner) && qty !== null,
+    placeholderData: keepPreviousData,
   });
 
 export const useRecipeSettings = (owner: RecipeOwner) =>
