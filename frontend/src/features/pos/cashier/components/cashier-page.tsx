@@ -45,7 +45,7 @@ import { newCartItemsForOpenBillAppend } from '@/lib/pos/table-sale-target';
 import { formatRupiah as formatCurrency } from '@/lib/format';
 import { checkGiftCard, checkNfcTab, saveCustomer, withCustomerDiscount } from '../api';
 import { cashierCartPanelClass, cashierSplitRowClass } from '../cashier-workspace-layout';
-import { cashierSessionReducer, initialCashierSession, promoBasis } from '../cashier-session';
+import { cashierSessionReducer, initialCashierSession, membershipPercent, promoBasis } from '../cashier-session';
 import { stallBlockedReason } from '../catalog';
 import { cfdCartState, computeCashierBill } from '../checkout';
 import {
@@ -76,6 +76,7 @@ import { CashierHeader } from './cashier-header';
 import { CashierCatalogPanel } from './cashier-catalog-panel';
 import { GuestCountDialog } from './guest-count-dialog';
 import { ReceiptResultDialog } from './receipt-result-dialog';
+import { SeasonPassDialog } from './season-pass-dialog';
 import { PosOfflineRegistrar } from './pos-offline-registrar';
 
 function CashierPageContent({ variant }: { variant: CashierPageVariant }) {
@@ -129,6 +130,7 @@ function CashierPageContent({ variant }: { variant: CashierPageVariant }) {
   /** Jumlah tamu (EPIC-038): dari ?pax= Restaurant, masih bisa dikoreksi. String: kosong ≠ 0. */
   const [guestCount, setGuestCount] = useState(searchParams.get('pax') ?? '');
   const [showGuestModal, setShowGuestModal] = useState(false);
+  const [showPassDialog, setShowPassDialog] = useState(false);
   const [customerPicker, setCustomerPicker] = useState({ open: false, search: '', nfcUid: null as string | null });
 
   const requireActiveShift = () => {
@@ -175,7 +177,7 @@ function CashierPageContent({ variant }: { variant: CashierPageVariant }) {
 
   const activeOffersQuery = usePosActiveOffers(true, cart.selectedCustomerId ?? null);
   const offers = activeOffersQuery.data ?? [];
-  const membershipPct = customer ? customer.discount : 0;
+  const membershipPct = membershipPercent(customer ? customer.discount : 0, session.pass);
   const bill = computeCashierBill({
     items: cart.items,
     offerRules: offers.map((offer) => offer.eval),
@@ -349,6 +351,9 @@ function CashierPageContent({ variant }: { variant: CashierPageVariant }) {
               showStallNames={allStalls}
               offers={offers}
               customer={customer}
+              membershipPct={membershipPct}
+              passPercent={session.pass ? session.pass.discountPercent : null}
+              onScanPass={() => setShowPassDialog(true)}
               favorites={favorites}
               arkEnabled={arkEnabled}
               xpEnabled={xpEnabled}
@@ -449,6 +454,17 @@ function CashierPageContent({ variant }: { variant: CashierPageVariant }) {
                 if (c) toast.success(`Member ${c.name || c.phone} dipilih`);
               }}
               onClose={() => setCustomerPicker((prev) => ({ ...prev, open: false, nfcUid: null }))}
+            />
+
+            <SeasonPassDialog
+              open={showPassDialog}
+              active={session.pass}
+              onApply={(pass) => {
+                dispatch({ type: 'passApplied', pass });
+                toast.success(`Diskon pass ${pass.discountPercent}% untuk ${pass.holderName}`);
+              }}
+              onClear={() => dispatch({ type: 'passCleared' })}
+              onClose={() => setShowPassDialog(false)}
             />
 
             <GuestCountDialog

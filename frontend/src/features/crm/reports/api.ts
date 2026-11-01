@@ -1,5 +1,7 @@
+import { crmFetch } from "../crm-fetch";
 import type {
   AnalyzeBatchResult,
+  CollectibleIdleReport,
   ConversationInsightReportData,
   CrmReportData,
   CrmReportPeriodInput,
@@ -56,6 +58,9 @@ export async function getConversationInsightReport(
   }
   return json.data as ConversationInsightReportData;
 }
+
+export const getCollectibleIdleReport = () =>
+  crmFetch<CollectibleIdleReport>("/api/crm/collectibles/idle-report").then((res) => res.data);
 
 /**
  * Jalankan analisa untuk percakapan yang belum/berubah. Batch-nya dibatasi di

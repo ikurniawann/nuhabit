@@ -329,6 +329,25 @@ export async function resolveMemberQr(
   return json.data;
 }
 
+export type SeasonPassLookup =
+  | {
+      found: true;
+      pass_code: string;
+      holder_name: string;
+      product_name: string;
+      discount_percent: number;
+      valid_until: string | null;
+    }
+  | { found: false; reason: string; pass_code?: string };
+
+/** Pass musiman (QR, kode pass, atau UID gelang): diskon member hanya bila aktif dan dalam masa berlaku. */
+export async function lookupSeasonPass(code: string): Promise<SeasonPassLookup> {
+  const res = await fetch(`/api/pos/pass-lookup?code=${encodeURIComponent(code)}`, { cache: "no-store" });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.success) throw new Error(json.error || "Gagal memeriksa pass");
+  return json.data;
+}
+
 /** Kirim struk via WA; tanpa phone = nomor profil member di server. */
 export async function sendReceiptWa(orderId: string, phone?: string): Promise<string | null> {
   const { res, body } = await postJson(

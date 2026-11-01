@@ -55,6 +55,29 @@ export async function submitCancelTopup(topupId: string): Promise<{ topup_id: st
   return res.data as { topup_id: string; status: string };
 }
 
+export type GiftCardReloadInput = {
+  code: string;
+  amount: number;
+  payment_method: string;
+  payment_reference: string | null;
+};
+
+/** Isi ulang gift card dari kasir lewat kode yang diketik/discan; pembayaran tercatat di riwayat kartu. */
+export async function reloadGiftCardByCode(input: GiftCardReloadInput): Promise<{ balanceAfter: number }> {
+  const res = await fetch("/api/pos/gift-card-reload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: string;
+    data?: { balanceAfter: number };
+  };
+  if (!res.ok || !json.success || !json.data) throw new Error(json.error || "Gagal isi ulang gift card");
+  return json.data;
+}
+
 export function buildTopupQrImageUrl(qrString: string) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(qrString)}`;
 }

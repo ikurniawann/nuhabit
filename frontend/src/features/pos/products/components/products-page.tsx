@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Package, Search, X } from 'lucide-react';
+import { Loader2, Package, RefreshCw, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import type { PatchPosProductPayload, PosCatalogProduct } from '../types';
 import { MerchSettingsDialog } from './merch-settings-dialog';
 import { ModifiersDialog } from './modifiers-dialog';
 import { PRODUCT_TABLE_HEADERS, ProductTableRow, type ProductRowActions } from './product-table-row';
+import { SyncPurchasingDialog } from './sync-purchasing-dialog';
 import { VariantsDialog } from './variants-dialog';
 
 type LocalEdit = Partial<Pick<PosCatalogProduct, 'variants' | 'modifierGroups' | 'hasVariants' | 'hasModifiers'>>;
@@ -33,6 +34,8 @@ export function ProductsPage() {
   const [dialog, setDialog] = useState<OpenDialog>(null);
   // Varian & modifier hanya disimpan lokal (belum ada endpoint penyimpanannya).
   const [localEdits, setLocalEdits] = useState<Record<string, LocalEdit>>({});
+  const [syncOpen, setSyncOpen] = useState(false);
+  const posSkus = useMemo(() => new Set(products.map((product) => product.sku ?? '')), [products]);
 
   useEffect(() => {
     if (queryError instanceof Error) toast.error(queryError.message);
@@ -137,6 +140,12 @@ export function ProductsPage() {
       <PurchasingPageHeader
         title="Products & Menu"
         description="Manage POS products, variants, modifiers, and kitchen stations."
+        actions={
+          <Button type="button" variant="outline" onClick={() => setSyncOpen(true)}>
+            <RefreshCw />
+            Sinkron dari Purchasing
+          </Button>
+        }
       />
 
       <PurchasingListSection
@@ -222,6 +231,7 @@ export function ProductsPage() {
         </div>
       </PurchasingListSection>
 
+      <SyncPurchasingDialog open={syncOpen} posSkus={posSkus} onClose={() => setSyncOpen(false)} />
       {dialog?.kind === 'merch' ? (
         <MerchSettingsDialog
           key={dialog.product.id}

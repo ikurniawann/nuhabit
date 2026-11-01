@@ -14,6 +14,7 @@ import {
 import { useCrmReports } from "../queries";
 import { CsReportSection } from "./cs-report-section";
 import { ConversationInsightSection } from "./conversation-insight-section";
+import { CollectibleIdleSection } from "./collectible-idle-section";
 import type { CrmReportPeriodInput } from "../types";
 import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import { ScrollRegion } from "@/components/ui/scroll-region";
@@ -226,6 +227,8 @@ export function CrmReportsPage() {
         <CsReportSection period={applied} />
 
         <ConversationInsightSection period={applied} />
+
+        <CollectibleIdleSection />
       </div>
     </div>
   );

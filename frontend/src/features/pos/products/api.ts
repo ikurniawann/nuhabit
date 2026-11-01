@@ -252,6 +252,26 @@ export async function listPurchasingProductOptions(): Promise<PurchasingProductO
   return rows.map((row) => ({ id: row.id, kode: row.kode, nama: row.nama }));
 }
 
+/** SKU produk POS hasil sinkron purchasing (aturan server: PUR-<kode>, tanpa kode PUR-<8 huruf id>). */
+export const purchasingSyncSku = (option: PurchasingProductOption) =>
+  `PUR-${option.kode || option.id.slice(0, 8)}`;
+
+/** Buat atau perbarui produk POS dari master purchasing (harga jual, HPP, kategori). */
+export async function syncPurchasingProducts(ids: string[]): Promise<{ created: number; updated: number }> {
+  const response = await fetch("/api/pos/products/sync-purchasing", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ purchasing_product_ids: ids }),
+  });
+  const json = await parsePosResponse<{ data: { mode: string } | { mode: string }[] }>(
+    response,
+    "Gagal sinkron dari purchasing"
+  );
+  const results = Array.isArray(json.data) ? json.data : [json.data];
+  const created = results.filter((row) => row.mode === "created").length;
+  return { created, updated: results.length - created };
+}
+
 /** Sinkronkan varian SKU: hapus dulu, lalu ubah/buat (urutan aman untuk kode unik). */
 export async function syncMerchSkus(
   productId: string,

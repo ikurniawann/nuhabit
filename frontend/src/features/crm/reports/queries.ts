@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getConversationInsightReport, getCrmReports, getCsReport } from "./api";
+import { getCollectibleIdleReport, getConversationInsightReport, getCrmReports, getCsReport } from "./api";
 import type { CrmReportPeriodInput } from "./types";
 
 export const reportQueryKeys = {
@@ -30,4 +30,11 @@ export const useConversationInsightReport = (period: Partial<CrmReportPeriodInpu
   useQuery({
     queryKey: conversationInsightQueryKey(period),
     queryFn: () => getConversationInsightReport(period),
+  });
+
+/** Jatah koleksi menganggur; tidak bergantung periode laporan. */
+export const useCollectibleIdleReport = () =>
+  useQuery({
+    queryKey: [...reportQueryKeys.all, "collectible-idle"] as const,
+    queryFn: getCollectibleIdleReport,
   });

@@ -1,9 +1,12 @@
 'use client';
 
-import { AlertCircle, ArrowLeft, Loader2, Wallet } from 'lucide-react';
+import { useState } from 'react';
+import { AlertCircle, ArrowLeft, Gift, Loader2, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomerSearchModal } from '@/components/pos/CustomerSearchModal';
+import { Button } from '@/components/ui/button';
 import { useTopupPage } from '../use-topup-page';
+import { GiftCardReloadDialog } from './gift-card-reload-dialog';
 import { TopupAmountStep } from './topup-amount-step';
 import { TopupHistoryCard } from './topup-history-card';
 import { TopupMemberFinder } from './topup-member-finder';
@@ -14,6 +17,7 @@ import { WalletCard } from './wallet-card';
 
 export function TopupPage() {
   const page = useTopupPage();
+  const [giftCardOpen, setGiftCardOpen] = useState(false);
   const { state, dispatch, arkRate, creditRp, modal } = page;
   const { step, customer, result, topupRp } = state;
   const errorMessage = state.error || page.customersErrorMessage;
@@ -36,7 +40,12 @@ export function TopupPage() {
           <h1 className="text-lg font-bold text-foreground">Top-up ARK</h1>
         </div>
         <span className="ml-auto text-xs text-muted-foreground">1 ARK = 1.000</span>
+        <Button type="button" variant="outline" size="sm" onClick={() => setGiftCardOpen(true)}>
+          <Gift />
+          Isi ulang gift card
+        </Button>
       </div>
+      <GiftCardReloadDialog open={giftCardOpen} onClose={() => setGiftCardOpen(false)} />
 
       {errorMessage && (
         <div className="mb-3 flex items-center gap-2 rounded-xl border border-red-200/80 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
