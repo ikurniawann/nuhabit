@@ -35,7 +35,7 @@ export function ProductsPage() {
   // Varian & modifier hanya disimpan lokal (belum ada endpoint penyimpanannya).
   const [localEdits, setLocalEdits] = useState<Record<string, LocalEdit>>({});
   const [syncOpen, setSyncOpen] = useState(false);
-  const posSkus = useMemo(() => new Set(products.map((product) => product.sku)), [products]);
+  const posSkus = useMemo(() => new Set(products.map((product) => product.sku ?? '')), [products]);
 
   useEffect(() => {
     if (queryError instanceof Error) toast.error(queryError.message);
