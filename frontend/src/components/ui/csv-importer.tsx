@@ -40,6 +40,8 @@ interface CsvImporterProps {
   hideActions?: boolean;
   suppressSuccessToast?: boolean;
   expanded?: boolean;
+  /** Tolak Excel untuk endpoint yang hanya membaca CSV. */
+  csvOnly?: boolean;
   columns: CsvColumn[];
 }
 
@@ -160,6 +162,7 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
     hideActions = false,
     suppressSuccessToast = false,
     expanded = false,
+    csvOnly = false,
     columns,
   },
   ref
@@ -211,13 +214,14 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
       const isCsv =
         selectedFile.type === "text/csv" || lowerName.endsWith(".csv");
       const isXlsx =
-        selectedFile.type.includes("spreadsheet") ||
-        lowerName.endsWith(".xlsx") ||
-        lowerName.endsWith(".xls");
+        !csvOnly &&
+        (selectedFile.type.includes("spreadsheet") ||
+          lowerName.endsWith(".xlsx") ||
+          lowerName.endsWith(".xls"));
 
       if (!isCsv && !isXlsx) {
         toast.error("Format file tidak valid", {
-          description: "Silakan unggah file CSV atau Excel (.xlsx).",
+          description: csvOnly ? "Silakan unggah file CSV." : "Silakan unggah file CSV atau Excel (.xlsx).",
         });
         return;
       }
@@ -298,7 +302,7 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
       if (isXlsx) reader.readAsArrayBuffer(selectedFile);
       else reader.readAsText(selectedFile);
     },
-    [columns]
+    [columns, csvOnly]
   );
 
   const handleDrop = useCallback(
@@ -399,7 +403,9 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
           }`}
         >
           <Upload className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-          <p className="mb-2 text-sm text-gray-600">Seret dan lepas file CSV atau Excel di sini, atau</p>
+          <p className="mb-2 text-sm text-gray-600">
+            Seret dan lepas file {csvOnly ? "CSV" : "CSV atau Excel"} di sini, atau
+          </p>
           <Button
             type="button"
             variant="outline"
@@ -411,7 +417,7 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv,.xlsx,.xls"
+            accept={csvOnly ? ".csv" : ".csv,.xlsx,.xls"}
             className="hidden"
             onChange={(e) => {
               const selectedFile = e.target.files?.[0];
@@ -420,7 +426,9 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
               }
             }}
           />
-          <p className="mt-4 text-xs text-gray-500">Format yang diterima: CSV, Excel (.xlsx)</p>
+          <p className="mt-4 text-xs text-gray-500">
+            Format yang diterima: {csvOnly ? "CSV" : "CSV, Excel (.xlsx)"}
+          </p>
         </div>
       ) : (
         <div className={expanded ? "flex min-h-0 flex-1 flex-col space-y-4" : "space-y-4"}>

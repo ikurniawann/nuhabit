@@ -63,3 +63,8 @@ export async function updatePurchaseRequest(id: string, payload: PRFormPayload) 
     normalizePRPayload(payload)
   );
 }
+
+/** Ajukan PR draft ke persetujuan head departemen; hanya pemohon yang boleh. */
+export async function submitPurchaseRequest(id: string) {
+  return apiPost<{ data: { id: string; status: string } }>(`/api/purchasing/pr/${id}/submit`, {});
+}

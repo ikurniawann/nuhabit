@@ -117,6 +117,33 @@ export function termDisplayLabel(
   return localizeTermDescription(description);
 }
 
+/** Sisa tagihan bersih yang belum masuk jadwal termin mana pun. */
+export function schedulableAmount(payableAmount: number, terms: Pick<PurchaseOrderPaymentTerm, "amount">[]): number {
+  const scheduled = terms.reduce((sum, term) => sum + num(term.amount), 0);
+  return Math.max(0, num(payableAmount) - scheduled);
+}
+
+/** Termin yang belum dibayar sama sekali boleh dihapus dari jadwal. */
+export function canRemoveTerm(term: Pick<PurchaseOrderPaymentTerm, "paid_amount" | "status">): boolean {
+  return num(term.paid_amount) <= 0 && (term.status === "unpaid" || term.status === "overdue");
+}
+
+export interface TermFormValues {
+  description: string;
+  due_date: string;
+  amount: number | undefined;
+  notes: string;
+}
+
+export function validateTermForm(form: TermFormValues, schedulable: number): string | null {
+  const amount = num(form.amount);
+  if (!form.due_date || amount <= 0) return "Masukkan jatuh tempo dan nominal termin";
+  if (amount > schedulable + PAID_TOLERANCE) {
+    return `Nominal termin tidak boleh melebihi sisa yang belum dijadwalkan (${formatRupiah(schedulable)})`;
+  }
+  return null;
+}
+
 export interface PaymentFormValues {
   payment_term_id: string;
   payment_date: string;

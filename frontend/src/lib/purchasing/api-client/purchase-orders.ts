@@ -125,6 +125,24 @@ export async function getPurchaseOrderPaymentTerms(id: string): Promise<{
   return response.data;
 }
 
+export async function createPurchaseOrderPaymentTerm(
+  id: string,
+  payload: { description: string; due_date: string; amount: number; notes?: string | null }
+): Promise<PurchaseOrderPaymentTerm> {
+  const response = await fetchApi<{ data: PurchaseOrderPaymentTerm }>(
+    `${BASE}/po/${id}/payment-terms`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+  return response.data;
+}
+
+export async function deletePurchaseOrderPaymentTerm(id: string, termId: string): Promise<void> {
+  await fetchApi(`${BASE}/po/${id}/payment-terms/${termId}`, { method: "DELETE" });
+}
+
 export async function createVendorPayment(
   id: string,
   payload: {

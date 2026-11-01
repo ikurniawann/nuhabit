@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BeakerIcon } from "@heroicons/react/24/outline";
-import { Filter, Pencil, Plus, Search, X } from "lucide-react";
+import { Filter, ListTree, Pencil, Plus, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +18,8 @@ import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import { displayName, hasRecipe, matchesItemKeyword, paginate, toNumber } from "@/lib/purchasing/production-ui-display";
 import { getProductionModuleConfig } from "../production-module";
 import { useRecipeItems } from "../queries";
+import type { RecipeItem } from "../types";
+import { BomExplodeDialog } from "./bom-explode-dialog";
 import { PurchaseAdditionalCostsSection } from "./purchase-additional-costs-section";
 import { ScrollRegion } from "@/components/ui/scroll-region";
 
@@ -43,6 +45,7 @@ export function ProductionRecipesPage({
   const [bomFilter, setBomFilter] = useState<BomFilter>("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [exploding, setExploding] = useState<RecipeItem | null>(null);
 
   const productsQuery = useRecipeItems(moduleType);
   useErrorToast(productsQuery.error, "Gagal memuat daftar resep");
@@ -293,6 +296,18 @@ export function ProductionRecipesPage({
                           </td>
                         )}
                         <td className="px-4 py-3 text-right">
+                          {hasBom && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Urai resep"
+                              aria-label={`Urai resep ${displayName(product.nama)}`}
+                              className="cursor-pointer"
+                              onClick={() => setExploding(product)}
+                            >
+                              <ListTree className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Link href={`${config.bomEditorRoute(product.id)}?from=production`}>
                             <Button
                               variant="ghost"
@@ -325,6 +340,16 @@ export function ProductionRecipesPage({
       </PurchasingListSection>
 
       <PurchaseAdditionalCostsSection />
+
+      {exploding && (
+        <BomExplodeDialog
+          key={exploding.id}
+          open
+          onOpenChange={(open) => !open && setExploding(null)}
+          owner={isProduct ? { productId: exploding.id } : { rawMaterialId: exploding.id }}
+          itemName={displayName(exploding.nama)}
+        />
+      )}
     </div>
   );
 }

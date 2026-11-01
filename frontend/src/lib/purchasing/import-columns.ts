@@ -71,6 +71,25 @@ export const RAW_MATERIAL_IMPORT_COLUMNS = [
   { key: "status", label: "Status", required: false, description: "active atau inactive" },
 ];
 
+/** Impor satuan (Go /api/purchasing/import/units): CSV saja, kode yang sudah ada dilewati. */
+export const UNIT_IMPORT_COLUMNS = [
+  { key: "kode", label: "Kode", required: true, description: "Maksimal 10 karakter, mis. KG, PCS, DOS" },
+  { key: "nama", label: "Nama", required: true },
+  { key: "tipe", label: "Tipe", required: true, description: "BESAR, KECIL, atau KONVERSI" },
+  { key: "deskripsi", label: "Deskripsi", required: false },
+  {
+    key: "status",
+    label: "Status",
+    required: true,
+    description: "active atau inactive; selain active disimpan nonaktif",
+  },
+];
+
+export const UNIT_IMPORT_SAMPLE_ROWS = [
+  { kode: "KG", nama: "Kilogram", tipe: "BESAR", deskripsi: "Satuan berat", status: "active" },
+  { kode: "GR", nama: "Gram", tipe: "KECIL", deskripsi: "", status: "active" },
+];
+
 export const SUPPLIER_IMPORT_COLUMNS = [
   {
     key: "kode",

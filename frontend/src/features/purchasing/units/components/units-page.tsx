@@ -9,12 +9,13 @@ import { Switch } from "@/components/ui/switch";
 import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
-import { Loader2, Pencil, Plus, Scale, Search, Trash2, X } from "lucide-react";
+import { Loader2, Pencil, Plus, Scale, Search, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import type { Unit } from "@/types/purchasing";
 import { useUnitList } from "../queries";
 import { useUpdateUnitStatus, useDeleteUnit } from "../mutations";
 import { UnitFormDialog } from "./unit-form-dialog";
+import { UnitImportDialog } from "./unit-import-dialog";
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -39,6 +40,7 @@ export function UnitsPage() {
   const limit = 10;
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [deletingUnit, setDeletingUnit] = useState<Unit | null>(null);
@@ -135,10 +137,20 @@ export function UnitsPage() {
         title="Data Master Satuan"
         description={`Manage measurement units for raw materials and products — ${total} total`}
         actions={
-          <Button onClick={handleOpenAdd} className="purchasing-main-button w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah Satuan
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setIsImportOpen(true)}
+              className="purchasing-secondary-button w-full sm:w-auto"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Impor
+            </Button>
+            <Button onClick={handleOpenAdd} className="purchasing-main-button w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah Satuan
+            </Button>
+          </>
         }
       />
 
@@ -283,6 +295,8 @@ export function UnitsPage() {
         onOpenChange={setIsDialogOpen}
         editingUnit={editingUnit}
       />
+
+      <UnitImportDialog open={isImportOpen} onOpenChange={setIsImportOpen} />
 
       <ConfirmDialog
         open={statusDialog.open}

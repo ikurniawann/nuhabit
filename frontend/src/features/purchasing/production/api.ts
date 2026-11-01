@@ -11,6 +11,7 @@ import type {
   buildReturnPayload,
 } from "@/lib/purchasing/production-flow";
 import type { RecipeOwner, RecipeSettings } from "@/lib/purchasing/production-recipe-settings";
+import type { BomExplosion } from "@/lib/purchasing/production-ui-explode";
 import type { RawMaterialWithStock } from "@/types/purchasing";
 import type {
   CogsData,
@@ -233,6 +234,14 @@ export async function getProductionBatch(id: string): Promise<ProductionBatchDet
 
 function recipeOwnerQuery(owner: RecipeOwner) {
   return "productId" in owner ? `product_id=${owner.productId}` : `raw_material_id=${owner.rawMaterialId}`;
+}
+
+export async function getBomExplosion(owner: RecipeOwner, qty: number): Promise<BomExplosion> {
+  const json = await requestJson(
+    `${PRODUCTION_URL}/bom/explode?${recipeOwnerQuery(owner)}&qty=${qty}`,
+    "Gagal mengurai resep (BOM)"
+  );
+  return json.data as BomExplosion;
 }
 
 export async function getRecipeSettings(owner: RecipeOwner): Promise<RecipeSettings> {
