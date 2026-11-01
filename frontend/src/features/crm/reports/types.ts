@@ -153,3 +153,22 @@ export interface AnalyzeBatchResult {
     error?: string;
   }[];
 }
+
+/** Member yang jatah koleksi avatarnya belum terpakai. */
+export interface CollectibleIdleMember {
+  customer_id: string;
+  name: string;
+  phone: string;
+  total_xp: number;
+  quota: number;
+  used: number;
+  idle: number;
+}
+
+/** GET /api/crm/collectibles/idle-report: 100 member dengan jatah menganggur terbanyak. */
+export interface CollectibleIdleReport {
+  interval_xp: number;
+  total_idle: number;
+  active_artworks: number;
+  members: CollectibleIdleMember[];
+}
