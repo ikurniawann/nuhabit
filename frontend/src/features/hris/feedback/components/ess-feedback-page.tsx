@@ -8,7 +8,7 @@ import { useMyFeedback } from "../queries";
 import { relationshipLabel } from "../view";
 import type { MyFeedbackItem } from "../types";
 import { EssFeedbackForm } from "./ess-feedback-form";
-import { AssignmentStatusBadge, QueryState } from "./feedback-shared";
+import { AssignmentStatusBadge, ProgressBar, QueryState } from "./feedback-shared";
 
 /** ESS → Feedback 360°: penilaian yang ditugaskan HR kepada saya. */
 export function EssFeedbackPage() {
@@ -79,9 +79,7 @@ function FeedbackItemCard({ item, total, onOpen }: { item: MyFeedbackItem; total
                 {item.answered}/{total} kriteria
               </span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-surface" aria-hidden>
-              <div className="h-2 rounded-full bg-forest" style={{ width: `${percent}%` }} />
-            </div>
+            <ProgressBar percent={percent} />
           </div>
           <p className="text-xs text-muted-foreground">
             Tenggat {formatDate(item.due_date ?? item.cycle?.end_date)}

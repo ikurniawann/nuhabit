@@ -12,6 +12,18 @@ export function AssignmentStatusBadge({ status }: { status: FeedbackAssignmentSt
   return <Badge variant={meta.variant}>{meta.label}</Badge>;
 }
 
+/** Bilah progres 0–100; tanpa `label` hanya hiasan (angkanya sudah tertulis di dekatnya). */
+export function ProgressBar({ percent, label }: { percent: number; label?: string }) {
+  const a11y = label
+    ? { role: "progressbar", "aria-label": label, "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": percent }
+    : { "aria-hidden": true };
+  return (
+    <div className="h-2 overflow-hidden rounded-full bg-surface" {...a11y}>
+      <div className="h-2 rounded-full bg-forest" style={{ width: `${percent}%` }} />
+    </div>
+  );
+}
+
 /** Kerangka saat memuat, pesan galat, atau pesan kosong. */
 export function QueryState({ loading, error, empty }: { loading?: boolean; error?: Error | null; empty?: string }) {
   if (loading) return <SkeletonCard />;

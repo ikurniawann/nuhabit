@@ -12,7 +12,7 @@ import { useDeleteFeedbackCycle } from "../mutations";
 import { cycleProgress, cycleStatusMeta, cycleWeights } from "../view";
 import type { FeedbackCycle } from "../types";
 import { FeedbackCycleDialog } from "./feedback-cycle-dialog";
-import { QueryState } from "./feedback-shared";
+import { ProgressBar, QueryState } from "./feedback-shared";
 
 interface FeedbackCyclesTabProps {
   cycles: readonly FeedbackCycle[];
@@ -79,16 +79,7 @@ export function FeedbackCyclesTab({ cycles, loading, error, onOpenCycle }: Feedb
                       {progress.done}/{progress.total} ({progress.percent}%)
                     </span>
                   </div>
-                  <div
-                    role="progressbar"
-                    aria-label={`Progres ${cycle.name}`}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={progress.percent}
-                    className="h-2 overflow-hidden rounded-full bg-surface"
-                  >
-                    <div className="h-2 rounded-full bg-forest" style={{ width: `${progress.percent}%` }} />
-                  </div>
+                  <ProgressBar percent={progress.percent} label={`Progres ${cycle.name}`} />
                 </div>
                 <p className="text-xs text-muted-foreground">
                   KPI {weights.kpi}% + 360° {weights.feedback}% ·{" "}
