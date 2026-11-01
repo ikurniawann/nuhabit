@@ -148,10 +148,15 @@ export const IAM = {
   /** HRIS → Insights (analitik rekrutmen, laporan HR). */
   hrisInsights: ["hris.insights"],
   /**
-   * Pengelola penilaian kinerja. Sengaja tanpa hris.performance.review dan
-   * .dept-tasks yang juga di-grant ke role employee (ESS).
+   * Pengelola Feedback 360° (siklus, penugasan, persetujuan, hasil). Sengaja
+   * tanpa hris.performance.review dan .dept-tasks yang juga di-grant ke role
+   * employee (ESS).
    */
-  hrisPerformanceAdmin: ["hris.performance.kpi-scorecard", "hris.performance.kpi-config"],
+  hrisFeedbackAdmin: [
+    "hris.performance.feedback-360",
+    "hris.performance.kpi-scorecard",
+    "hris.performance.kpi-config",
+  ],
   /** Tulis katalog produk POS (PATCH produk, SKU merchandise). */
   posCatalogProducts: ["pos.catalog.products"],
   /** Tulis pengaturan ARK & XP (kurs ARK, preset top-up). */

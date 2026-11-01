@@ -281,6 +281,8 @@ func TestPerformanceReviews(t *testing.T) {
 
 func TestFeedback360(t *testing.T) {
 	e := setup(t)
+	// Start without the seeded categories (delta 20261101100000).
+	e.exec(`DELETE FROM performance.feedback_categories`)
 	approverEmail := e.hr.Email
 	approver := e.emp(empOpts{name: "Penyetuju", user: e.hr.UserID, email: approverEmail})
 	staff := e.emp(empOpts{name: "Dinilai"})
@@ -420,6 +422,132 @@ func TestFeedback360(t *testing.T) {
 	}
 	if e.call(&e.hr, "DELETE", "/api/hris/feedback-cycles/"+cycleID, nil, 200)["message"] != "Cycle deleted successfully" {
 		t.Fatal("delete cycle")
+	}
+}
+
+// The ESS reviewer form and the summaries the triggers keep (delta
+// 20261101100000): the seeded criteria, draft then submit, and the
+// approval lock.
+func TestFeedback360Reviewer(t *testing.T) {
+	e := setup(t)
+	e.emp(empOpts{name: "Penyetuju", user: e.hr.UserID, email: e.hr.Email}) // signs the approvals
+	reviewer := e.emp(empOpts{name: "Penilai", user: e.staff.UserID})
+	assessed := e.emp(empOpts{name: "Dinilai"})
+	e.exec(`INSERT INTO performance.kpi_scorecards (employee_id, period_year, period_month, role_code, score)
+		VALUES ($1, 2026, 10, 'pos', 90), ($1, 2026, 6, 'pos', 10)`, assessed)
+
+	cycle := func(name, status string) string {
+		c := e.call(&e.hr, "POST", "/api/hris/feedback-cycles", map[string]any{"name": name, "period_label": "Q4 2026",
+			"start_date": "2026-10-01", "end_date": "2026-12-31", "status": status}, 201)["data"].(map[string]any)
+		return c["id"].(string)
+	}
+	active, draft := cycle("Aktif", "active"), cycle("Draf", "draft")
+	assigned := e.call(&e.hr, "POST", "/api/hris/feedback-assignments", []any{
+		map[string]any{"cycle_id": active, "employee_id": assessed, "reviewer_id": reviewer, "relationship_type": "peer", "due_date": "2026-11-15"},
+		map[string]any{"cycle_id": active, "employee_id": reviewer, "reviewer_id": reviewer, "relationship_type": "self"},
+		map[string]any{"cycle_id": draft, "employee_id": assessed, "reviewer_id": reviewer, "relationship_type": "peer"},
+		map[string]any{"cycle_id": active, "employee_id": reviewer, "reviewer_id": assessed, "relationship_type": "peer"},
+	}, 201)["data"].([]any)
+	peerID := assigned[0].(map[string]any)["id"].(string)
+	selfID := assigned[1].(map[string]any)["id"].(string)
+	othersID := assigned[3].(map[string]any)["id"].(string)
+
+	// Only my reviews in active cycles, due date first.
+	list := e.call(&e.staff, "GET", "/api/hris/me/feedback-360", nil, 200)
+	rows := list["data"].([]any)
+	if len(rows) != 2 || list["criteria_total"] != 15.0 || rows[0].(map[string]any)["id"] != peerID ||
+		rows[0].(map[string]any)["employee"].(map[string]any)["full_name"] != "Dinilai" ||
+		rows[0].(map[string]any)["cycle"].(map[string]any)["name"] != "Aktif" || rows[0].(map[string]any)["answered"] != 0.0 {
+		t.Fatalf("my list %v", list)
+	}
+	if empty := e.call(&e.admin, "GET", "/api/hris/me/feedback-360", nil, 200); len(empty["data"].([]any)) != 0 {
+		t.Fatalf("no employee %v", empty)
+	}
+	wantErr(t, e.call(&e.staff, "GET", "/api/hris/me/feedback-360/"+othersID, nil, 404), "Penilaian tidak ditemukan")
+	wantErr(t, e.call(&e.admin, "GET", "/api/hris/me/feedback-360/"+peerID, nil, 403), "Akun ini tidak terhubung ke data karyawan")
+
+	form := e.call(&e.staff, "GET", "/api/hris/me/feedback-360/"+peerID, nil, 200)["data"].(map[string]any)
+	cats := form["categories"].([]any)
+	if form["editable"] != true || len(cats) != 5 || cats[0].(map[string]any)["name"] != "Leadership" ||
+		len(cats[0].(map[string]any)["criteria"].([]any)) != 3 || len(form["responses"].([]any)) != 0 {
+		t.Fatalf("form %v", form)
+	}
+	// Ratings per category: Leadership 5, Communication 4, Collaboration 3, Accountability 4, Problem Solving 4.
+	ratings := []int{5, 4, 3, 4, 4}
+	var answers []any
+	for i, c := range cats {
+		for _, cr := range c.(map[string]any)["criteria"].([]any) {
+			answers = append(answers, map[string]any{"criteria_id": cr.(map[string]any)["id"], "rating": ratings[i], "comments": " "})
+		}
+	}
+
+	wantErr(t, e.call(&e.staff, "PUT", "/api/hris/me/feedback-360/"+peerID, map[string]any{"responses": []any{
+		map[string]any{"criteria_id": answers[0].(map[string]any)["criteria_id"], "rating": 6}}}, 400), "Data tidak valid")
+	draftSave := e.call(&e.staff, "PUT", "/api/hris/me/feedback-360/"+peerID, map[string]any{"responses": answers[:2]}, 200)
+	if draftSave["message"] != "Draf penilaian tersimpan" || draftSave["data"].(map[string]any)["status"] != "in_progress" {
+		t.Fatalf("draft %v", draftSave)
+	}
+	wantErr(t, e.call(&e.staff, "PUT", "/api/hris/me/feedback-360/"+peerID, map[string]any{"responses": []any{}, "submit": true}, 400),
+		"Lengkapi penilaian semua kriteria sebelum mengirim")
+	var summaries int
+	e.scalar(&summaries, `SELECT count(*)::int FROM performance.feedback_summaries WHERE cycle_id = $1`, active)
+	if summaries != 0 {
+		t.Fatalf("a draft must not create a summary: %d", summaries)
+	}
+
+	sent := e.call(&e.staff, "PUT", "/api/hris/me/feedback-360/"+peerID, map[string]any{"responses": answers, "submit": true}, 200)
+	if sent["message"] != "Penilaian terkirim" || sent["data"].(map[string]any)["status"] != "submitted" {
+		t.Fatalf("submit %v", sent)
+	}
+	wantErr(t, e.call(&e.staff, "PUT", "/api/hris/me/feedback-360/"+peerID, map[string]any{"responses": answers}, 409),
+		"Penilaian ini sudah dikirim dan tidak bisa diubah")
+
+	// 360 = 80, KPI = the October scorecard (June is outside the cycle): 90×70% + 80×30% = 87 (B).
+	summary := e.call(&e.hr, "GET", "/api/hris/feedback-summaries?cycle_id="+active+"&employee_id="+assessed, nil, 200)["data"].([]any)[0].(map[string]any)
+	want := map[string]any{"leadership_score": "100.00", "communication_score": "80.00", "collaboration_score": "60.00",
+		"accountability_score": "80.00", "problem_solving_score": "80.00", "overall_360_score": "80.00", "kpi_score": "90.00",
+		"final_score": "87.00", "final_grade": "B"}
+	for k, v := range want {
+		if summary[k] != v {
+			t.Fatalf("summary %s = %v, want %v (%v)", k, summary[k], v, summary)
+		}
+	}
+	var comment *string
+	e.scalar(&comment, `SELECT comments FROM performance.feedback_responses WHERE assignment_id = $1 LIMIT 1`, peerID)
+	if comment != nil {
+		t.Fatalf("blank comment stored as %q", *comment)
+	}
+
+	// The self-assessment: submit, reject (back to the reviewer), resubmit, approve (locks).
+	selfAnswers := make([]any, len(answers))
+	for i, a := range answers {
+		selfAnswers[i] = map[string]any{"criteria_id": a.(map[string]any)["criteria_id"], "rating": 3}
+	}
+	e.call(&e.staff, "PUT", "/api/hris/me/feedback-360/"+selfID, map[string]any{"responses": selfAnswers, "submit": true}, 200)
+	e.call(&e.hr, "POST", "/api/hris/feedback-approvals/reject", map[string]any{"assignment_id": selfID, "rejection_reason": "Lengkapi komentar"}, 200)
+	back := e.call(&e.staff, "GET", "/api/hris/me/feedback-360/"+selfID, nil, 200)["data"].(map[string]any)
+	if back["editable"] != true || back["rejection_reason"] != "Lengkapi komentar" || len(back["responses"].([]any)) != 15 {
+		t.Fatalf("rejected self %v", back)
+	}
+	var overall *string
+	e.scalar(&overall, `SELECT overall_360_score::text FROM performance.feedback_summaries WHERE cycle_id = $1 AND employee_id = $2`, active, reviewer)
+	if overall != nil {
+		t.Fatalf("a rejected review must not count: %v", *overall)
+	}
+	e.call(&e.staff, "PUT", "/api/hris/me/feedback-360/"+selfID, map[string]any{"responses": selfAnswers, "submit": true}, 200)
+	e.call(&e.hr, "POST", "/api/hris/feedback-approvals/approve", map[string]any{"assignment_id": selfID}, 200)
+	var locked bool
+	e.scalar(&locked, `SELECT is_locked FROM performance.feedback_summaries WHERE cycle_id = $1 AND employee_id = $2`, active, reviewer)
+	e.scalar(&overall, `SELECT overall_360_score::text FROM performance.feedback_summaries WHERE cycle_id = $1 AND employee_id = $2`, active, reviewer)
+	if !locked || overall == nil || *overall != "60.00" {
+		t.Fatalf("approved self: locked %v overall %v", locked, overall)
+	}
+
+	cycles := e.call(&e.hr, "GET", "/api/hris/feedback-cycles?status=active", nil, 200)["data"].([]any)
+	for _, c := range cycles {
+		if c := c.(map[string]any); c["id"] == active && c["completed_count"] != 2.0 {
+			t.Fatalf("cycle progress %v", c)
+		}
 	}
 }
 

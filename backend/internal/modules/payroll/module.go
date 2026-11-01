@@ -158,6 +158,9 @@ func (h *handler) routes() []module.Route {
 		route("PATCH /api/hris/feedback-responses/{id}", h.rejectViaResponse),
 		route("GET /api/hris/feedback-summaries", h.listSummaries),
 		route("POST /api/hris/feedback-summaries", h.createSummary),
+		route("GET /api/hris/me/feedback-360", h.listMyFeedback),
+		route("GET /api/hris/me/feedback-360/{id}", h.getMyFeedback),
+		route("PUT /api/hris/me/feedback-360/{id}", h.saveMyFeedback),
 	}
 }
 
