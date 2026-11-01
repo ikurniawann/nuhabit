@@ -1,14 +1,18 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { CalendarPlus, Trash2, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useApInvoiceList } from "@/features/accounting/ap/queries";
 import { formatDate, formatRupiah } from "@/lib/format";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import {
   canRemoveTerm,
+  openApInvoices,
   receiptHref,
   schedulableAmount,
   termDisplayLabel,
@@ -50,6 +54,11 @@ export function POPaymentCard({ po, figures }: POPaymentCardProps) {
   const hasCredits = figures.returnCreditAmount > 0 || figures.rejectCreditAmount > 0;
   const schedulable = schedulableAmount(figures.payableAmount, terms);
   const nextTermNo = Math.max(0, ...terms.map((term) => term.term_no)) + 1;
+  // Pembayaran masuk lewat invoice AP yang dibuat saat GRN PO ini diposting.
+  const invoicesQuery = useApInvoiceList({ purchase_order_id: po.id, status: "POSTED", limit: 100 });
+  const allInvoices = invoicesQuery.data?.data ?? [];
+  const payableInvoices = openApInvoices(allInvoices);
+  const missingInvoice = invoicesQuery.isSuccess && payableInvoices.length === 0 && figures.outstandingAmount > 0;
 
   const handleRemoveTerm = async () => {
     if (!removingTerm) return;
@@ -81,7 +90,7 @@ export function POPaymentCard({ po, figures }: POPaymentCardProps) {
           </Button>
           <Button
             onClick={() => setPayOpen(true)}
-            disabled={figures.outstandingAmount <= 0}
+            disabled={payableInvoices.length === 0}
             className="purchasing-main-button"
           >
             Bayar
@@ -89,6 +98,16 @@ export function POPaymentCard({ po, figures }: POPaymentCardProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {missingInvoice && (
+          <div className="no-print rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            {allInvoices.length === 0
+              ? "Belum ada invoice AP untuk PO ini. Invoice dibuat otomatis saat GRN PO ini diposting."
+              : "Invoice AP yang ada sudah lunas. Sisa tagihan bisa dibayar setelah GRN berikutnya diposting."}{" "}
+            <Link href={RM_ROUTES.purchasingGrn} className="font-medium underline">
+              Buka Penerimaan Barang (GRN)
+            </Link>
+          </div>
+        )}
         <div className="grid gap-3 md:grid-cols-4">
           <InfoTile label="Status Pembayaran">
             <div className="mt-2">
@@ -215,14 +234,7 @@ export function POPaymentCard({ po, figures }: POPaymentCardProps) {
         )}
       </CardContent>
 
-      <POPaymentDialog
-        open={payOpen}
-        onOpenChange={setPayOpen}
-        poId={po.id}
-        paidAmount={Number(po.paid_amount || 0)}
-        terms={terms}
-        figures={figures}
-      />
+      <POPaymentDialog open={payOpen} onOpenChange={setPayOpen} invoices={payableInvoices} />
       <POTermDialog
         key={termOpen ? `term-${nextTermNo}` : "term-closed"}
         open={termOpen}

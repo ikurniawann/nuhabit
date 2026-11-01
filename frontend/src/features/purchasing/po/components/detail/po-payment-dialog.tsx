@@ -16,17 +16,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatRupiah } from "@/lib/format";
+import type { ApInvoiceRow } from "@/lib/accounting/ap-types";
+import { formatDate, formatRupiah } from "@/lib/format";
 import {
   defaultPaymentForm,
   paymentKind,
   todayIsoDate,
   validatePaymentForm,
   type PaymentFormValues,
-  type PODetailFigures,
 } from "@/lib/purchasing/po-ui-detail";
-import type { PurchaseOrderPaymentTerm, VendorPayment } from "@/types/purchasing";
-import { useCreateVendorPayment } from "../../mutations";
+import type { VendorPayment } from "@/types/purchasing";
+import { usePayPurchaseOrderInvoice } from "../../mutations";
 
 const METHOD_OPTIONS = [
   { value: "bank_transfer", label: "Transfer Bank" },
@@ -39,60 +39,60 @@ const METHOD_OPTIONS = [
 interface POPaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  poId: string;
-  paidAmount: number;
-  terms: PurchaseOrderPaymentTerm[];
-  figures: PODetailFigures;
+  /** Invoice AP PO yang masih punya sisa tagihan, terlama dulu. */
+  invoices: ApInvoiceRow[];
 }
 
-/** Catat pembayaran vendor; nilai awal = termin pertama yang belum lunas dan sisa tagihan PO. */
-export function POPaymentDialog({ open, onOpenChange, ...formProps }: POPaymentDialogProps) {
+/** Catat pembayaran vendor lewat Accounts Payable; termin PO dipilih otomatis oleh server. */
+export function POPaymentDialog({ open, onOpenChange, invoices }: POPaymentDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 overflow-hidden rounded-2xl border border-gray-200/70 p-0 shadow-xl ring-1 ring-gray-200/60 sm:max-w-[620px]">
         <DialogHeader className="border-b border-gray-200/70 px-5 py-4">
           <DialogTitle className="text-base font-semibold text-gray-900">Bayar Purchase Order</DialogTitle>
           <DialogDescription className="mt-1 text-sm leading-5 text-gray-500">
-            Catat pembayaran untuk purchase order ini. Pelunasan penuh diberi label{" "}
+            Pembayaran dicatat ke invoice AP dari GRN purchase order ini. Pelunasan penuh diberi label{" "}
             <span className="font-medium text-gray-700">Lunas</span>; nominal lebih kecil dicatat sebagai cicilan.
           </DialogDescription>
         </DialogHeader>
-        <PaymentForm {...formProps} onClose={() => onOpenChange(false)} />
+        <PaymentForm invoices={invoices} onClose={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
   );
 }
 
-function PaymentForm({
-  poId,
-  paidAmount,
-  terms,
-  figures,
-  onClose,
-}: Omit<POPaymentDialogProps, "open" | "onOpenChange"> & { onClose: () => void }) {
-  const outstanding = figures.outstandingAmount;
-  const [form, setForm] = useState<PaymentFormValues>(() => defaultPaymentForm(terms, outstanding, todayIsoDate()));
-  const createPayment = useCreateVendorPayment();
+const invoiceLabel = (invoice: ApInvoiceRow) =>
+  `${invoice.invoice_no}${invoice.grn_number ? ` · ${invoice.grn_number}` : ""} · sisa ${formatRupiah(
+    invoice.outstanding_amount
+  )}`;
+
+function PaymentForm({ invoices, onClose }: { invoices: ApInvoiceRow[]; onClose: () => void }) {
+  const [form, setForm] = useState<PaymentFormValues>(() => defaultPaymentForm(invoices, todayIsoDate()));
+  const pay = usePayPurchaseOrderInvoice();
+  const invoice = invoices.find((row) => row.id === form.invoice_id);
+  const outstanding = Number(invoice?.outstanding_amount ?? 0);
   const kind = paymentKind(form.amount, outstanding);
   const patch = (values: Partial<PaymentFormValues>) => setForm((prev) => ({ ...prev, ...values }));
 
+  const selectInvoice = (id: string) => {
+    const next = invoices.find((row) => row.id === id);
+    patch({ invoice_id: id, amount: next?.outstanding_amount || undefined });
+  };
+
   const handleSubmit = async () => {
-    const invalid = validatePaymentForm(form, outstanding);
+    const invalid = invoice ? validatePaymentForm(form, outstanding) : "Pilih invoice AP yang akan dibayar";
     if (invalid) {
       toast.error(invalid);
       return;
     }
     try {
-      await createPayment.mutateAsync({
-        poId,
-        payload: {
-          payment_term_id: form.payment_term_id || null,
-          payment_date: form.payment_date,
-          amount: Number(form.amount),
-          method: form.method,
-          reference_number: form.reference_number.trim() || null,
-          notes: form.notes.trim() || null,
-        },
+      await pay.mutateAsync({
+        invoice_id: form.invoice_id,
+        payment_date: form.payment_date,
+        amount: Number(form.amount),
+        method: form.method,
+        reference_number: form.reference_number.trim() || null,
+        notes: form.notes.trim() || null,
       });
       toast.success(kind === "full" ? "Pelunasan berhasil dicatat" : "Pembayaran berhasil dicatat");
       onClose();
@@ -104,16 +104,30 @@ function PaymentForm({
   return (
     <>
       <div className="grid gap-4 px-5 py-4">
-        <div className="rounded-xl border border-pink-100 bg-pink-50 p-3">
-          <div className="text-xs font-semibold text-pink-700">Sisa tagihan</div>
-          <div className="mt-1 text-lg font-bold text-pink-700">{formatRupiah(outstanding)}</div>
-          <div className="mt-1 text-xs text-pink-700/80">
-            Total PO {formatRupiah(figures.grossPayableAmount)}
-            {figures.returnCreditAmount > 0 && <> · Retur -{formatRupiah(figures.returnCreditAmount)}</>}
-            {figures.rejectCreditAmount > 0 && <> · Nota kredit reject -{formatRupiah(figures.rejectCreditAmount)}</>}
-            {" · "}Tagihan bersih {formatRupiah(figures.payableAmount)} · Dibayar {formatRupiah(paidAmount)}
-          </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="po-payment-invoice" className="text-xs">Invoice AP</Label>
+          <Combobox
+            id="po-payment-invoice"
+            options={invoices.map((row) => ({ value: row.id, label: invoiceLabel(row) }))}
+            value={form.invoice_id}
+            onChange={selectInvoice}
+            placeholder="Pilih invoice..."
+            searchPlaceholder="Cari invoice..."
+            emptyMessage="Invoice tidak ditemukan"
+            className="h-9 text-sm"
+          />
         </div>
+
+        {invoice && (
+          <div className="rounded-xl border border-pink-100 bg-pink-50 p-3">
+            <div className="text-xs font-semibold text-pink-700">Sisa tagihan invoice</div>
+            <div className="mt-1 text-lg font-bold text-pink-700">{formatRupiah(outstanding)}</div>
+            <div className="mt-1 text-xs text-pink-700/80">
+              Total {formatRupiah(invoice.total_amount)} · Dibayar {formatRupiah(invoice.allocated_amount)}
+              {invoice.due_date && <> · Jatuh tempo {formatDate(invoice.due_date)}</>}
+            </div>
+          </div>
+        )}
 
         {kind && (
           <div
@@ -197,12 +211,8 @@ function PaymentForm({
         <Button variant="outline" onClick={onClose} className="purchasing-secondary-button">
           Batal
         </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={createPayment.isPending || outstanding <= 0}
-          className="purchasing-main-button"
-        >
-          {createPayment.isPending ? "Memproses..." : "Simpan Pembayaran"}
+        <Button onClick={handleSubmit} disabled={pay.isPending || !invoice} className="purchasing-main-button">
+          {pay.isPending ? "Memproses..." : "Simpan Pembayaran"}
         </Button>
       </DialogFooter>
     </>

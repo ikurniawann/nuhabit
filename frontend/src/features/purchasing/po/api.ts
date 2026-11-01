@@ -15,7 +15,6 @@ export {
   getPurchaseOrderPaymentTerms,
   createPurchaseOrderPaymentTerm,
   deletePurchaseOrderPaymentTerm,
-  createVendorPayment,
 } from "@/lib/purchasing/api-client/purchase-orders";
 
 export interface POFormData {

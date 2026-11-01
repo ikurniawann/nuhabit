@@ -1,8 +1,10 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { PurchaseOrderFormData, VendorPayment } from "@/types/purchasing";
+import type { PurchaseOrderFormData } from "@/types/purchasing";
 import type { SendVia } from "@/lib/purchasing/po-ui-status";
+import { createApPayment } from "@/features/accounting/ap/api";
+import { apKeys } from "@/features/accounting/ap/query-keys";
 import {
   createPurchaseOrder,
   updatePurchaseOrder,
@@ -12,7 +14,6 @@ import {
   closePurchaseOrder,
   createPurchaseOrderPaymentTerm,
   deletePurchaseOrderPaymentTerm,
-  createVendorPayment,
 } from "./api";
 import { poQueryKeys } from "./query-keys";
 import { vendorPaymentsQueryKeys } from "@/features/purchasing/vendor-payments/query-keys";
@@ -54,26 +55,18 @@ export const useCreatePaymentTerm = () =>
 export const useDeletePaymentTerm = () =>
   usePOMutation(({ poId, termId }: { poId: string; termId: string }) => deletePurchaseOrderPaymentTerm(poId, termId));
 
-export const useCreateVendorPayment = () => {
+/**
+ * Bayar PO lewat Accounting AP: pembayaran dialokasikan ke satu invoice AP PO,
+ * lalu server mencatat vendor payment dan termin PO dalam transaksi yang sama.
+ */
+export const usePayPurchaseOrderInvoice = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      poId,
-      payload,
-    }: {
-      poId: string;
-      payload: {
-        payment_term_id?: string | null;
-        payment_date?: string;
-        amount: number;
-        method: VendorPayment["method"];
-        reference_number?: string | null;
-        notes?: string | null;
-      };
-    }) => createVendorPayment(poId, payload),
+    mutationFn: createApPayment,
     onSuccess: () => {
       // poQueryKeys.all mencakup detail & payments PO ini.
       queryClient.invalidateQueries({ queryKey: poQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: apKeys.all });
       queryClient.invalidateQueries({ queryKey: vendorPaymentsQueryKeys.all });
     },
   });
