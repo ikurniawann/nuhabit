@@ -10,6 +10,8 @@ import {
   sendPurchaseOrder,
   cancelPurchaseOrder,
   closePurchaseOrder,
+  createPurchaseOrderPaymentTerm,
+  deletePurchaseOrderPaymentTerm,
   createVendorPayment,
 } from "./api";
 import { poQueryKeys } from "./query-keys";
@@ -42,6 +44,15 @@ export const useCancelPurchaseOrder = () =>
 
 export const useClosePurchaseOrder = () =>
   usePOMutation(({ id, reason }: { id: string; reason: string }) => closePurchaseOrder(id, reason));
+
+export const useCreatePaymentTerm = () =>
+  usePOMutation(
+    ({ poId, payload }: { poId: string; payload: Parameters<typeof createPurchaseOrderPaymentTerm>[1] }) =>
+      createPurchaseOrderPaymentTerm(poId, payload)
+  );
+
+export const useDeletePaymentTerm = () =>
+  usePOMutation(({ poId, termId }: { poId: string; termId: string }) => deletePurchaseOrderPaymentTerm(poId, termId));
 
 export const useCreateVendorPayment = () => {
   const queryClient = useQueryClient();

@@ -1,16 +1,26 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { WalletCards } from "lucide-react";
+import { CalendarPlus, Trash2, WalletCards } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatDate, formatRupiah } from "@/lib/format";
-import { receiptHref, termDisplayLabel, type PODetailFigures } from "@/lib/purchasing/po-ui-detail";
+import {
+  canRemoveTerm,
+  receiptHref,
+  schedulableAmount,
+  termDisplayLabel,
+  type PODetailFigures,
+} from "@/lib/purchasing/po-ui-detail";
 import { paymentStatusBadge } from "@/lib/purchasing/po-ui-status";
-import type { PurchaseOrderWithStats } from "@/types/purchasing";
+import type { PurchaseOrderPaymentTerm, PurchaseOrderWithStats } from "@/types/purchasing";
+import { useDeletePaymentTerm } from "../../mutations";
 import { usePurchaseOrderPayments } from "../../queries";
 import { ToneBadge } from "../po-dialogs";
 import { POPaymentDialog } from "./po-payment-dialog";
+import { POTermDialog } from "./po-term-dialog";
 
 function InfoTile({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -29,12 +39,28 @@ interface POPaymentCardProps {
 /** Pembayaran invoice PO (konteks Account Payable): status, termin, riwayat, dan dialog bayar. */
 export function POPaymentCard({ po, figures }: POPaymentCardProps) {
   const [payOpen, setPayOpen] = useState(false);
+  const [termOpen, setTermOpen] = useState(false);
+  const [removingTerm, setRemovingTerm] = useState<PurchaseOrderPaymentTerm | null>(null);
   const paymentsQuery = usePurchaseOrderPayments(po.id);
+  const deleteTerm = useDeletePaymentTerm();
   const terms = paymentsQuery.data?.terms ?? [];
   const payments = paymentsQuery.data?.payments ?? [];
   const termById = new Map(terms.map((term) => [term.id, term]));
   const termLabel = (term: (typeof terms)[number]) => termDisplayLabel(term, figures.payableAmount);
   const hasCredits = figures.returnCreditAmount > 0 || figures.rejectCreditAmount > 0;
+  const schedulable = schedulableAmount(figures.payableAmount, terms);
+  const nextTermNo = Math.max(0, ...terms.map((term) => term.term_no)) + 1;
+
+  const handleRemoveTerm = async () => {
+    if (!removingTerm) return;
+    try {
+      await deleteTerm.mutateAsync({ poId: po.id, termId: removingTerm.id });
+      toast.success("Termin pembayaran dihapus");
+      setRemovingTerm(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal menghapus termin pembayaran");
+    }
+  };
 
   return (
     <Card className="border-gray-200/70 shadow-sm">
@@ -43,13 +69,24 @@ export function POPaymentCard({ po, figures }: POPaymentCardProps) {
           <WalletCards className="h-5 w-5" />
           Pembayaran Invoice
         </CardTitle>
-        <Button
-          onClick={() => setPayOpen(true)}
-          disabled={figures.outstandingAmount <= 0}
-          className="purchasing-main-button no-print"
-        >
-          Bayar
-        </Button>
+        <div className="no-print flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setTermOpen(true)}
+            disabled={schedulable <= 0}
+            className="purchasing-secondary-button"
+          >
+            <CalendarPlus className="mr-2 h-4 w-4" />
+            Tambah Termin
+          </Button>
+          <Button
+            onClick={() => setPayOpen(true)}
+            disabled={figures.outstandingAmount <= 0}
+            className="purchasing-main-button"
+          >
+            Bayar
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 md:grid-cols-4">
@@ -86,12 +123,15 @@ export function POPaymentCard({ po, figures }: POPaymentCardProps) {
                 <th className="px-4 py-3 text-right font-semibold">Nominal</th>
                 <th className="px-4 py-3 text-right font-semibold">Dibayar</th>
                 <th className="px-4 py-3 text-center font-semibold">Status</th>
+                <th className="no-print px-4 py-3">
+                  <span className="sr-only">Aksi</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
               {terms.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">
                     Belum ada jadwal pembayaran. Gunakan <span className="font-medium text-gray-700">Bayar</span> untuk
                     mencatat pelunasan atau pembayaran sebagian, jadwal akan dibuat otomatis.
                   </td>
@@ -112,6 +152,19 @@ export function POPaymentCard({ po, figures }: POPaymentCardProps) {
                       <td className="px-4 py-3 text-right text-emerald-700">{formatRupiah(term.paid_amount)}</td>
                       <td className="px-4 py-3 text-center">
                         <ToneBadge tone={paymentStatusBadge(term.status)} />
+                      </td>
+                      <td className="no-print px-4 py-3 text-right">
+                        {canRemoveTerm(term) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setRemovingTerm(term)}
+                            aria-label={`Hapus termin ${label}`}
+                            className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -169,6 +222,28 @@ export function POPaymentCard({ po, figures }: POPaymentCardProps) {
         paidAmount={Number(po.paid_amount || 0)}
         terms={terms}
         figures={figures}
+      />
+      <POTermDialog
+        key={termOpen ? `term-${nextTermNo}` : "term-closed"}
+        open={termOpen}
+        onOpenChange={setTermOpen}
+        poId={po.id}
+        nextTermNo={nextTermNo}
+        schedulable={schedulable}
+      />
+      <ConfirmDialog
+        open={removingTerm !== null}
+        onOpenChange={(open) => !open && setRemovingTerm(null)}
+        title="Hapus termin pembayaran?"
+        description={
+          removingTerm &&
+          `${termLabel(removingTerm)} sebesar ${formatRupiah(removingTerm.amount)} dihapus dari jadwal pembayaran PO ini.`
+        }
+        confirmLabel="Hapus"
+        loadingLabel="Menghapus..."
+        loading={deleteTerm.isPending}
+        onConfirm={handleRemoveTerm}
+        variant="danger"
       />
     </Card>
   );

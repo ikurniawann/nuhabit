@@ -13,6 +13,8 @@ export {
   cancelPurchaseOrder,
   closePurchaseOrder,
   getPurchaseOrderPaymentTerms,
+  createPurchaseOrderPaymentTerm,
+  deletePurchaseOrderPaymentTerm,
   createVendorPayment,
 } from "@/lib/purchasing/api-client/purchase-orders";
 

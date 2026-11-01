@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
 import type { PurchaseOrderPaymentTerm, PurchaseOrderWithStats } from "@/types/purchasing";
 import {
+  canRemoveTerm,
   defaultPaymentForm,
   localizeTermDescription,
   paymentKind,
   poDetailFigures,
   poFinancialBreakdown,
   receiptHref,
+  schedulableAmount,
   termDisplayLabel,
   validatePaymentForm,
+  validateTermForm,
 } from "./po-ui-detail";
 
 const po = (fields: Partial<PurchaseOrderWithStats>) => fields as PurchaseOrderWithStats;
@@ -117,6 +120,30 @@ describe("payment terms", () => {
     expect(paymentKind(undefined, 500)).toBeNull();
     expect(paymentKind(500, 500)).toBe("full");
     expect(paymentKind(200, 500)).toBe("installment");
+  });
+});
+
+describe("payment term schedule", () => {
+  it("leaves the unscheduled share of the net payable", () => {
+    expect(schedulableAmount(1000, [{ amount: 300 }, { amount: 200 }])).toBe(500);
+    expect(schedulableAmount(1000, [{ amount: 1200 }])).toBe(0);
+    expect(schedulableAmount(1000, [])).toBe(1000);
+  });
+
+  it("removes only terms without any payment", () => {
+    expect(canRemoveTerm({ paid_amount: 0, status: "unpaid" })).toBe(true);
+    expect(canRemoveTerm({ paid_amount: 0, status: "overdue" })).toBe(true);
+    expect(canRemoveTerm({ paid_amount: 100, status: "partial" })).toBe(false);
+    expect(canRemoveTerm({ paid_amount: 0, status: "paid" })).toBe(false);
+  });
+
+  it("validates the term against the unscheduled amount", () => {
+    const form = { description: "Termin 1", due_date: "2026-11-30", amount: 400, notes: "" };
+    expect(validateTermForm(form, 500)).toBeNull();
+    expect(validateTermForm({ ...form, due_date: "" }, 500)).toMatch(/Masukkan jatuh tempo/);
+    expect(validateTermForm({ ...form, amount: 600 }, 500)).toBe(
+      "Nominal termin tidak boleh melebihi sisa yang belum dijadwalkan (Rp500)"
+    );
   });
 });
 
