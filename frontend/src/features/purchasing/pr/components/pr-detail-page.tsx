@@ -23,7 +23,9 @@ import { PRApprovalActions } from "@/features/purchasing/components/shared/pr-ap
 import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import { NAV_FROM_APPROVAL_PR, appendNavFrom } from "@/lib/iam/nav-context";
 import { useNavFrom } from "@/lib/iam/use-nav-from";
+import { useAuth } from "@/hooks/use-auth";
 import { usePurchaseRequest } from "../queries";
+import { PRSubmitButton } from "./pr-submit-button";
 import type { PRDetailItem } from "../types";
 import { formatDate, formatNumber } from "@/lib/format";
 
@@ -87,6 +89,7 @@ export function PRDetailPage({ params }: PRDetailPageProps) {
     ? appendNavFrom(RM_ROUTES.purchasingPrEdit(id), NAV_FROM_APPROVAL_PR)
     : RM_ROUTES.purchasingPrEdit(id);
   const { data: pr, isLoading, isError, error } = usePurchaseRequest(id);
+  const { user } = useAuth();
 
   if (isLoading) {
     return (
@@ -160,6 +163,8 @@ export function PRDetailPage({ params }: PRDetailPageProps) {
               </Button>
             </Link>
           )}
+          {/* Hanya pemohon yang boleh mengajukan; editor lain cukup mengubah. */}
+          {pr.status === "draft" && user?.id === pr.requester_id && <PRSubmitButton prId={id} />}
           {pr.status === "rejected" && <PRRevisionButton prId={id} />}
           <Link href={`/dashboard/purchasing/print/pr/${id}`} target="_blank">
             <Button variant="outline" className="purchasing-secondary-button w-full cursor-pointer sm:w-auto">
