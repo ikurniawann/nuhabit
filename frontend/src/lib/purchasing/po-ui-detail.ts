@@ -1,4 +1,5 @@
 /** Perhitungan tampilan halaman detail PO bahan baku: progres, tagihan, termin, pembayaran. */
+import type { ApInvoiceRow } from "@/lib/accounting/ap-types";
 import { formatRupiah } from "@/lib/format";
 import type {
   PurchaseOrderPaymentTerm,
@@ -144,8 +145,15 @@ export function validateTermForm(form: TermFormValues, schedulable: number): str
   return null;
 }
 
+/** Invoice AP PO (satu per GRN) yang masih punya sisa tagihan, terlama dulu; hanya ini yang bisa dibayar. */
+export function openApInvoices<T extends Pick<ApInvoiceRow, "outstanding_amount" | "invoice_date">>(invoices: T[]): T[] {
+  return invoices
+    .filter((invoice) => num(invoice.outstanding_amount) > PAID_TOLERANCE)
+    .sort((a, b) => a.invoice_date.localeCompare(b.invoice_date));
+}
+
 export interface PaymentFormValues {
-  payment_term_id: string;
+  invoice_id: string;
   payment_date: string;
   amount: number | undefined;
   method: VendorPayment["method"];
@@ -153,16 +161,17 @@ export interface PaymentFormValues {
   notes: string;
 }
 
-/** Nilai awal dialog bayar: termin pertama yang belum lunas, nominal = sisa tagihan PO. */
+/** Nilai awal dialog bayar: invoice AP terlama yang terbuka, nominal = sisa tagihannya. */
 export function defaultPaymentForm(
-  terms: Pick<PurchaseOrderPaymentTerm, "id" | "status">[],
-  outstandingAmount: number,
+  invoices: Pick<ApInvoiceRow, "id" | "outstanding_amount">[],
   today: string
 ): PaymentFormValues {
+  const first = invoices[0];
+  const outstanding = num(first?.outstanding_amount);
   return {
-    payment_term_id: terms.find((term) => term.status !== "paid")?.id || "",
+    invoice_id: first?.id ?? "",
     payment_date: today,
-    amount: outstandingAmount > 0 ? outstandingAmount : undefined,
+    amount: outstanding > 0 ? outstanding : undefined,
     method: "bank_transfer",
     reference_number: "",
     notes: "",

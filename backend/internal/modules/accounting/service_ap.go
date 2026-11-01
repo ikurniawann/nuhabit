@@ -119,7 +119,9 @@ func (s *Service) mapApInvoice(r apInvoiceRow) ApInvoice {
 // InvoiceListFilter is parseInvoiceListQuery plus the company.
 type InvoiceListFilter struct {
 	CompanyID, Status, PaymentStatus, Search string
-	Limit, Offset                            float64 // JavaScript numbers (NaN fails in SQL like node-pg)
+	// PurchaseOrderID keeps the AP invoices of one PO (one per GRN); AR ignores it.
+	PurchaseOrderID string
+	Limit, Offset   float64 // JavaScript numbers (NaN fails in SQL like node-pg)
 }
 
 func pageArgs(args []any, limit, offset float64) (string, []any) {
@@ -137,6 +139,10 @@ func (s *Service) ListApInvoices(ctx context.Context, f InvoiceListFilter) ([]Ap
 	if f.Status != "" {
 		args = append(args, f.Status)
 		where = append(where, "i.status = $"+itoa(len(args)))
+	}
+	if f.PurchaseOrderID != "" {
+		args = append(args, f.PurchaseOrderID)
+		where = append(where, "i.purchase_order_id::text = $"+itoa(len(args)))
 	}
 	if t := jsTrim(f.Search); t != "" {
 		args = append(args, "%"+t+"%")

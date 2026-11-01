@@ -10,6 +10,8 @@ export type ApListFilters = {
   search?: string;
   status?: string;
   payment_status?: string;
+  /** Invoice AP milik satu PO (satu per GRN). */
+  purchase_order_id?: string;
   limit?: number;
   offset?: number;
 };

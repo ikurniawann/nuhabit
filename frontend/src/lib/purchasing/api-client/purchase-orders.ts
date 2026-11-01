@@ -143,27 +143,6 @@ export async function deletePurchaseOrderPaymentTerm(id: string, termId: string)
   await fetchApi(`${BASE}/po/${id}/payment-terms/${termId}`, { method: "DELETE" });
 }
 
-export async function createVendorPayment(
-  id: string,
-  payload: {
-    payment_term_id?: string | null;
-    payment_date?: string;
-    amount: number;
-    method: VendorPayment["method"];
-    reference_number?: string | null;
-    notes?: string | null;
-  }
-): Promise<VendorPayment> {
-  const response = await fetchApi<{ data: VendorPayment }>(
-    `${BASE}/po/${id}/payments`,
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }
-  );
-  return response.data;
-}
-
 export async function listPOItems(
   poId: string
 ): Promise<PurchaseOrderItem[]> {

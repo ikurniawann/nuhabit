@@ -249,7 +249,7 @@ func (h *Handler) subsidiary(w http.ResponseWriter, r *http.Request, u *auth.Use
 
 func invoiceFilter(r *http.Request, companyID string) InvoiceListFilter {
 	return InvoiceListFilter{CompanyID: companyID, Status: raw(r, "status"), PaymentStatus: raw(r, "payment_status"),
-		Search: raw(r, "search"), Limit: numberParam(r, "limit", 20), Offset: numberParam(r, "offset", 0)}
+		Search: raw(r, "search"), PurchaseOrderID: raw(r, "purchase_order_id"), Limit: numberParam(r, "limit", 20), Offset: numberParam(r, "offset", 0)}
 }
 
 func (h *Handler) listApInvoices(w http.ResponseWriter, r *http.Request, u *auth.User) error {

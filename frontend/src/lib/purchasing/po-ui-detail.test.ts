@@ -4,6 +4,7 @@ import {
   canRemoveTerm,
   defaultPaymentForm,
   localizeTermDescription,
+  openApInvoices,
   paymentKind,
   poDetailFigures,
   poFinancialBreakdown,
@@ -94,21 +95,29 @@ describe("payment terms", () => {
     expect(termDisplayLabel(term({ term_no: 3 }), 1000)).toBe("Cicilan 3");
   });
 
-  it("defaults the payment form to the first unpaid term and the outstanding amount", () => {
+  it("keeps the AP invoices with an outstanding balance, oldest first", () => {
+    const open = openApInvoices([
+      { id: "new", invoice_date: "2026-10-09", outstanding_amount: 300 },
+      { id: "paid", invoice_date: "2026-10-01", outstanding_amount: 0 },
+      { id: "old", invoice_date: "2026-10-02", outstanding_amount: 750 },
+    ]);
+    expect(open.map((invoice) => invoice.id)).toEqual(["old", "new"]);
+  });
+
+  it("defaults the payment form to the first open AP invoice and its outstanding amount", () => {
     const form = defaultPaymentForm(
       [
-        { id: "t1", status: "paid" },
-        { id: "t2", status: "unpaid" },
+        { id: "i1", outstanding_amount: 750 },
+        { id: "i2", outstanding_amount: 300 },
       ],
-      750,
       "2026-10-04"
     );
-    expect(form).toMatchObject({ payment_term_id: "t2", amount: 750, payment_date: "2026-10-04", method: "bank_transfer" });
-    expect(defaultPaymentForm([], 0, "2026-10-04").amount).toBeUndefined();
+    expect(form).toMatchObject({ invoice_id: "i1", amount: 750, payment_date: "2026-10-04", method: "bank_transfer" });
+    expect(defaultPaymentForm([], "2026-10-04")).toMatchObject({ invoice_id: "", amount: undefined });
   });
 
   it("validates payment amount against the outstanding balance", () => {
-    const base = defaultPaymentForm([], 500, "2026-10-04");
+    const base = defaultPaymentForm([{ id: "i1", outstanding_amount: 500 }], "2026-10-04");
     expect(validatePaymentForm(base, 500)).toBeNull();
     expect(validatePaymentForm({ ...base, amount: 0 }, 500)).toMatch(/Masukkan tanggal/);
     expect(validatePaymentForm({ ...base, amount: 600 }, 500)).toBe(

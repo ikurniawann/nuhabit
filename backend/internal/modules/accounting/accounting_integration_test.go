@@ -338,6 +338,33 @@ VALUES ('GV'||$1, 'Go Vendor', 'x', '0', 'v@x.test', 'x', 'other') RETURNING id:
 	return id
 }
 
+// The PO payable page pays through the AP invoices of its PO.
+func TestApInvoicesOfPurchaseOrder(t *testing.T) {
+	e := setup(t)
+	vendor := e.vendor()
+	po := func() string {
+		var id string
+		e.scalar(&id, `INSERT INTO purchasing.purchase_orders (nomor_po, vendor_id, company_id, subtotal, total)
+VALUES ('PO-GO-'||$1, $2, $3, 1000, 1000) RETURNING id::text`, testutil.RandomHex(3), vendor, e.company)
+		return id
+	}
+	billed, unbilled := po(), po()
+	var invoice string
+	e.scalar(&invoice, `INSERT INTO accounting.ap_invoices (company_id, invoice_no, invoice_date, vendor_id, purchase_order_id, subtotal, total_amount, status)
+VALUES ($1, 'AP-PO-1', '2026-10-01', $2, $3, 1000, 1000, 'POSTED') RETURNING id::text`, e.company, vendor, billed)
+
+	byPo := e.do("GET", "/api/accounting/ap/invoices?status=POSTED&purchase_order_id="+billed, nil, 200)["data"].([]any)
+	if len(byPo) != 1 || byPo[0].(map[string]any)["id"] != invoice || byPo[0].(map[string]any)["outstanding_amount"] != float64(1000) {
+		t.Fatalf("invoices of PO: %v", byPo)
+	}
+	if none := e.do("GET", "/api/accounting/ap/invoices?purchase_order_id="+unbilled, nil, 200)["data"].([]any); len(none) != 0 {
+		t.Fatalf("invoices of an unbilled PO: %v", none)
+	}
+	if bad := e.do("GET", "/api/accounting/ap/invoices?purchase_order_id=not-a-uuid", nil, 200)["data"].([]any); len(bad) != 0 {
+		t.Fatalf("invoices of a malformed id: %v", bad)
+	}
+}
+
 func TestApPaymentAndVoid(t *testing.T) {
 	e := setup(t)
 	cash := e.account("1101001", "Bank", "ASSET", true)
