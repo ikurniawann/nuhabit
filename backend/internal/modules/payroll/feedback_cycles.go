@@ -42,9 +42,12 @@ func (h *handler) createCategory(w http.ResponseWriter, r *http.Request) error {
 }
 
 // cycleListSelect renders the PostgREST aggregate embeds the TS asked for
-// (`assignments_count:feedback_assignments(count)`) as [{"count": n}].
+// (`assignments_count:feedback_assignments(count)`) as [{"count": n}];
+// completed_count is the submitted and approved assignments (the HR page's
+// progress bar).
 const cycleListSelect = `SELECT x.*,
 	(SELECT json_build_array(json_build_object('count', count(*))) FROM performance.feedback_assignments a WHERE a.cycle_id = x.id) AS assignments_count,
+	(SELECT count(*)::int FROM performance.feedback_assignments a WHERE a.cycle_id = x.id AND a.status IN ('submitted', 'approved')) AS completed_count,
 	(SELECT json_build_array(json_build_object('count', count(*))) FROM performance.feedback_summaries s WHERE s.cycle_id = x.id) AS summaries_count
 	FROM performance.feedback_cycles x`
 

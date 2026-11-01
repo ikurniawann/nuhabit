@@ -3355,6 +3355,21 @@
     "path": "/api/hris/me/beranda"
   },
   {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/me/feedback-360"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/me/feedback-360/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "PUT",
+    "path": "/api/hris/me/feedback-360/{id}"
+  },
+  {
     "module": "hris",
     "method": "GET",
     "path": "/api/hris/me/team"

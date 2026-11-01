@@ -95,7 +95,7 @@ var (
 	HrisMaster              = []string{"hris.master"}
 	HrisOrganization        = []string{"hris.organization"}
 	HrisInsights            = []string{"hris.insights"}
-	HrisPerformanceAdmin    = []string{"hris.performance.kpi-scorecard", "hris.performance.kpi-config"}
+	HrisFeedbackAdmin       = []string{"hris.performance.feedback-360", "hris.performance.kpi-scorecard", "hris.performance.kpi-config"}
 	PosCatalogProducts      = []string{"pos.catalog.products"}
 	PosLoyaltySettings      = []string{"pos.loyalty.settings"}
 	SettingsBilling         = []string{"settings.billing"}
@@ -201,7 +201,7 @@ var ByKey = map[string][]string{
 	"hrisMaster":              HrisMaster,
 	"hrisOrganization":        HrisOrganization,
 	"hrisInsights":            HrisInsights,
-	"hrisPerformanceAdmin":    HrisPerformanceAdmin,
+	"hrisFeedbackAdmin":       HrisFeedbackAdmin,
 	"posCatalogProducts":      PosCatalogProducts,
 	"posLoyaltySettings":      PosLoyaltySettings,
 	"settingsBilling":         SettingsBilling,

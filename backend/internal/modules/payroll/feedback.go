@@ -12,8 +12,9 @@ import (
 )
 
 // 360 feedback (lib/hris/feedback-repo.ts, feedback-schemas.ts). The
-// performance.feedback_* tables belong to this module. The module has no UI
-// yet; every route needs the KPI admin menus.
+// performance.feedback_* tables belong to this module. Its admin UI is the
+// HR page /dashboard/hris/feedback-360; every route here needs the
+// feedback or KPI admin menus (feedback_me.go serves the reviewers).
 //
 // Assignment embeds follow employee_id and reviewer_id. (The TS shim fell
 // back to approved_by for constraint-name hints and unhinted embeds, so it
@@ -201,7 +202,7 @@ func (h *handler) approverID(r *http.Request, notFound string) (string, error) {
 }
 
 func (h *handler) requireFeedbackAdmin(r *http.Request) error {
-	_, err := h.auth.RequireMenuPrefix(r, iam.HrisPerformanceAdmin...)
+	_, err := h.auth.RequireMenuPrefix(r, iam.HrisFeedbackAdmin...)
 	return err
 }
 
