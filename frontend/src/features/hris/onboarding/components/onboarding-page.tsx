@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, User, Calendar, Briefcase, Mail, Phone, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { EMPLOYEES_ROUTES } from "@/features/users/constants";
 import { formatDate } from "@/lib/format";
 import { EMPLOYMENT_STATUS_BADGES, tenureDays } from "@/lib/hris/onboarding-view";
 import { useOnboardingEmployee } from "../queries";
@@ -209,7 +210,7 @@ export function OnboardingPage({ params }: OnboardingPageProps) {
         <CardContent>
           <div className="flex flex-wrap gap-3">
             <Button variant="outline" asChild>
-              <Link href={`/dashboard/employees`}>
+              <Link href={EMPLOYEES_ROUTES.detail(employeeId)}>
                 Lihat Profil Lengkap
               </Link>
             </Button>
@@ -221,7 +222,7 @@ export function OnboardingPage({ params }: OnboardingPageProps) {
             </Button>
 
             <Button variant="outline" asChild>
-              <Link href={`/dashboard/hris/leave-balances/${employeeId}`}>
+              <Link href={`${EMPLOYEES_ROUTES.detail(employeeId)}?tab=leave`}>
                 Lihat Saldo Cuti
               </Link>
             </Button>

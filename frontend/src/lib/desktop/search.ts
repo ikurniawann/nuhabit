@@ -22,8 +22,8 @@ export const SEARCH_SOURCES: readonly SearchSourceDef[] = [
   { key: "order", label: "Transaksi", iamPrefixes: ["pos.reports", "pos.operations"], href: "/dashboard/pos/orders" },
   { key: "member", label: "Member", iamPrefixes: ["crm.members", "crm"], href: "/dashboard/crm/members" },
   { key: "product", label: "Produk", iamPrefixes: ["pos.catalog", "items.product"], href: "/dashboard/pos/products" },
-  { key: "material", label: "Bahan Baku", iamPrefixes: ["items.raw-material"], href: "/dashboard/items/raw-material/master/materials" },
-  { key: "employee", label: "Karyawan", iamPrefixes: ["hris.kepegawaian", "hris"], href: "/dashboard/hris/kepegawaian/users" },
+  { key: "material", label: "Bahan Baku", iamPrefixes: ["items.raw-material"], href: "/dashboard/raw-material/materials" },
+  { key: "employee", label: "Karyawan", iamPrefixes: ["hris.kepegawaian", "hris"], href: "/dashboard/employees" },
   { key: "document", label: "Dataroom", iamPrefixes: ["dataroom"], href: "/dashboard/dataroom" },
 ] as const;
 

@@ -278,7 +278,7 @@ func (p *Postgres) InboxSection(ctx context.Context, key string) (*InboxSection,
 				return nil, err
 			}
 			it.Subtitle = leaveType + " · " + domain.DescribeLeaveRange(deref(start), deref(end), days)
-			it.Href, it.Actionable = "/dashboard/hris/workforce/leaves", true
+			it.Href, it.Actionable = "/dashboard/hris/leaves", true
 		case "po":
 			var supplier string
 			var total float64
@@ -286,14 +286,14 @@ func (p *Postgres) InboxSection(ctx context.Context, key string) (*InboxSection,
 				return nil, err
 			}
 			it.Subtitle = supplier + " · Rp " + domain.FormatID(total)
-			it.Href = "/dashboard/items/raw-material/approval/po"
+			it.Href = "/dashboard/raw-material/approval/po"
 		case "stok":
 			var available, minimum float64
 			if err := rows.Scan(&it.ID, &it.Title, &available, &minimum, &sec.Total); err != nil {
 				return nil, err
 			}
 			it.Subtitle = "sisa " + domain.JSNumber(available) + " dari minimum " + domain.JSNumber(minimum)
-			it.Href = "/dashboard/items/raw-material/purchasing/pr"
+			it.Href = "/dashboard/raw-material/purchasing/pr"
 		}
 		sec.Items = append(sec.Items, it)
 	}
@@ -375,7 +375,7 @@ func (p *Postgres) SearchSource(ctx context.Context, key, pattern string) ([]dom
 			err = rows.Scan(&id, &a, &b)
 			hit.Title = strOr(b, "-")
 			hit.Subtitle = ptr(deref(a))
-			hit.Href = "/dashboard/items/raw-material/master/materials?q=" + encodeURIComponent(deref(a))
+			hit.Href = "/dashboard/raw-material/materials/" + id
 		case "employee":
 			err = rows.Scan(&id, &a, &b, &c)
 			hit.Title = strOr(a, "-")
@@ -384,7 +384,7 @@ func (p *Postgres) SearchSource(ctx context.Context, key, pattern string) ([]dom
 				sub += " · " + *c
 			}
 			hit.Subtitle = &sub
-			hit.Href = "/dashboard/hris/kepegawaian/users?q=" + encodeURIComponent(deref(a))
+			hit.Href = "/dashboard/employees/" + id
 		case "document":
 			err = rows.Scan(&id, &a, &b)
 			hit.Title = strOr(a, "-")

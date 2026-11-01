@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ActionPO } from "@/features/purchasing/dashboard/queries";
 import { formatDate } from "@/lib/format";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import { getPOStatusLabel } from "@/lib/purchasing/status-labels";
 import { AlertCircle, Clock, Eye } from "lucide-react";
 import Link from "next/link";
@@ -60,7 +61,7 @@ export function ActionPOPanel({ pos }: ActionPOPanelProps) {
                   <div className="flex flex-col items-end gap-1.5">
                     <Badge className={color}>{label}</Badge>
                     <Button asChild variant="ghost" size="sm" className="h-7 px-2">
-                      <Link href={`/dashboard/purchasing/purchase-orders/${po.id}`} aria-label={`Lihat ${po.po_number}`}>
+                      <Link href={RM_ROUTES.purchasingPoDetail(po.id)} aria-label={`Lihat ${po.po_number}`}>
                         <Eye className="w-3.5 h-3.5" />
                       </Link>
                     </Button>
