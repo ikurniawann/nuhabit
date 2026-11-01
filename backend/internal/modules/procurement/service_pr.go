@@ -475,7 +475,8 @@ func (s *Service) UpdatePurchaseRequest(ctx context.Context, id string, body any
 	return map[string]string{"id": id, "status": write.Status}, nil
 }
 
-// SubmitPurchaseRequest is submitPurchaseRequest.
+// SubmitPurchaseRequest is submitPurchaseRequest. An urgent PR raises the
+// same owner alert as submitting it from the edit form.
 func (s *Service) SubmitPurchaseRequest(ctx context.Context, id string, user *auth.User) (*Row, error) {
 	pr, err := s.rows.One(ctx, s.db, `SELECT * FROM purchase_requests WHERE id = $1::text::uuid`, id)
 	if err != nil || pr == nil {
@@ -487,8 +488,43 @@ func (s *Service) SubmitPurchaseRequest(ctx context.Context, id string, user *au
 	if pr.Str("status") != domain.PrDraft {
 		return nil, badRequest("Hanya PR dengan status draft yang bisa disubmit")
 	}
-	return s.rows.One(ctx, s.db, `UPDATE purchase_requests SET status = 'pending_head', current_approval_level = 'head_dept',
-		updated_at = $2 WHERE id = $1 RETURNING *`, pr.Str("id"), s.now())
+	var out *Row
+	err = database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
+		out, err = s.rows.One(ctx, tx, `UPDATE purchase_requests SET status = 'pending_head', current_approval_level = 'head_dept',
+			updated_at = $2 WHERE id = $1 RETURNING *`, pr.Str("id"), s.now())
+		if err != nil || !domain.IsUrgentPriority(pr.Str("priority")) {
+			return err
+		}
+		write, err := s.storedPrWrite(ctx, tx, pr.Str("id"), domain.PrPendingHead)
+		if err != nil {
+			return err
+		}
+		number := pr.Str("pr_number")
+		if number == "" {
+			number = id
+		}
+		return s.publishUrgent(ctx, tx, pr.Str("id"), number, write, user.FullName)
+	})
+	return out, err
+}
+
+// storedPrWrite reads a saved PR back into the shape publishUrgent takes.
+func (s *Service) storedPrWrite(ctx context.Context, tx pgx.Tx, prID, status string) (*prWrite, error) {
+	head, err := s.rows.One(ctx, tx, `SELECT department_id::text AS department_id, priority, required_date::text AS required_date,
+		notes, total_amount::float8 AS total_amount FROM purchase_requests WHERE id = $1`, prID)
+	if err != nil {
+		return nil, err
+	}
+	lines, err := s.rows.Query(ctx, tx, `SELECT description, qty::float8 AS qty, unit FROM pr_items WHERE pr_id = $1`, prID)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]prItemInput, len(lines))
+	for i, l := range lines {
+		items[i] = prItemInput{Description: l.Str("description"), Unit: l.Str("unit"), Line: domain.PrLine{Qty: l.Num("qty")}}
+	}
+	return &prWrite{DepartmentID: head.Str("department_id"), Priority: head.Str("priority"), RequiredDate: head.StrPtr("required_date"),
+		Notes: head.StrPtr("notes"), Items: items, Total: head.Num("total_amount"), Status: status}, nil
 }
 
 // PrDecision is prDecisionSchema.

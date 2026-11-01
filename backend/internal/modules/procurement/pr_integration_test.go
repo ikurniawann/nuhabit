@@ -245,6 +245,38 @@ func TestUrgentPurchaseRequestPublishesAlert(t *testing.T) {
 	}
 }
 
+func TestSubmitUrgentPurchaseRequestPublishesAlert(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixtures()
+	staff := e.staff(itemsAll)
+	bus := outbox.NewBus(nil, nil)
+	var got []outbox.Event
+	bus.Subscribe("procurement.purchase_request.urgent", "procurement-test.urgent-submit", func(_ context.Context, _ pgx.Tx, ev outbox.Event) error {
+		got = append(got, ev)
+		return nil
+	})
+	if err := bus.Register(e.ctx, e.tx); err != nil {
+		t.Fatal(err)
+	}
+	r := e.do(&staff, "POST", "/api/purchasing/pr", prBody(f, map[string]any{"priority": "urgent", "action": "draft"}))
+	e.expect(r, 201, "")
+	prID := r.data()["id"].(string)
+	e.expect(e.do(&staff, "POST", "/api/purchasing/pr/"+prID+"/submit", nil), 200, "")
+	if _, err := bus.Dispatch(e.ctx, e.tx); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("events = %d", len(got))
+	}
+	var payload map[string]any
+	_ = got[1].Decode(&payload)
+	items, _ := payload["items"].([]any)
+	if payload["dedup_key"] != prID+":pending_head" || payload["status"] != "pending_head" || payload["required_date"] != "2026-11-01" ||
+		payload["total_amount"] != float64(30000) || len(items) != 1 || items[0].(map[string]any)["qty"] != float64(2) {
+		t.Fatalf("payload = %v", payload)
+	}
+}
+
 func TestPurchaseRequestFormData(t *testing.T) {
 	e := newEnv(t)
 	f := e.fixtures()
