@@ -20,6 +20,13 @@ export interface GiftCardBuyer {
   phone: string | null;
 }
 
+/** Pass musiman yang discan kasir: diskon member pass berlaku untuk transaksi ini. */
+export interface SeasonPassDiscount {
+  code: string;
+  holderName: string;
+  discountPercent: number;
+}
+
 export type ResultKind = "standard" | "offlined";
 
 export interface CashierSessionState {
@@ -40,6 +47,8 @@ export interface CashierSessionState {
     basis: string | null;
   };
   giftCardBuyer: GiftCardBuyer | null;
+  /** Lepas begitu transaksi selesai, keranjang dikosongkan, atau tagihan lain dimuat. */
+  pass: SeasonPassDiscount | null;
   cfdPayment: CfdPayment | null;
   result: { payload: ReceiptPayload; kind: ResultKind; waPhone: string } | null;
   /** Dari Restaurant: kembali ke board setelah dialog struk ditutup. */
@@ -69,6 +78,8 @@ export type CashierSessionAction =
   | { type: "promoBasisChanged"; basis: string }
   | { type: "cartCleared" }
   | { type: "giftCardBuyerSet"; buyer: GiftCardBuyer | null }
+  | { type: "passApplied"; pass: SeasonPassDiscount }
+  | { type: "passCleared" }
   | { type: "cfdPaymentChanged"; payment: CfdPayment | null };
 
 const CASH_TENDER = { method: "cash", arkToUse: 0 };
@@ -83,10 +94,16 @@ export function initialCashierSession(): CashierSessionState {
     handoff: { freshResetDone: false, autoPayDone: false, restaurantKey: null },
     promo: { applied: null, input: "", busy: false, error: null, basis: null },
     giftCardBuyer: null,
+    pass: null,
     cfdPayment: null,
     result: null,
     returnAfterResult: false,
   };
+}
+
+/** Diskon member transaksi: yang terbesar antara tier member dan pass musiman (tidak ditumpuk). */
+export function membershipPercent(customerPct: number, pass: SeasonPassDiscount | null): number {
+  return Math.max(customerPct, pass?.discountPercent ?? 0);
 }
 
 /** Basis promo: berubah bila subtotal item atau customer berubah. */
@@ -113,6 +130,7 @@ export function cashierSessionReducer(
         paymentOpen: false,
         tender: CASH_TENDER,
         bill: action.clearBill ? { ...state.bill, key: null } : state.bill,
+        pass: null,
         returnAfterResult: state.returnAfterResult || action.returnToRestaurant,
       };
     case "resultRevealed":
@@ -126,6 +144,7 @@ export function cashierSessionReducer(
       return {
         ...state,
         tender: { ...state.tender, method: "cash" },
+        pass: null,
         bill: {
           key: action.key,
           number: action.number,
@@ -136,6 +155,7 @@ export function cashierSessionReducer(
       return {
         ...state,
         bill: { key: null, number: null, persistedItemIds: [] },
+        pass: null,
         handoff: { ...state.handoff, freshResetDone: true },
       };
     case "autoPayApplied":
@@ -147,6 +167,8 @@ export function cashierSessionReducer(
     case "openBillSaved":
       return {
         ...state,
+        // Tagihan baru tersimpan lalu keranjang dikosongkan; tambahan item tetap memakai pass.
+        pass: action.appendedItemIds ? state.pass : null,
         bill: {
           ...state.bill,
           persistedItemIds: action.appendedItemIds
@@ -176,9 +198,13 @@ export function cashierSessionReducer(
         promo: { ...state.promo, applied: null, error: null, basis: action.basis },
       };
     case "cartCleared":
-      return { ...state, promo: { ...state.promo, applied: null, error: null, input: "" } };
+      return { ...state, pass: null, promo: { ...state.promo, applied: null, error: null, input: "" } };
     case "giftCardBuyerSet":
       return { ...state, giftCardBuyer: action.buyer };
+    case "passApplied":
+      return { ...state, pass: action.pass };
+    case "passCleared":
+      return { ...state, pass: null };
     case "cfdPaymentChanged":
       return { ...state, cfdPayment: action.payment };
     default:

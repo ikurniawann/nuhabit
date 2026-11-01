@@ -3,6 +3,7 @@ import type { ReceiptPayload } from "@/components/pos/PrintReceipt";
 import {
   cashierSessionReducer as reduce,
   initialCashierSession,
+  membershipPercent,
   promoBasis,
   type CashierSessionAction,
   type CashierSessionState,
@@ -172,5 +173,30 @@ describe("cashierSessionReducer: side data", () => {
     ]);
     expect(state.giftCardBuyer).toEqual({ name: "Ani", phone: "0812" });
     expect(state.cfdPayment).toEqual({ method: "cash", amount: 10 });
+  });
+});
+
+describe("cashierSessionReducer: season pass", () => {
+  const pass = { code: "SP-1", holderName: "Budi", discountPercent: 15 };
+  const withPass = () => run([{ type: "passApplied", pass }]);
+
+  it("keeps the pass until the transaction ends", () => {
+    expect(withPass().pass).toEqual(pass);
+    expect(run([{ type: "passCleared" }], withPass()).pass).toBeNull();
+    expect(run([{ type: "paymentSucceeded", clearBill: true, returnToRestaurant: false }], withPass()).pass).toBeNull();
+    expect(run([{ type: "cartCleared" }], withPass()).pass).toBeNull();
+    expect(run([{ type: "freshReset" }], withPass()).pass).toBeNull();
+    expect(run([{ type: "billLoaded", key: "o2", number: "B-2" }], withPass()).pass).toBeNull();
+  });
+
+  it("drops the pass when a new open bill empties the cart but keeps it for appended items", () => {
+    expect(run([{ type: "openBillSaved", appendedItemIds: null }], withPass()).pass).toBeNull();
+    expect(run([{ type: "openBillSaved", appendedItemIds: ["i1"] }], withPass()).pass).toEqual(pass);
+  });
+
+  it("uses the larger of the member tier and the pass discount", () => {
+    expect(membershipPercent(10, null)).toBe(10);
+    expect(membershipPercent(10, pass)).toBe(15);
+    expect(membershipPercent(20, pass)).toBe(20);
   });
 });

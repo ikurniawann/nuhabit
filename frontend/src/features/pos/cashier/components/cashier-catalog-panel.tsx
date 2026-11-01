@@ -30,6 +30,9 @@ export function CashierCatalogPanel(props: {
   showStallNames: boolean;
   offers: PosActiveOffer[];
   customer: CustomerWithDiscount | null;
+  /** Diskon member transaksi (tier atau pass musiman), untuk harga coret katalog. */
+  membershipPct: number;
+  passPercent: number | null;
   favorites: Product[];
   arkEnabled: boolean;
   xpEnabled: boolean;
@@ -38,6 +41,7 @@ export function CashierCatalogPanel(props: {
   orderType: string;
   onOrderType: (orderType: "dine_in" | "takeaway") => void;
   onFindCustomer: () => void;
+  onScanPass: () => void;
   onClearCustomer: () => void;
   notices: Parameters<typeof CashierNotices>[0];
   actions: Pick<ReturnType<typeof useCatalogActions>, "openProduct" | "selectMerchSku" | "applyOffer">;
@@ -57,9 +61,11 @@ export function CashierCatalogPanel(props: {
           customerName={customer ? (customer.name ?? "") : null}
           onOrderType={props.onOrderType}
           onFindCustomer={props.onFindCustomer}
+          passPercent={props.passPercent}
+          onScanPass={props.onScanPass}
           term={filter.search}
           products={products}
-          membershipPct={customer ? customer.discount : 0}
+          membershipPct={props.membershipPct}
           formatCurrency={props.formatCurrency}
           onTermChange={(search) => setFilter((prev) => ({ ...prev, search }))}
           onScan={(term) => {
@@ -92,6 +98,7 @@ export function CashierCatalogPanel(props: {
         <ProductGrid
           products={filterCatalog(products, filter)}
           customer={customer}
+          membershipPct={props.membershipPct}
           isTabletMode={props.isTabletMode}
           showStallName={props.showStallNames}
           arkEnabled={props.arkEnabled}

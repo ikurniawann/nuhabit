@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, ShoppingBag, User, Utensils } from "lucide-react";
+import { Search, ShoppingBag, Ticket, User, Utensils } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MemberPriceText } from "@/components/pos/MemberPriceText";
 import type { Product } from "@/lib/pos-api";
@@ -114,13 +114,16 @@ function ProductSearch(props: ProductSearchProps) {
 
 const TOOL_BUTTON = "flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all";
 
-/** Dine-in / Take Away, cari customer, dan cari produk. */
+/** Dine-in / Take Away, cari customer, pass musiman, dan cari produk. */
 export function CashierToolbar(
   props: ProductSearchProps & {
     orderType: string;
     customerName: string | null;
+    /** Diskon pass musiman yang sedang dipakai, null bila belum ada. */
+    passPercent: number | null;
     onOrderType: (orderType: "dine_in" | "takeaway") => void;
     onFindCustomer: () => void;
+    onScanPass: () => void;
   }
 ) {
   const { isTabletMode, orderType, customerName } = props;
@@ -159,6 +162,18 @@ export function CashierToolbar(
         >
           <User className="h-4 w-4" />
           <span>{customerName ? customerName.split(" ")[0] : "Find Customer"}</span>
+        </button>
+        <button
+          type="button"
+          onClick={props.onScanPass}
+          className={`${TOOL_BUTTON} ${
+            props.passPercent !== null
+              ? "border-violet-500 bg-violet-500 text-white shadow-sm hover:bg-violet-600"
+              : "border-violet-200/80 bg-violet-50 text-violet-700 hover:border-violet-400 hover:bg-violet-100"
+          }`}
+        >
+          <Ticket className="h-4 w-4" />
+          <span>{props.passPercent !== null ? `Pass ${props.passPercent}%` : "Pass"}</span>
         </button>
         <ProductSearch {...props} />
       </div>

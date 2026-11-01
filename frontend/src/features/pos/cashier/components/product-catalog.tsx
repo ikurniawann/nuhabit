@@ -60,6 +60,7 @@ export function CatalogFilters(props: {
 export function ProductGrid(props: {
   products: Product[];
   customer: CustomerWithDiscount | null;
+  membershipPct: number;
   isTabletMode: boolean;
   showStallName: boolean;
   arkEnabled: boolean;
@@ -68,8 +69,7 @@ export function ProductGrid(props: {
   formatArk: (value: number) => string;
   onPick: (product: Product) => void;
 }) {
-  const { customer, isTabletMode, arkEnabled, xpEnabled } = props;
-  const membershipPct = customer ? customer.discount : 0;
+  const { customer, membershipPct, isTabletMode, arkEnabled, xpEnabled } = props;
   const smallText = isTabletMode ? "text-[11px]" : "text-[9px]";
   return (
     <div className={cashierProductScrollClass()}>
