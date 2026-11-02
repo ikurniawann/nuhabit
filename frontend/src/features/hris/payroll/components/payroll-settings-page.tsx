@@ -134,7 +134,7 @@ export function PayrollSettingsPage() {
           </Button>
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold">
-              <Cog6ToothIcon className="h-6 w-6 text-pink-600" />
+              <Cog6ToothIcon className="h-6 w-6 text-forest" />
               Pengaturan Payroll
             </h1>
             <p className="text-sm text-gray-500">
@@ -147,7 +147,7 @@ export function PayrollSettingsPage() {
         <Button
           onClick={handleSave}
           disabled={saveMutation.isPending || isLoading}
-          className="bg-pink-600 hover:bg-pink-700"
+          className="bg-forest text-white hover:bg-everglade"
         >
           {saveMutation.isPending ? "Menyimpan..." : "Simpan Pengaturan"}
         </Button>

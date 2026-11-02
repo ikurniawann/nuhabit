@@ -4,6 +4,7 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScrollRegion } from "@/components/ui/scroll-region";
 import {
   ArrowLeftIcon,
@@ -29,18 +30,24 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
   const loading = runQuery.isLoading;
   const notify = useNotifyPayslip(id);
   const [exporting, setExporting] = useState(false);
+  const [resendDetailId, setResendDetailId] = useState<string | null>(null);
   const notifyingId = notify.isPending ? notify.variables : null;
   const missingEmailCount = details.filter((detail) => !detail.employee?.is_active || !detail.employee?.email).length;
   const emailedCount = details.filter((detail) => Boolean(detail.payslip_emailed_at)).length;
 
-  function handleNotify(detailId: string, alreadyEmailed: boolean) {
-    if (alreadyEmailed && !window.confirm("Kirim ulang slip gaji ke email karyawan ini?")) return;
+  function sendPayslip(detailId: string) {
     notify.mutate(detailId, {
       onSuccess: (json) => {
+        setResendDetailId(null);
         toast.success(json.message || "Email slip gaji diterima Resend");
       },
       onError: (error) => toast.error(error.message || "Gagal mengirim notifikasi"),
     });
+  }
+
+  function handleNotify(detailId: string, alreadyEmailed: boolean) {
+    if (alreadyEmailed) setResendDetailId(detailId);
+    else sendPayslip(detailId);
   }
 
   async function handleExportPayroll() {
@@ -72,7 +79,7 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-forest" />
       </div>
     );
   }
@@ -91,6 +98,16 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
 
   return (
     <div className="space-y-6 pb-12">
+      <ConfirmDialog
+        open={resendDetailId !== null}
+        onOpenChange={(open) => { if (!open) setResendDetailId(null); }}
+        title="Kirim ulang slip gaji?"
+        description="Slip gaji akan dikirim lagi ke email karyawan ini."
+        confirmLabel="Kirim ulang"
+        loading={notify.isPending}
+        onConfirm={() => { if (resendDetailId) sendPayslip(resendDetailId); }}
+        variant="default"
+      />
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard/hris/payroll")}>

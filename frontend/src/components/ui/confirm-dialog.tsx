@@ -24,7 +24,7 @@ export interface ConfirmDialogProps {
   loadingLabel?: string;
   loading?: boolean;
   onConfirm: () => void;
-  /** danger = red confirm (delete/deactivate), default = pink confirm. */
+  /** danger = red confirm (delete/deactivate), default = forest green confirm. */
   variant?: "danger" | "default";
   /** Optional extra content rendered in the body. */
   children?: ReactNode;
@@ -75,7 +75,7 @@ export function ConfirmDialog({
               "h-10 gap-2 rounded-lg px-4 text-sm font-semibold text-white shadow-sm",
               variant === "danger"
                 ? "bg-red-600 hover:bg-red-700"
-                : "bg-pink-600 hover:bg-pink-700"
+                : "bg-forest hover:bg-everglade"
             )}
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

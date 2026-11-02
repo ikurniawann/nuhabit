@@ -90,7 +90,7 @@ export function NewPayrollDialog({
           <Button
             onClick={handleCreate}
             disabled={createMutation.isPending}
-            className="bg-pink-600 hover:bg-pink-700"
+            className="bg-forest text-white hover:bg-everglade"
           >
             {createMutation.isPending ? "Membuat..." : "Buat Payroll"}
           </Button>
@@ -133,7 +133,7 @@ export function CalculateConfirmDialog({
               id="include-thr"
               checked={includeThr}
               onChange={(e) => setIncludeThr(e.target.checked)}
-              className="h-4 w-4 text-pink-600 focus:ring-pink-500 border-gray-300 rounded"
+              className="h-4 w-4 text-forest focus:ring-forest border-gray-300 rounded"
             />
             <label htmlFor="include-thr" className="text-sm font-medium text-gray-700 cursor-pointer">
               Include THR (Tunjangan Hari Raya)
@@ -188,7 +188,7 @@ export function CalculationResultDialog({
 
         {calculating ? (
           <div className="py-8 flex flex-col items-center justify-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600" />
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-forest" />
             <p className="text-gray-600">Sedang menghitung payroll untuk semua karyawan...</p>
           </div>
         ) : result ? (
@@ -215,7 +215,7 @@ export function CalculationResultDialog({
             </div>
 
             <div className="flex justify-end pt-4">
-              <Button onClick={onClose} className="bg-pink-600 hover:bg-pink-700">
+              <Button onClick={onClose} className="bg-forest text-white hover:bg-everglade">
                 Tutup
               </Button>
             </div>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollRegion } from "@/components/ui/scroll-region";
 import { PlusIcon, DocumentTextIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
@@ -41,6 +42,7 @@ export function PayrollPage() {
   const { user } = useAuth();
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [calcRunId, setCalcRunId] = useState<string | null>(null);
+  const [deleteRunId, setDeleteRunId] = useState<string | null>(null);
   const [calculationResult, setCalculationResult] = useState<CalculationResult | null>(null);
 
   const payrollQuery = usePayrollRuns();
@@ -79,12 +81,11 @@ export function PayrollPage() {
     }
   }
 
-  async function handleDelete(runId: string) {
-    if (!confirm("Apakah Anda yakin ingin menghapus payroll run ini? Data detail payroll juga akan terhapus.")) {
-      return;
-    }
+  async function handleDelete() {
+    if (!deleteRunId) return;
     try {
-      await deleteMutation.mutateAsync(runId);
+      await deleteMutation.mutateAsync(deleteRunId);
+      setDeleteRunId(null);
       toast.success("Payroll run berhasil dihapus");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal menghapus payroll");
@@ -94,7 +95,7 @@ export function PayrollPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-forest" />
       </div>
     );
   }
@@ -115,7 +116,7 @@ export function PayrollPage() {
             <Cog6ToothIcon className="w-4 h-4 mr-2" />
             Pengaturan
           </Button>
-          <Button onClick={() => setShowNewDialog(true)} className="bg-pink-600 hover:bg-pink-700">
+          <Button onClick={() => setShowNewDialog(true)} className="bg-forest text-white hover:bg-everglade">
             <PlusIcon className="w-4 h-4 mr-2" />
             Payroll Baru
           </Button>
@@ -262,7 +263,7 @@ export function PayrollPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleDelete(run.id)}
+                              onClick={() => setDeleteRunId(run.id)}
                               className="text-red-600 hover:text-red-700 hover:border-red-300"
                             >
                               Hapus
@@ -280,6 +281,16 @@ export function PayrollPage() {
       </Card>
 
       <NewPayrollDialog open={showNewDialog} onOpenChange={setShowNewDialog} />
+      <ConfirmDialog
+        open={deleteRunId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteRunId(null); }}
+        title="Hapus payroll run?"
+        description="Data detail payroll pada run ini juga akan terhapus. Tindakan ini tidak dapat dibatalkan."
+        confirmLabel="Hapus payroll"
+        loading={deleteMutation.isPending}
+        onConfirm={() => void handleDelete()}
+        variant="danger"
+      />
       <CalculationResultDialog
         calculating={calculateMutation.isPending}
         result={calculationResult}
