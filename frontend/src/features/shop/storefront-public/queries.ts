@@ -104,7 +104,7 @@ export function previewPromoCode(slug: string, code: string, cart: CartLine[]) {
 
 /** Xendit answers with the invoice; ARK Coin pays at once and answers with the status page. */
 export type CheckoutResponse =
-  | { invoice_url: string }
+  | { invoice_url: string; status_url: string; order_number: string }
   | { orderNumber: string; accessToken: string; status: "paid"; statusUrl: string };
 
 export function submitShopCheckout(slug: string, payload: CheckoutPayload) {

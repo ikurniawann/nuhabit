@@ -16,6 +16,7 @@ import { useAreaSearch, type AreaSuggestion } from '@/features/shop/shared/area-
 import { AreaSuggestions } from '@/features/shop/shared/area-suggestions';
 import { pushShopEvent } from '../analytics';
 import { readCheckoutContact, saveCheckoutContact } from '../cart-store';
+import { rememberPendingOrder } from '../pending-order';
 import { fetchShippingRates, previewPromoCode, submitShopCheckout, useShopMember, type RateQuote } from '../queries';
 
 const INPUT_CLASS =
@@ -77,6 +78,33 @@ export function CheckoutSheet({
   const triedCode = useRef<string | null>(null);
   const [payment, setPayment] = useState<PaymentMethod>('xendit');
   const [formError, setFormError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.querySelector<HTMLElement>('button, input, select, textarea, a[href]')?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); closeRef.current(); return; }
+      if (event.key !== 'Tab') return;
+      const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href]') ?? [])];
+      if (focusable.length === 0) return;
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = oldOverflow;
+      previouslyFocused?.focus();
+    };
+  }, [open]);
 
   // Member values win over the remembered contact, once per member load.
   const member = useShopMember(slug, open);
@@ -185,7 +213,9 @@ export function CheckoutSheet({
       try {
         const url = new URL(target, window.location.origin);
         if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Invalid URL');
-        onPaid();
+        if ('status_url' in result) rememberPendingOrder(result.status_url, slug, signature);
+        // An invoice is an unpaid order. Keep the cart until payment succeeds.
+        if ('status' in result && result.status === 'paid') onPaid();
         window.location.assign(url.href);
       } catch {
         setFormError('The payment page could not be opened. Please contact NüHabit with your order details.');
@@ -256,7 +286,7 @@ export function CheckoutSheet({
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-forest/55 sm:p-6">
-      <div role="dialog" aria-modal="true" aria-label="Checkout" className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-hero">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Checkout" className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-hero">
         <div className="flex items-center justify-between border-b border-forest/10 px-5 py-4 sm:px-8">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-everglade">NüHabit Shop</p>

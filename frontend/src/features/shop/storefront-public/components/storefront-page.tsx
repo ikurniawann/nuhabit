@@ -38,6 +38,7 @@ import type { AppliedPromo, CatalogProduct, CatalogSku } from '@/lib/shop/types'
 import { pushShopEvent } from '../analytics';
 import { bindCart, clearCart, closeCart, openCart, setCartNote, setCartPendingCode, setCartPromo, updateLines, useCart } from '../cart-store';
 import { useShopMember, useStorefrontCatalog } from '../queries';
+import { latestPendingOrder } from '../pending-order';
 import { bindSaved, pushRecent, useSaved } from '../saved-store';
 import { useWishlist } from '../use-wishlist';
 import { CartDrawer } from './cart-drawer';
@@ -59,6 +60,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
   // cart. null means checkout uses the cart.
   const [buyNow, setBuyNow] = useState<{ lines: CartLine[]; note: string; promo: AppliedPromo | null } | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [pendingOrderUrl, setPendingOrderUrl] = useState<string | null>(null);
   // Filters live in the URL query (the server render shows the loader, so
   // reading the query here never changes the first markup).
   const [filters, setFilters] = useState<CatalogFilters>(() =>
@@ -71,6 +73,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
     if (shopSlug) {
       bindCart(shopSlug);
       bindSaved(shopSlug);
+      queueMicrotask(() => setPendingOrderUrl(latestPendingOrder(shopSlug)));
     }
   }, [shopSlug]);
 
@@ -190,6 +193,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
       ) : null}
 
       <div className="px-3 py-3 md:px-4">
+        {pendingOrderUrl ? <Link href={pendingOrderUrl} className="mb-4 block rounded-xl border border-forest/20 bg-lemon px-4 py-3 text-sm font-semibold text-forest">You have an order awaiting payment. Check its status or continue paying →</Link> : null}
         <StorefrontHero storefront={storefront} products={products} onSelect={openProduct} />
 
         {storefront.banner ? <PromoBanner banner={storefront.banner} onCopyCode={copyBannerCode} /> : null}

@@ -7,11 +7,13 @@
 
 import { Check, CheckCircle2, Clock, Loader2, MapPin, MessageCircle, Package, Store, Truck, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { formatRupiah } from '@/lib/format';
 import { formatDateTimeEn } from '@/lib/shop/format-en';
 import { orderStepIndex, orderSteps } from '@/lib/shop/order-steps';
 import type { PublicOrderStatus } from '@/lib/shop/types';
 import { useShopOrderStatus } from '../queries';
+import { settlePendingOrder } from '../pending-order';
 import { ReviewForm } from './review-form';
 
 const STATUS_LABEL: Record<string, { label: string; tone: string }> = {
@@ -35,6 +37,9 @@ const STATUS_ICON: Record<string, typeof Clock> = {
 
 export function ShopOrderStatusPage({ token }: { token: string }) {
   const { data: order, error } = useShopOrderStatus(token);
+  useEffect(() => {
+    if (order) settlePendingOrder(token, order.status);
+  }, [order, token]);
 
   if (error && !order) {
     return (

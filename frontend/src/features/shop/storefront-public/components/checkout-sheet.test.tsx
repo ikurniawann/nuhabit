@@ -54,6 +54,22 @@ describe("CheckoutSheet", () => {
   beforeEach(() => window.localStorage.clear());
   afterEach(() => vi.unstubAllGlobals());
 
+  it("keeps keyboard focus in checkout and restores it after closing", () => {
+    stubFetch(() => ({ body: { success: true, data: null } }));
+    const trigger = document.createElement("button");
+    document.body.appendChild(trigger);
+    trigger.focus();
+    const onClose = vi.fn();
+    const { unmount } = renderSheet({ onClose });
+    const close = screen.getByRole("button", { name: "Close" });
+    expect(close).toHaveFocus();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledOnce();
+    unmount();
+    expect(trigger).toHaveFocus();
+    trigger.remove();
+  });
+
   it("pickup hides the address fields and marks shipping as free pickup", async () => {
     stubFetch((url) => (url.endsWith("/me") ? { body: { success: true, data: null } } : { body: { success: true, data: [] } }));
     renderSheet();
@@ -161,7 +177,7 @@ describe("CheckoutSheet", () => {
       fireEvent.click(screen.getByRole("button", { name: /Pay Now/ }));
     });
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://invoice.test/abc"));
-    expect(onPaid).toHaveBeenCalled();
+    expect(onPaid).not.toHaveBeenCalled(); // Invoice created; payment has not cleared yet.
     const checkoutCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith("/checkout"));
     expect(JSON.parse(String(checkoutCall?.[1]?.body))).toMatchObject({
       customer: { name: "Sari", phone: "0813 999 888", email: null },

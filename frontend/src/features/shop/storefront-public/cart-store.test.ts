@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import { addCartLine, changeCartVariant, makeCartLine } from "@/lib/shop/storefront-cart";
+import { addCartLine, cartSignature, changeCartVariant, makeCartLine } from "@/lib/shop/storefront-cart";
+import { rememberPendingOrder, settlePendingOrder } from "./pending-order";
 import {
   bindCart,
   clearCart,
@@ -77,6 +78,18 @@ describe("cart store", () => {
     act(() => clearCart());
     expect(result.current.lines).toEqual([]);
     expect(window.localStorage.getItem("shop-cart-store")).toBe(JSON.stringify({ lines: [], note: "", promo: null, pendingCode: null }));
+  });
+
+  it("keeps a pending cart and clears only the matching paid order", () => {
+    act(() => bindCart("store"));
+    act(() => updateLines((lines) => addCartLine(lines, tee, sizeL)));
+    const { result } = renderHook(() => useCart());
+    const signature = cartSignature(result.current.lines);
+    rememberPendingOrder("https://example.test/shop/order/token-1", "store", signature);
+    settlePendingOrder("token-1", "pending");
+    expect(result.current.lines).toHaveLength(1);
+    act(() => settlePendingOrder("token-1", "paid"));
+    expect(result.current.lines).toHaveLength(0);
   });
 
   it("a promo is stored with the cart and dropped when the lines change", () => {

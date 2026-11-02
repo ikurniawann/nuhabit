@@ -16,7 +16,7 @@
 //   `shop-recent-<slug>`    JSON string[] of recently viewed ids: see saved-store.ts.
 
 import { useEffect, useSyncExternalStore } from "react";
-import { cartCount, parseStoredCart, type CartLine } from "@/lib/shop/storefront-cart";
+import { cartCount, cartSignature, parseStoredCart, type CartLine } from "@/lib/shop/storefront-cart";
 import type { AppliedPromo } from "@/lib/shop/types";
 
 export type CartState = {
@@ -112,6 +112,14 @@ export function setCartPendingCode(pendingCode: string | null) {
 
 export function clearCart() {
   setState({ lines: [], note: "", promo: null, pendingCode: null, open: false });
+}
+
+/** Settle only the exact cart used for this order; another purchase may have changed it. */
+export function clearCartIfMatches(slug: string, signature: string) {
+  const stored = parseStoredCart(read(storageKey(slug)));
+  if (cartSignature(stored.lines) !== signature) return;
+  if (state.slug === slug) clearCart();
+  else write(storageKey(slug), { lines: [], note: "", promo: null, pendingCode: null });
 }
 
 /** Open the cart drawer; the store page reads it through useCart(). */
