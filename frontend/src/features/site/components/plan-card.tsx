@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatRupiah } from "@/lib/format";
+import { useMemberOtpConfig, whatsappOtpOn } from "@/lib/otp-availability";
 import { cn } from "@/lib/utils";
 import { planPayload, pushSiteEvent } from "../lib/analytics";
 import { creditsLabel, groupPlans, joinHref, validityLabel } from "../lib/plans";
@@ -18,6 +19,8 @@ interface PlanCardProps {
 
 /** One plan: name, badge, branch price, what it grants, and the "Choose" link to /join. */
 export function PlanCard({ plan, branchSlug, onSelect }: PlanCardProps) {
+  const otpConfig = useMemberOtpConfig();
+  const frontDeskSignup = otpConfig !== null && !whatsappOtpOn(otpConfig);
   const select = () => {
     pushSiteEvent("plan_select", planPayload(plan, branchSlug));
     onSelect?.();
@@ -34,11 +37,13 @@ export function PlanCard({ plan, branchSlug, onSelect }: PlanCardProps) {
         <li>Valid for {validityLabel(plan.validity_days)}</li>
       </ul>
       {plan.description ? <p className="text-sm text-muted-foreground">{plan.description}</p> : null}
+      {frontDeskSignup ? <p className="text-xs text-muted-foreground">New here? Ask our team to set up your membership first. Existing members can choose and sign in.</p> : null}
       <Button asChild className="mt-auto uppercase">
         <Link href={joinHref(plan.id, branchSlug)} onClick={select}>
           Choose
         </Link>
       </Button>
+      {frontDeskSignup ? <Link href="/contact" className="text-center text-sm font-semibold text-forest underline">Contact the team</Link> : null}
     </article>
   );
 }
