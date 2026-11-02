@@ -242,7 +242,7 @@ export const TRAIN_ID: Record<string, string> = {
   "Discard this activity?": "Buang aktivitas ini?",
   "Finding GPS…": "Mencari GPS…",
   "GPS did not capture a usable route. You can keep the time and notes without a map.": "GPS tidak merekam rute yang bisa dipakai. Kamu tetap bisa menyimpan waktu dan catatan tanpa peta.",
-  "Keep activity": "Simpan aktivitas",
+  "Keep activity": "Tetap simpan",
   "Save this activity without a GPS route": "Simpan aktivitas ini tanpa rute GPS",
   "Your route and workout details will be lost.": "Rute dan detail latihanmu akan hilang.",
 };

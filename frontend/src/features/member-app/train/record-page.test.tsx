@@ -58,7 +58,7 @@ describe("RecordPage navigation", () => {
       <RecordPage />
     </QueryClientProvider>);
     expect(await screen.findByText(/Your activity was recovered/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Continue recording" }));
+    fireEvent.click(screen.getByRole("button", { name: /Continue recording|Lanjut merekam/ }));
     expect(await screen.findByRole("button", { name: /Pause|Jeda/ })).toBeInTheDocument();
   });
 });

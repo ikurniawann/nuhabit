@@ -16,7 +16,7 @@ describe("SaveForm", () => {
 
     const submit = screen.getByRole("button", { name: /Save activity|Simpan aktivitas/ });
     expect(submit).toBeDisabled();
-    fireEvent.click(screen.getByRole("checkbox", { name: "Save this activity without a GPS route" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Save this activity without a GPS route|Simpan aktivitas ini tanpa rute GPS/ }));
     fireEvent.click(submit);
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith("activity-1"));
