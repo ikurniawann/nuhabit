@@ -33,6 +33,7 @@ import { WorkoutPlan } from "./record/workout-plan";
 import { TrainTabs } from "./train-tabs";
 
 type Phase = "idle" | "recording" | "paused" | "saving";
+const DRAFT_KEY = "nuhabit-activity-draft-v1";
 
 export function RecordPage() {
   const router = useRouter();
@@ -63,6 +64,11 @@ export function RecordPage() {
   const [lastFixAt, setLastFixAt] = useState<number | null>(null);
   const [clockNow, setClockNow] = useState(0);
   const [startedAt, setStartedAt] = useState(0);
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftStorageError, setDraftStorageError] = useState(false);
+  const [recovered, setRecovered] = useState(false);
+  const [hasFinished, setHasFinished] = useState(false);
+  const [leaveHref, setLeaveHref] = useState<string | null>(null);
 
   const startTsRef = useRef(0);
   const pausedRef = useRef(false);
@@ -74,6 +80,92 @@ export function RecordPage() {
   const pausedMsRef = useRef(0);
   const lastKmRef = useRef(0);
   const aliveRef = useRef(true);
+  const leaveDialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let live = true;
+    queueMicrotask(() => {
+      if (!live) return;
+      try {
+        const raw = window.localStorage.getItem(DRAFT_KEY);
+        if (raw) {
+          try {
+            const draft = JSON.parse(raw) as { type: ActivityType; startedAt: number; elapsedSec: number; distanceM: number; points: TrackPoint[]; laps: number[]; exercises: StrengthExercise[] };
+            if (draft.startedAt > 0 && Array.isArray(draft.points)) {
+              setType(draft.type);
+              setStartedAt(draft.startedAt);
+              setElapsedSec(draft.elapsedSec);
+              setDistanceM(draft.distanceM);
+              setPoints(draft.points);
+              setLaps(draft.laps ?? []);
+              setExercises(draft.exercises ?? []);
+              setPhase("saving");
+              setRecovered(true);
+              setHasFinished(true);
+              const now = Date.now();
+              startTsRef.current = now - Math.max(0, draft.elapsedSec) * 1000;
+              pausedAtRef.current = now;
+              pausedRef.current = true;
+              needsSegmentRef.current = true;
+            }
+          } catch { window.localStorage.removeItem(DRAFT_KEY); }
+        }
+        const probe = `${DRAFT_KEY}-probe`;
+        window.localStorage.setItem(probe, "1");
+        window.localStorage.removeItem(probe);
+      } catch { setDraftStorageError(true); }
+      setDraftReady(true);
+    });
+    return () => { live = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!draftReady) return;
+    try {
+      if (phase === "idle") window.localStorage.removeItem(DRAFT_KEY);
+      else window.localStorage.setItem(DRAFT_KEY, JSON.stringify({ type, startedAt, elapsedSec, distanceM, points, laps, exercises }));
+    } catch { queueMicrotask(() => setDraftStorageError(true)); }
+  }, [draftReady, phase, type, startedAt, elapsedSec, distanceM, points, laps, exercises]);
+
+  useEffect(() => {
+    if (phase !== "recording" && phase !== "paused") return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [phase]);
+
+  useEffect(() => {
+    if (!leaveHref) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    leaveDialogRef.current?.querySelector<HTMLElement>("button")?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setLeaveHref(null); return; }
+      if (event.key !== "Tab") return;
+      const buttons = [...(leaveDialogRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? [])];
+      const first = buttons[0];
+      const last = buttons[buttons.length - 1];
+      if (event.shiftKey && document.activeElement === first && last) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last && first) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("keydown", onKey); previous?.focus(); };
+  }, [leaveHref]);
+
+  useEffect(() => {
+    if (phase !== "recording" && phase !== "paused") return;
+    const guardLink = (event: MouseEvent) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
+      if (!link || link.hasAttribute("download") || link.getAttribute("target") === "_blank") return;
+      const url = new URL(link.href, window.location.href);
+      if (url.origin !== window.location.origin || url.href === window.location.href) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setLeaveHref(`${url.pathname}${url.search}${url.hash}`);
+    };
+    document.addEventListener("click", guardLink, true);
+    return () => document.removeEventListener("click", guardLink, true);
+  }, [phase]);
 
   // Keep the display awake where supported. Mobile browsers may still suspend
   // location when the tab is backgrounded or the device is locked.
@@ -131,6 +223,30 @@ export function RecordPage() {
       watchIdRef.current = null;
     }
   }, []);
+  const startSources = useCallback((kind: ActivityType) => {
+    stopSources();
+    timersRef.current.push(window.setInterval(() => {
+      setClockNow(Date.now());
+      const activeMs = (pausedRef.current ? pausedAtRef.current : Date.now()) - startTsRef.current - pausedMsRef.current;
+      setElapsedSec(Math.max(0, Math.floor(activeMs / 1000)));
+    }, 1000));
+    if (kind === "WORKOUT") return;
+    try {
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => appendPoint(pos, kind),
+        (err) => {
+          needsSegmentRef.current = true;
+          if (err.code === 1) setLocationPermission("denied");
+          setGpsError(err.code === 1
+            ? "Location is blocked for this site. Allow it in your browser settings and start again."
+            : "Lost the GPS fix. The timer is still running; the route will continue when the signal returns.");
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
+      );
+    } catch {
+      setGpsError("GPS could not restart. The timer is still running; you can save without a route.");
+    }
+  }, [appendPoint, setLocationPermission, stopSources]);
   useEffect(() => {
     aliveRef.current = true;
     return () => {
@@ -140,6 +256,7 @@ export function RecordPage() {
   }, [stopSources]);
 
   const start = async () => {
+    if (!draftReady || draftStorageError) return;
     let initialPosition: GeolocationPosition | null = null;
     if (type !== "WORKOUT" && type !== "HYROX") {
       if (!navigator.geolocation || !window.isSecureContext) {
@@ -190,33 +307,12 @@ export function RecordPage() {
     lastFixRef.current = null;
     needsSegmentRef.current = false;
     setPhase("recording");
+    setRecovered(false);
     if (initialPosition && type !== "WORKOUT" && type !== "HYROX") {
       appendPoint(initialPosition, type);
     }
 
-    timersRef.current.push(
-      window.setInterval(() => {
-        setClockNow(Date.now());
-        const activeMs = (pausedRef.current ? pausedAtRef.current : Date.now()) - startTsRef.current - pausedMsRef.current;
-        setElapsedSec(Math.max(0, Math.floor(activeMs / 1000)));
-      }, 1000),
-    );
-
-    if (type === "WORKOUT" || type === "HYROX") return; // timer only / guided
-
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => appendPoint(pos, type),
-      (err) => {
-        needsSegmentRef.current = true;
-        if (err.code === 1) setLocationPermission("denied");
-        setGpsError(
-          err.code === 1
-            ? "Location is blocked for this site. Allow it in your browser settings and start again."
-            : "Lost the GPS fix. The timer is still running - the route will pick up when the signal returns.",
-        );
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
-    );
+    if (type !== "HYROX") startSources(type);
   };
 
   // Audio cue at every completed kilometre (skipped when speech synthesis is unavailable).
@@ -228,14 +324,15 @@ export function RecordPage() {
       const pace = distanceM > 0 ? (elapsedSec / distanceM) * 1000 : 0;
       const mm = Math.floor(pace / 60);
       const ss = Math.round(pace % 60);
-      const u = new SpeechSynthesisUtterance(
-        `${km} kilometer${km > 1 ? "s" : ""}. Average pace ${mm} ${ss < 10 ? "oh " : ""}${ss} per kilometer.`,
-      );
+      const cue = type === "RIDE"
+        ? `Average speed ${elapsedSec > 0 ? (distanceM / elapsedSec * 3.6).toFixed(1) : "0"} kilometers per hour.`
+        : `Average pace ${mm} ${ss < 10 ? "oh " : ""}${ss} per kilometer.`;
+      const u = new SpeechSynthesisUtterance(`${km} kilometer${km > 1 ? "s" : ""}. ${cue}`);
       window.speechSynthesis?.speak(u);
     } catch {
       /* no speech support */
     }
-  }, [distanceM, audioCues, phase, elapsedSec]);
+  }, [distanceM, audioCues, phase, elapsedSec, type]);
 
   const togglePause = () => {
     pausedRef.current = !pausedRef.current;
@@ -259,14 +356,35 @@ export function RecordPage() {
         ? [...previous, { ...previous[previous.length - 1]!, t: Math.max(previous[previous.length - 1]!.t + 1, finishedMs) }]
         : previous);
     }
+    if (!pausedRef.current) pausedAtRef.current = Date.now();
     pausedRef.current = true;
     stopSources();
+    setHasFinished(true);
     setPhase("saving");
+  };
+
+  const resumeAfterFinish = () => {
+    if (type === "HYROX") return;
+    pausedMsRef.current += Date.now() - pausedAtRef.current;
+    pausedRef.current = false;
+    needsSegmentRef.current = true;
+    setRecovered(false);
+    setPhase("recording");
+    startSources(type);
+  };
+
+  const leaveWithDraft = () => {
+    if (!leaveHref) return;
+    try {
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify({ type, startedAt, elapsedSec, distanceM, points, laps, exercises }));
+    } catch { setDraftStorageError(true); return; }
+    router.push(leaveHref);
   };
 
   const discard = () => {
     stopSources();
     setPhase("idle");
+    setHasFinished(false);
     setPoints([]);
     setDistanceM(0);
     setElapsedSec(0);
@@ -305,37 +423,19 @@ export function RecordPage() {
 
       {phase === "idle" ? (
         <>
+          {draftStorageError ? <p role="alert" className="nh-card text-sm font-bold text-nh-danger">This browser cannot save an activity draft. Free up browser storage or enable site storage, then reload before recording.</p> : null}
           <TypeTiles type={type} onSelect={setType} />
           {type === "HYROX" ? null : type !== "WORKOUT" ? (
             <div className="flex flex-col gap-3">
-              {/* Asked here rather than at Start: a prompt in the middle of a run
-                  is the moment somebody is least inclined to read it. */}
-              <LocationGate
-                permission={locationPermission}
-                error={null}
-                locating={askingLocation}
-                reason="So your run is drawn on the map and your distance and pace are real."
-                onRequest={() => {
-                  setAskingLocation(true);
-                  navigator.geolocation.getCurrentPosition(
-                    () => {
-                      setLocationPermission("granted");
-                      setGpsError("");
-                      setAskingLocation(false);
-                    },
-                    (err) => {
-                      if (err.code === 1) setLocationPermission("denied");
-                      setGpsError(
-                        err.code === 1
-                          ? "Location is blocked for this site. Allow it in your browser settings, then reload."
-                          : "Could not get a fix yet - you can still start, and it will pick you up outside.",
-                      );
-                      setAskingLocation(false);
-                    },
-                    { enableHighAccuracy: true, timeout: 15000 },
-                  );
-                }}
-              />
+              {locationPermission === "denied" || locationPermission === "insecure" || locationPermission === "unsupported" ? (
+                <LocationGate permission={locationPermission} error={null} locating={false} reason="GPS is required to record a route." onRequest={() => undefined} />
+              ) : (
+                <p role="status" className="nh-card text-sm text-nh-forest">
+                  {askingLocation ? "Finding an accurate GPS signal…" : locationPermission === "granted"
+                    ? "Location access is ready. Press Start to find a GPS signal and begin recording."
+                    : "Press Start to allow location and begin recording when GPS is accurate."}
+                </p>
+              )}
               {gpsError ? (
                 <p className="text-xs font-bold text-nh-danger">
                   {t(gpsError)}
@@ -354,10 +454,10 @@ export function RecordPage() {
           {type !== "HYROX" ? (
             <button
               onClick={() => void start()}
-              disabled={askingLocation || (type !== "WORKOUT" && (locationPermission === "denied" || locationPermission === "insecure" || locationPermission === "unsupported"))}
+              disabled={!draftReady || draftStorageError || askingLocation || (type !== "WORKOUT" && (locationPermission === "denied" || locationPermission === "insecure" || locationPermission === "unsupported"))}
               className="nh-btn-brand flex items-center justify-center gap-2 !py-5 text-lg disabled:opacity-50"
             >
-              <Play size={22} fill="currentColor" /> {askingLocation ? t("Finding you…") : t("Start")}
+              <Play size={22} fill="currentColor" /> {askingLocation ? t("Finding GPS…") : t(type === "WORKOUT" ? "Start" : "Start GPS recording")}
             </button>
           ) : (
             <HyroxSimCard
@@ -404,6 +504,7 @@ export function RecordPage() {
 
       {phase === "recording" || phase === "paused" ? (
         <>
+          {draftStorageError ? <p role="alert" className="nh-card text-sm font-bold text-nh-danger">Your activity draft could not be saved. Keep this page open and finish the activity soon.</p> : null}
           <LiveClock
             type={type}
             paused={phase === "paused"}
@@ -452,7 +553,9 @@ export function RecordPage() {
         </>
       ) : null}
 
-      {phase === "saving" ? (
+      {hasFinished ? (
+        <div hidden={phase !== "saving"} className="space-y-5">
+        {recovered ? <p role="status" className="nh-card text-sm font-bold text-nh-forest">Your activity was recovered. Recording stopped when you left the page; review the saved route before posting.</p> : null}
         <SaveForm
           type={type === "HYROX" ? "WORKOUT" : type}
           strength={exercises}
@@ -463,11 +566,24 @@ export function RecordPage() {
           startedAt={startedAt}
           gear={(stats?.gear ?? []).filter((g) => !g.retired)}
           onDiscard={discard}
+          onResume={resumeAfterFinish}
           onSaved={(id) => {
+            try { window.localStorage.removeItem(DRAFT_KEY); } catch { /* Activity is already saved on the server. */ }
             invalidate();
             router.push(m(`/train/activities/${id}`));
           }}
         />
+        </div>
+      ) : null}
+      {leaveHref ? (
+        <div ref={leaveDialogRef} role="dialog" aria-modal="true" aria-labelledby="leave-recording-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5">
+          <div className="nh-card w-full max-w-sm space-y-4">
+            <h2 id="leave-recording-title" className="nh-display text-xl">Leave recording?</h2>
+            <p className="text-sm text-nh-muted">GPS and the timer will stop. Your activity draft will be ready to review when you return.</p>
+            <button className="nh-btn-brand w-full" onClick={() => setLeaveHref(null)}>Keep recording</button>
+            <button className="nh-btn-ghost w-full" onClick={leaveWithDraft}>Leave and save draft</button>
+          </div>
+        </div>
       ) : null}
     </div>
   );

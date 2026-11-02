@@ -223,4 +223,12 @@ export const CLASSES_ID: Record<string, string> = {
   Ongoing: "Berlangsung",
   Training: "Latihan",
   Raced: "Sudah race",
+  "Back to classes": "Kembali ke kelas",
+  "Cancel this booking?": "Batalkan booking ini?",
+  "Confirm cancellation": "Konfirmasi pembatalan",
+  "Could not load this class. It may no longer be available.": "Kelas ini gagal dimuat. Mungkin kelasnya sudah tidak tersedia.",
+  "Keep booking": "Tetap booking",
+  "Late cancellation may forfeit your class credits. Check the cancellation deadline before continuing.": "Pembatalan terlambat bisa menghanguskan kredit kelasmu. Cek batas waktu pembatalan sebelum lanjut.",
+  "Leave waitlist?": "Keluar dari waitlist?",
+  "Your place in the waitlist will be released.": "Posisimu di waitlist akan dilepas.",
 };

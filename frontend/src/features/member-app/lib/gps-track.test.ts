@@ -35,6 +35,12 @@ describe("GPS recording", () => {
     expect(stats.distanceM).toBeLessThan(12);
   });
 
+  it("marks the first fix after restoring a draft as a new route segment", () => {
+    const resumed = acceptGpsFix(fix(-6.2, 60), null, start, "RUN", true)!;
+    expect(resumed.accepted.point.segmentStart).toBe(true);
+    expect(resumed.distanceM).toBe(0);
+  });
+
   it("rejects stale and low accuracy fixes", () => {
     expect(acceptGpsFix(fix(-6.2, -10), null, start, "WALK")).toBeNull();
     expect(acceptGpsFix(fix(-6.2, 0, 90), null, start, "WALK")).toBeNull();

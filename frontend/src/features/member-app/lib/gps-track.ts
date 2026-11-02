@@ -43,6 +43,7 @@ export function acceptGpsFix(
       : {}),
   };
   if (!previous) {
+    if (newSegment) point.segmentStart = true;
     return { accepted: { point, accuracyM: fix.accuracyM, at: fix.at }, distanceM: 0 };
   }
   if (fix.at <= previous.at) return null;

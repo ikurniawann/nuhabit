@@ -1,6 +1,6 @@
 import { useT } from "../../lib/i18n";
 import type { ActivityType } from "../../lib/queries-train";
-import { formatDistanceM, formatDuration, formatPace } from "../../ui";
+import { formatDistanceM, formatDuration, formatPace, formatSpeedKmh } from "../../ui";
 
 /** The big clock while recording, with distance and pace for GPS activities. */
 export function LiveClock({
@@ -34,9 +34,9 @@ export function LiveClock({
             </p>
           </div>
           <div>
-            <p className="nh-label !mb-0">{t("Avg pace")}</p>
+            <p className="nh-label !mb-0">{t(type === "RIDE" ? "Avg speed" : "Avg pace")}</p>
             <p className="nh-display text-3xl">
-              {formatPace(avgPace, units)}
+              {type === "RIDE" ? formatSpeedKmh(distanceM, elapsedSec, units) : formatPace(avgPace, units)}
             </p>
           </div>
         </div>

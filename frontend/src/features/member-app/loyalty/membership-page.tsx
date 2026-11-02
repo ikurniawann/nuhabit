@@ -1,8 +1,10 @@
 "use client";
 
 import { Check, Crown } from "lucide-react";
+import Link from "next/link";
 import { formatRupiah } from "@/lib/format";
 import { useT } from "../lib/i18n";
+import { m } from "../lib/links";
 import { spendProgressPct, tierPerkKeys, useMembership, type MembershipView } from "../lib/queries-progress";
 import { EmptyState, Spinner, formatDay } from "../ui";
 import { PageTitle, SectionHeader } from "./loyalty-ui";
@@ -21,7 +23,10 @@ export function MembershipPage() {
         {t("Membership")}
       </PageTitle>
       {!data.enabled ? (
-        <EmptyState title={t("Membership tiers are coming soon")} />
+        <div className="space-y-3">
+          <EmptyState title={t("Membership tiers are coming soon")} />
+          <Link href={m("/wallet")} className="nh-btn-brand block text-center">{t("View available packages")}</Link>
+        </div>
       ) : (
         <>
           <TierCard view={data} />

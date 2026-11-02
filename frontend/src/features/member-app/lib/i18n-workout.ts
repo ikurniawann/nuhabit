@@ -94,4 +94,5 @@ export const ID_WORKOUT: Record<string, string> = {
   "Race stations": "Stasiun race",
   Substitutes: "Pengganti",
   "Technique guide": "Panduan teknik",
+  "Could not load this workout.": "Workout ini gagal dimuat.",
 };

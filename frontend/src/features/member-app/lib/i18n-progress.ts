@@ -68,4 +68,7 @@ export const PROGRESS_ID: Record<string, string> = {
   "4-week streak": "Streak 4 minggu",
   "Package purchase": "Beli paket",
   "Early renewal bonus": "Bonus perpanjang lebih awal",
+  "Saved payment methods are not available yet. You can still pay when you buy a package.": "Metode pembayaran tersimpan belum tersedia. Kamu tetap bisa bayar saat membeli paket.",
+  "View available packages": "Lihat paket yang tersedia",
+  "View packages": "Lihat paket",
 };

@@ -3,7 +3,7 @@
 import { ArrowLeft, CalendarPlus2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../lib/api";
 import { PARQ_REQUIRED, useErrorText, WAIVER_REQUIRED } from "../lib/error-codes";
 import { coverageFor } from "../lib/classes-view";
@@ -38,14 +38,33 @@ export function SessionDetailPage() {
   const errorText = useErrorText();
   const { sessionId = "" } = useParams<{ sessionId: string }>();
   const router = useRouter();
-  const { data: v, isLoading } = useSession(sessionId);
+  const { data: v, isLoading, isError, refetch } = useSession(sessionId);
   const { data: wallet } = useWallet();
   const book = useBookMutation();
   const cancel = useCancelMutation();
   // fix: the booking failed for a missing waiver or PAR-Q, so the message links to that screen.
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string; fix?: FixLink } | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const cancelDialogRef = useRef<HTMLDivElement>(null);
   const invalidate = useInvalidateAll();
+
+  useEffect(() => {
+    if (!confirmCancel) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    cancelDialogRef.current?.querySelector<HTMLElement>("button")?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setConfirmCancel(false); return; }
+      if (event.key !== "Tab") return;
+      const buttons = [...(cancelDialogRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? [])];
+      const first = buttons[0];
+      const last = buttons[buttons.length - 1];
+      if (event.shiftKey && document.activeElement === first && last) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last && first) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("keydown", onKey); previous?.focus(); };
+  }, [confirmCancel]);
 
   const onOffer = async (bookingId: string, accept: boolean) => {
     setConfirmBusy(true);
@@ -66,7 +85,14 @@ export function SessionDetailPage() {
     }
   };
 
-  if (isLoading || !v) return <Spinner label={t("Loading class…")} />;
+  if (isLoading) return <Spinner label={t("Loading class…")} />;
+  if (isError || !v) return (
+    <div className="nh-card flex flex-col gap-3 text-center">
+      <p className="font-bold">{t("Could not load this class. It may no longer be available.")}</p>
+      <button className="nh-btn-brand" onClick={() => void refetch()}>{t("Try again")}</button>
+      <Link href={m("/classes")} className="text-sm font-bold text-nh-forest">{t("Back to classes")}</Link>
+    </div>
+  );
 
   const mine = v.myBooking;
   const bookable = ["PUBLISHED", "FULL"].includes(v.session.status);
@@ -104,6 +130,7 @@ export function SessionDetailPage() {
 
   const onCancel = async () => {
     if (!mine) return;
+    setConfirmCancel(false);
     setMessage(null);
     try {
       const res = await cancel.mutateAsync(mine.id);
@@ -233,7 +260,7 @@ export function SessionDetailPage() {
             </>
           ) : null}
           {mine.status === "CONFIRMED" || (mine.status === "WAITLIST" && !mine.promotionOfferedAt) ? (
-            <button className="nh-btn-ghost text-nh-danger" disabled={cancel.isPending} onClick={() => void onCancel()}>
+            <button className="nh-btn-ghost text-nh-danger" disabled={cancel.isPending} onClick={() => setConfirmCancel(true)}>
               {mine.status === "WAITLIST" ? t("Leave waitlist") : t("Cancel booking")}
             </button>
           ) : null}
@@ -251,6 +278,18 @@ export function SessionDetailPage() {
       <Link href={m("/bookings")} className="text-center text-sm font-bold text-nh-forest">
         {t("My bookings")} →
       </Link>
+      {confirmCancel ? (
+        <div ref={cancelDialogRef} role="dialog" aria-modal="true" aria-labelledby="cancel-booking-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="nh-card w-full max-w-sm space-y-4">
+            <h2 id="cancel-booking-title" className="nh-display text-xl">{mine?.status === "WAITLIST" ? t("Leave waitlist?") : t("Cancel this booking?")}</h2>
+            <p className="text-sm text-nh-muted">{mine?.status === "WAITLIST" ? t("Your place in the waitlist will be released.") : t("Late cancellation may forfeit your class credits. Check the cancellation deadline before continuing.")}</p>
+            <div className="flex gap-2">
+              <button className="nh-btn-ghost flex-1" onClick={() => setConfirmCancel(false)}>{t("Keep booking")}</button>
+              <button className="nh-btn-brand flex-1" disabled={cancel.isPending} onClick={() => void onCancel()}>{t("Confirm cancellation")}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

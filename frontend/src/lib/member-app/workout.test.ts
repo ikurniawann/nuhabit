@@ -9,6 +9,7 @@ import {
   toRaceEvent,
   toSessionView,
   toWorkout,
+  workoutElapsedSec,
   youtubeEmbedUrl,
   youtubeVideoId,
 } from "./workout";
@@ -71,6 +72,13 @@ describe("workout adapters", () => {
     expect(view.activeSec).toBe(280);
     expect(view.completionPct).toBe(50);
     expect(view.workout.totalTargetSec).toBe(600);
+  });
+
+  it("restores elapsed time from server timestamps after reopening or pausing", () => {
+    const started = toSessionView(sessionRow({ total_pause_sec: 30 }), workout).session;
+    expect(workoutElapsedSec(started, Date.parse("2026-10-01T00:06:00Z"))).toBe(330);
+    const paused = toSessionView(sessionRow({ status: "paused", paused_at: "2026-10-01T00:05:00Z", total_pause_sec: 30 }), workout).session;
+    expect(workoutElapsedSec(paused, Date.parse("2026-10-01T00:20:00Z"))).toBe(270);
   });
 
   it("flattens history to one row per session, newest first", () => {

@@ -4,7 +4,7 @@ import { CheckCircle2, CirclePlay, Pause, Play, Square } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { WorkoutSessionView } from "@/lib/member-app/workout";
+import { workoutElapsedSec, type WorkoutSessionView } from "@/lib/member-app/workout";
 import { VideoSheet } from "../components/video-sheet";
 import { useT } from "../lib/i18n";
 import { m } from "../lib/links";
@@ -23,27 +23,35 @@ export function WorkoutActivePage() {
   const [paused, setPaused] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const { data: library } = useExerciseLibrary();
 
   useEffect(() => {
+    let live = true;
     void api.workout.session(sessionId).then((loaded) => {
+      if (!live) return;
       setView(loaded);
-      // Sesi yang dibuka ulang saat dijeda tetap dijeda (server menolak jeda dua kali).
       setPaused(loaded.session.status === "PAUSED");
-    });
+      setLoadError(false);
+    }).catch(() => { if (live) setLoadError(true); });
+    return () => { live = false; };
   }, [sessionId]);
 
   useEffect(() => {
-    const id = window.setInterval(() => {
-      if (!paused && view && ["STARTED", "PAUSED"].includes(view.session.status)) {
-        setTotalSec((s) => s + 1);
-        setBlockSec((s) => s + 1);
-      }
-    }, 1000);
+    const tick = () => {
+      if (!view) return;
+      const elapsed = workoutElapsedSec(view.session);
+      const completed = view.session.blockResults.reduce((sum, result) => sum + result.durationSec, 0);
+      setTotalSec(elapsed);
+      setBlockSec(Math.max(0, elapsed - completed));
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [paused, view]);
 
+  if (loadError) return <div className="nh-card space-y-3 text-center"><p>{t("Could not load this workout.")}</p><button className="nh-btn-brand" onClick={() => window.location.reload()}>{t("Try again")}</button></div>;
   if (!view) return <Spinner label={t("Loading session…")} />;
   const { session, workout } = view;
   const done = session.status === "COMPLETED" || session.status === "PARTIAL";
@@ -59,7 +67,6 @@ export function WorkoutActivePage() {
     setBusy(true);
     try {
       const updated = await api.workout.completeBlock(session.id, currentBlock.order, Math.max(1, blockSec));
-      setBlockSec(0);
       if (updated.session.blockResults.length >= workout.blocks.length) {
         const finished = await api.workout.finish(session.id, false);
         setView(finished);

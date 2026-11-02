@@ -2,10 +2,12 @@
 
 import { ArrowLeft, CreditCard, ShieldCheck, Wallet } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Suspense, useState, type ReactNode } from "react";
 import { ApiError } from "../lib/api";
 import { activeMethod, type SavedMethod } from "../lib/classes-view";
 import { useT } from "../lib/i18n";
+import { m } from "../lib/links";
 import { linkSavedMethod, useSavedMethods, useUnlinkSavedMethod } from "../lib/queries-classes";
 import { Spinner, formatDay } from "../ui";
 
@@ -69,7 +71,10 @@ function PaymentMethods() {
       </p>
 
       {!data.enabled ? (
-        <div className="nh-card text-sm text-nh-muted">{t("Saved payment methods are not available yet.")}</div>
+        <div className="nh-card space-y-3 text-sm text-nh-muted">
+          <p>{t("Saved payment methods are not available yet. You can still pay when you buy a package.")}</p>
+          <Link href={m("/wallet")} className="inline-block font-bold text-nh-forest underline">{t("View packages")} →</Link>
+        </div>
       ) : (
         <>
           {active ? (

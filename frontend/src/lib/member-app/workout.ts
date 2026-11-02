@@ -35,6 +35,9 @@ export interface WorkoutSession {
   currentBlock: number;
   blockResults: WorkoutBlockResult[];
   createdAt: string;
+  startedAt: string | null;
+  pausedAt: string | null;
+  totalPauseSec: number;
 }
 
 export interface WorkoutSessionView {
@@ -68,7 +71,17 @@ export const toSession = (row: SessionRow): WorkoutSession => ({
   currentBlock: row.current_block,
   blockResults: row.block_results ?? [],
   createdAt: row.created_at,
+  startedAt: row.started_at,
+  pausedAt: row.paused_at,
+  totalPauseSec: row.total_pause_sec,
 });
+
+/** Use server timestamps so reopening a session does not restart its clock. */
+export function workoutElapsedSec(session: WorkoutSession, now = Date.now()): number {
+  if (!session.startedAt) return 0;
+  const end = session.status === "PAUSED" && session.pausedAt ? Date.parse(session.pausedAt) : now;
+  return Math.max(0, Math.floor((end - Date.parse(session.startedAt)) / 1000) - session.totalPauseSec);
+}
 
 export function toSessionView(row: SessionRow, workout: GeneratedWorkout): WorkoutSessionView {
   const session = toSession(row);
