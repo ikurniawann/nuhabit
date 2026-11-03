@@ -21,7 +21,7 @@ export function EmptyState({
       }}
     >
       <p style={{ fontWeight: 700 }}>{title}</p>
-      {hint ? <p style={{ fontSize: '0.875rem', opacity: 0.6 }}>{hint}</p> : null}
+      {hint ? <p style={{ fontSize: '0.875rem', color: 'var(--color-nh-muted)' }}>{hint}</p> : null}
       {action}
     </div>
   );

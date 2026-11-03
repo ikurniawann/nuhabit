@@ -134,8 +134,10 @@ input.nh-input.nh-input::placeholder {
   }
 }
 @media (prefers-reduced-motion: no-preference) {
+  /* Tanpa forwards: transform yang tertinggal membuat elemen fixed di halaman
+     (sheet, dialog) menempel ke konten, bukan ke layar. */
   .nh-page-enter {
-    animation: nh-page-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: nh-page-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) backwards;
   }
   .nh-sheet-backdrop {
     animation: nh-fade-in 0.22s ease-out both;

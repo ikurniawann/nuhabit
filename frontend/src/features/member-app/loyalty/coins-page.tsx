@@ -74,7 +74,7 @@ export function CoinsPage() {
       <section>
         <SectionHeader label={t("Coin history")} />
         {wallet.length === 0 ? (
-          <EmptyState title={t("No coin activity yet")} hint={t("Your first top-up will show up here.")} />
+          <EmptyState title={t("No coin activity yet")} hint={t("Your first top-up will show up here.")} action={<Link href={m("/coins/topup")} className="nh-btn-brand mt-2">{t("Top up now")}</Link>} />
         ) : (
           <div className="nh-card divide-y divide-nh-line !py-1">
             {wallet.map((row) => {

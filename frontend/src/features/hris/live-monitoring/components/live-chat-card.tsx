@@ -56,6 +56,7 @@ export function LiveChatCard({ type, sessionId }: { type: LiveSessionType; sessi
       </div>
       <div className="flex items-center gap-1.5 border-t border-gray-100 p-2">
         <input
+          aria-label="Tulis pesan ke kandidat"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {

@@ -22,6 +22,9 @@ let memoryLang: Lang = DEFAULT_LANG;
 
 const parseLang = (value: unknown): Lang => (value === "en" ? "en" : "id");
 
+/** Dates read in the app language, whatever language the device runs. */
+export const localeFor = (lang: Lang) => (lang === "id" ? "id-ID" : "en-GB");
+
 function readLang(): Lang {
   return parseLang(readStorage(STORAGE_KEYS.memberLang) ?? memoryLang);
 }
@@ -34,6 +37,9 @@ function subscribe(listener: () => void) {
     window.removeEventListener("storage", listener);
   };
 }
+
+/** For formatters called outside a hook; a language change re-renders their caller through useT. */
+export const currentLocale = () => localeFor(readLang());
 
 export function setLang(lang: Lang) {
   memoryLang = lang;

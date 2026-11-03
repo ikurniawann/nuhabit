@@ -123,6 +123,7 @@ export function ReturnItemsTable({
             </td>
             <td className="px-1.5 py-1.5 align-middle">
               <input
+                aria-label="Kondisi item"
                 type="text"
                 value={item.condition_notes}
                 onChange={(e) =>

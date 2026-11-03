@@ -16,6 +16,7 @@ import {
 } from "../lib/queries-loyalty";
 import { EmptyState, Spinner, StatusBadge, formatDayTime, formatDay, type Tone } from "../ui";
 import { Notice, PageTitle, SectionHeader } from "./loyalty-ui";
+import Link from "next/link";
 
 type T = ReturnType<typeof useT>;
 
@@ -59,7 +60,7 @@ export function OrdersPage() {
       {isLoading ? <Spinner label={t("Loading orders…")} /> : null}
       {error ? <Notice ok={false}>{error.message}</Notice> : null}
       {data && data.orders.length === 0 ? (
-        <EmptyState title={t("No orders yet")} hint={t("Your first visit will show up here.")} />
+        <EmptyState title={t("No orders yet")} hint={t("Your first visit will show up here.")} action={<Link href="/apparel" className="nh-btn-brand mt-2">{t("Browse the shop")}</Link>} />
       ) : null}
       {data && data.orders.length > 0 ? (
         <div className="nh-card divide-y divide-nh-line !py-0">

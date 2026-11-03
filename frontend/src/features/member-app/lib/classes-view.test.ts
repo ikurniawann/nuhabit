@@ -68,6 +68,15 @@ describe("toSessionView", () => {
   });
 });
 
+describe("toSessionView booking blockers", () => {
+  it("carries what the server says is missing and defaults to nothing", () => {
+    const v = toSessionView(session({ waiver_missing: true, parq_missing: true }), catalog);
+    expect([v.waiverMissing, v.parqMissing]).toEqual([true, true]);
+    const none = toSessionView(session({}), catalog);
+    expect([none.waiverMissing, none.parqMissing]).toEqual([false, false]);
+  });
+});
+
 describe("branchNameOf", () => {
   it("falls back to the only branch for unassigned rows", () => {
     expect(branchNameOf({ ...catalog, branches: [catalog.branches[0]!] }, null)).toBe("Sulu Bandung");
@@ -172,6 +181,19 @@ describe("wallet coverage", () => {
       enabled: true,
       leftThisMonth: null,
     });
+  });
+
+  it("toSessionView reads the cancel terms: the booking's outcome first, else the deadline", () => {
+    const base = { id: "s1", class_type_id: "ct", class_type_name: "Engine", coach_id: null, coach_name: null, branch_id: null,
+      starts_at: "2026-11-05T10:00:00Z", ends_at: "2026-11-05T11:00:00Z", capacity: 10, credit_cost: 2, status: "published",
+      confirmed_count: 0, waitlist_count: 0, seats_left: 10, my_booking: null };
+    const before = toSessionView({ ...base, cancel_deadline: "2026-11-05T06:00:00Z", cancel_info: null }, catalog);
+    expect(before.cancelDeadline).toBe("2026-11-05T06:00:00Z");
+    expect(before.cancelInfo).toBeNull();
+    const booked = toSessionView({ ...base, cancel_deadline: "2026-11-05T06:00:00Z",
+      cancel_info: { deadline: "2026-11-05T08:00:00Z", late: true, penalty_credits: 2, pass_strike: false } }, catalog);
+    expect(booked.cancelDeadline).toBe("2026-11-05T08:00:00Z");
+    expect(booked.cancelInfo).toEqual({ late: true, penaltyCredits: 2, passStrike: false });
   });
 
   it("coverageFor: null without active packages, else whether any active one covers the class", () => {

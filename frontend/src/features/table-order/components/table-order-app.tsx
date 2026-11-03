@@ -610,8 +610,9 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
                   autoFocus
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
+                  aria-label="Cari menu"
                   placeholder="Cari menu…"
-                  className="h-full flex-1 bg-transparent text-sm outline-none"
+                  className="h-full flex-1 bg-transparent text-base outline-none sm:text-sm"
                 />
                 {query && (
                   <button type="button" onClick={() => setQuery("")} aria-label="Bersihkan">

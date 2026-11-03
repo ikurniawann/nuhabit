@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -21,6 +20,7 @@ import {
   type GearView,
 } from "../lib/queries-train";
 import { Spinner, formatDistanceM } from "../ui";
+import { BottomSheet } from "../components/bottom-sheet";
 
 export function GearPage() {
   const router = useRouter();
@@ -75,6 +75,7 @@ export function GearPage() {
           <div className="flex items-center gap-2">
             <input
               autoFocus
+              aria-label={t("Name")}
               className="nh-input !py-1.5 text-sm"
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
@@ -225,52 +226,43 @@ export function AddGearSheet({
   };
 
   return (
-    <div
-      className="nh-sheet-backdrop fixed inset-0 z-40 flex items-end justify-center bg-black/50"
-      onClick={onClose}
-    >
-      <div
-        className="nh-sheet-panel w-full max-w-md rounded-t-3xl bg-nh-cream p-5 pb-8"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="nh-display mb-4 text-xl">{t("Add gear")}</h2>
-        <div className="flex flex-col gap-3">
-          <div>
-            <label className="nh-label">{t("Name")}</label>
-            <input
-              className="nh-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Novablast 4"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {(["SHOES", "BIKE"] as const).map((k) => (
-              <button
-                key={k}
-                onClick={() => setKind(k)}
-                className={`rounded-xl border px-3 py-2.5 text-sm font-black uppercase ${
-                  kind === k
-                    ? "border-nh-forest bg-nh-forest/10 text-nh-forest"
-                    : "border-nh-line bg-nh-cream text-nh-muted"
-                }`}
-              >
-                {t(k === "SHOES" ? "Shoes" : "Bike")}
-              </button>
-            ))}
-          </div>
-          {error ? (
-            <p className="text-sm font-bold text-nh-danger">{error}</p>
-          ) : null}
-          <button
-            className="nh-btn-brand"
-            disabled={busy || name.trim().length < 2}
-            onClick={() => void save()}
-          >
-            {t("Add gear")}
-          </button>
+    <BottomSheet title={t("Add gear")} onClose={onClose}>
+      <div className="flex flex-col gap-3">
+        <div>
+          <label className="nh-label" htmlFor="gear-name">{t("Name")}</label>
+          <input id="gear-name"
+            className="nh-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Novablast 4"
+          />
         </div>
+        <div className="grid grid-cols-2 gap-2">
+          {(["SHOES", "BIKE"] as const).map((k) => (
+            <button
+              key={k}
+              onClick={() => setKind(k)}
+              className={`rounded-xl border px-3 py-2.5 text-sm font-black uppercase ${
+                kind === k
+                  ? "border-nh-forest bg-nh-forest/10 text-nh-forest"
+                  : "border-nh-line bg-nh-cream text-nh-muted"
+              }`}
+            >
+              {t(k === "SHOES" ? "Shoes" : "Bike")}
+            </button>
+          ))}
+        </div>
+        {error ? (
+          <p className="text-sm font-bold text-nh-danger">{error}</p>
+        ) : null}
+        <button
+          className="nh-btn-brand"
+          disabled={busy || name.trim().length < 2}
+          onClick={() => void save()}
+        >
+          {t("Add gear")}
+        </button>
       </div>
-    </div>
+    </BottomSheet>
   );
 }

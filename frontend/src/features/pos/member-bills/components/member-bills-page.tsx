@@ -57,6 +57,7 @@ export function MemberBillsPage() {
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
+              aria-label="Cari nama atau nomor HP member"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Cari nama / nomor HP member…"

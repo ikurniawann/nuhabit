@@ -32,7 +32,7 @@ export function PromosPage() {
           </div>
           <p className="relative mt-2 text-sm font-medium text-white/60">{p.description}</p>
           <div className="relative mt-4 flex items-center justify-between text-xs">
-            <span className="font-semibold text-white/40">
+            <span className="font-semibold text-white/60">
               {p.endsAt ? `${t("Until")} ${formatDay(p.endsAt)}` : t("No end date")}
             </span>
             {p.live ? (

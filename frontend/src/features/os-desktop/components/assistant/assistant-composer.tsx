@@ -109,6 +109,7 @@ export function AssistantComposer({
           {uploading ? <Loader2 className="size-4 animate-spin" /> : <Paperclip className="size-4" />}
         </button>
         <textarea
+          aria-label={placeholder}
           ref={inputRef}
           value={input}
           rows={1}

@@ -55,6 +55,7 @@ export function StrengthLogger({
                 </span>
                 <input
                   inputMode="decimal"
+                  aria-label={`${t("Set")} ${si + 1}: kg`}
                   placeholder="-"
                   value={set.kg}
                   onChange={(e) =>
@@ -64,6 +65,7 @@ export function StrengthLogger({
                 />
                 <input
                   inputMode="numeric"
+                  aria-label={`${t("Set")} ${si + 1}: ${t("Reps")}`}
                   placeholder="-"
                   value={set.reps}
                   onChange={(e) =>

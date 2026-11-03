@@ -127,6 +127,7 @@ export function YouPage() {
                 className="nh-input !w-24 !py-1.5"
                 value={goalDraft}
                 inputMode="decimal"
+                aria-label={t("Set a weekly goal")}
                 onChange={(e) => setGoalDraft(e.target.value)}
                 placeholder="km"
               />

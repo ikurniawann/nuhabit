@@ -12,10 +12,10 @@ import { PageTitle, SectionHeader } from "./loyalty-ui";
 /** Tier membership dari belanja 12 bulan: sisa belanja ke tier berikutnya, perks, tangga tier, riwayat. */
 export function MembershipPage() {
   const t = useT();
-  const { data, isLoading, error } = useMembership();
+  const { data, isLoading, error, refetch } = useMembership();
 
   if (isLoading) return <Spinner label={t("Loading membership…")} />;
-  if (error || !data) return <EmptyState title={t("Could not load your membership")} />;
+  if (error || !data) return <EmptyState title={t("Could not load your membership")} action={<button className="nh-btn-brand mt-2" onClick={() => void refetch()}>{t("Try again")}</button>} />;
 
   return (
     <div className="flex flex-col gap-5">

@@ -3,6 +3,8 @@
 import { useT } from "../lib/i18n";
 import { useMyVisits } from "../lib/queries-home";
 import { EmptyState, Spinner, StatusBadge, formatDayTime, gateReasonLabel } from "../ui";
+import Link from "next/link";
+import { m } from "../lib/links";
 
 export function VisitsPage() {
   const t = useT();
@@ -13,7 +15,7 @@ export function VisitsPage() {
     <div className="flex flex-col gap-5">
       <h1 className="nh-display text-3xl font-black">{t("Visit history")}</h1>
       {!visits || visits.length === 0 ? (
-        <EmptyState title={t("No visits yet")} hint={t("Your gate check-ins will appear here.")} />
+        <EmptyState title={t("No visits yet")} hint={t("Your gate check-ins will appear here.")} action={<Link href={m("/classes")} className="nh-btn-brand mt-2">{t("Book a class")}</Link>} />
       ) : (
         <div className="flex flex-col gap-2">
           {visits.map((v) => (

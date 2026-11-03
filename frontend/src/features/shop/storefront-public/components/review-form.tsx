@@ -43,10 +43,11 @@ export function ReviewForm({ orderToken, productId, productName }: { orderToken:
       <textarea
         value={comment}
         onChange={(event) => setComment(event.target.value)}
+        aria-label="What did you think? (optional)"
         placeholder="What did you think? (optional)"
         rows={2}
         maxLength={1000}
-        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-forest"
+        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-base outline-none focus:border-forest sm:text-sm"
       />
       {submit.isError ? <p className="text-xs text-red-600">{submit.error instanceof Error ? submit.error.message : 'Could not send the review'}</p> : null}
       <div className="flex items-center gap-2">

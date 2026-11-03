@@ -25,10 +25,10 @@ export const XP_SOURCE: Record<string, string> = {
 /** Progres: XP dari latihan, streak mingguan, cara dapat XP, riwayat, dan leaderboard kehadiran. */
 export function ProgressPage() {
   const t = useT();
-  const { data, isLoading, error } = useProgress();
+  const { data, isLoading, error, refetch } = useProgress();
 
   if (isLoading) return <Spinner label={t("Loading progress…")} />;
-  if (error || !data) return <EmptyState title={t("Could not load your progress")} />;
+  if (error || !data) return <EmptyState title={t("Could not load your progress")} action={<button className="nh-btn-brand mt-2" onClick={() => void refetch()}>{t("Try again")}</button>} />;
 
   return (
     <div className="flex flex-col gap-5">

@@ -4,6 +4,7 @@ import { BookMarked, CalendarDays, CirclePlay, Coins, Dumbbell, Flag, Gift, QrCo
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { currentLocale } from "../lib/lang";
 import { goLinkHref } from "@/lib/member-app/go-link";
 import { MemberCardSheet } from "../components/member-card";
 import { SectionHeader } from "../loyalty/loyalty-ui";
@@ -168,7 +169,7 @@ export function HomePage() {
                 </div>
                 <p className="relative mt-2 text-sm font-medium text-white/60">{p.description}</p>
                 <div className="relative mt-4 flex items-center justify-between text-xs">
-                  <span className="font-semibold text-white/40">
+                  <span className="font-semibold text-white/60">
                     {p.endsAt ? `${t("Until")} ${formatDay(p.endsAt)}` : t("No end date")}
                   </span>
                   <span className="nh-chip bg-nh-lime text-nh-ink">{t("Use it")}</span>
@@ -296,7 +297,7 @@ export function HomePage() {
                   <span className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl bg-nh-forest/[0.08]">
                     <span className="nh-display text-lg leading-none text-nh-forest">{d.getDate()}</span>
                     <span className="text-[9px] font-extrabold tracking-wide text-nh-forest/70 uppercase">
-                      {d.toLocaleDateString(undefined, { month: "short" })}
+                      {d.toLocaleDateString(currentLocale(), { month: "short" })}
                     </span>
                   </span>
                   <div className="min-w-0 flex-1">

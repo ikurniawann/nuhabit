@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../lib/api";
-import { PARQ_REQUIRED, useErrorText, WAIVER_REQUIRED } from "../lib/error-codes";
+import { ERROR_MESSAGES, PARQ_REQUIRED, useErrorText, WAIVER_REQUIRED } from "../lib/error-codes";
 import { coverageFor } from "../lib/classes-view";
 import { fill, useT } from "../lib/i18n";
 import { googleCalendarEventUrl } from "../lib/google-calendar";
+import { currentLocale } from "../lib/lang";
 import { classTypeKey } from "../lib/images";
 import { m } from "../lib/links";
 import {
@@ -25,12 +26,28 @@ import { Spinner, formatDayTime } from "../ui";
 
 type FixLink = { href: string; label: string };
 
+const WAIVER_FIX: FixLink = { href: "/profile/waiver", label: "Read and sign the waiver" };
+const PARQ_FIX: FixLink = { href: "/profile/health", label: "Fill in the health declaration" };
+
 /** The screen that clears a booking denial, or undefined. */
 function fixLink(e: unknown): FixLink | undefined {
   if (!(e instanceof ApiError)) return undefined;
-  if (e.code === WAIVER_REQUIRED) return { href: "/profile/waiver", label: "Read and sign the waiver" };
-  if (e.code === PARQ_REQUIRED) return { href: "/profile/health", label: "Fill in the health declaration" };
+  if (e.code === WAIVER_REQUIRED) return WAIVER_FIX;
+  if (e.code === PARQ_REQUIRED) return PARQ_FIX;
   return undefined;
+}
+
+/** What stands between the member and this booking, with the screen that clears it. */
+function BookingBlocker({ text, fix }: { text: string; fix: FixLink }) {
+  const t = useT();
+  return (
+    <div className="rounded-xl bg-nh-warn/15 p-3 text-sm font-bold text-nh-warn">
+      {text}
+      <Link href={m(fix.href)} className="mt-2 block text-nh-forest underline">
+        {t(fix.label)} →
+      </Link>
+    </div>
+  );
 }
 
 export function SessionDetailPage() {
@@ -47,6 +64,7 @@ export function SessionDetailPage() {
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const cancelDialogRef = useRef<HTMLDivElement>(null);
+  const [openedAt] = useState(() => Date.now());
   const invalidate = useInvalidateAll();
 
   useEffect(() => {
@@ -98,6 +116,14 @@ export function SessionDetailPage() {
   const bookable = ["PUBLISHED", "FULL"].includes(v.session.status);
   // Package coverage indicator: null = no package credits (no restriction).
   const covered = coverageFor(wallet, v.session.classTypeId);
+  // Say so before the tap: the server would refuse the booking anyway.
+  const shortOfCredits = !mine && bookable && wallet && !wallet.activePass && wallet.balance < v.session.creditCost;
+  const unmet = !mine && bookable ? [...(v.waiverMissing ? [WAIVER_FIX] : []), ...(v.parqMissing ? [PARQ_FIX] : [])] : [];
+  const cancelNote = !v.cancelDeadline
+    ? null
+    : new Date(v.cancelDeadline).getTime() > openedAt
+      ? fill(t("Free cancellation until {time}."), { time: formatDayTime(v.cancelDeadline, v.session.timezone) })
+      : t("The free cancellation window has passed for this class.");
   const calendarUrl = mine?.status === "CONFIRMED"
     ? googleCalendarEventUrl({
         title: v.classTypeName,
@@ -165,6 +191,20 @@ export function SessionDetailPage() {
         <p className="nh-chip self-start bg-nh-ok/10 text-nh-ok">{t("Covered by your package")}</p>
       ) : null}
 
+      {shortOfCredits ? (
+        <BookingBlocker
+          text={fill(t("This class costs {cost} credits and your balance is {balance}."), { cost: v.session.creditCost, balance: wallet.balance })}
+          fix={{ href: "/wallet/topup", label: "Top up credits" }}
+        />
+      ) : null}
+      {unmet.map((fix) => (
+        <BookingBlocker
+          key={fix.href}
+          text={t(ERROR_MESSAGES[fix === WAIVER_FIX ? WAIVER_REQUIRED : PARQ_REQUIRED])}
+          fix={fix}
+        />
+      ))}
+
       <div className="nh-card grid grid-cols-2 gap-3 text-sm">
         <div>
           <p className="nh-label !mb-0.5">{t("Branch")}</p>
@@ -196,7 +236,7 @@ export function SessionDetailPage() {
             (item, i, arr) => (
               <div key={item.label} className="flex gap-3">
                 <p className="w-16 shrink-0 pt-0.5 text-right font-mono text-xs font-bold whitespace-nowrap text-nh-muted">
-                  {item.startsAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZone: v.session.timezone })}
+                  {item.startsAt.toLocaleTimeString(currentLocale(), { hour: "2-digit", minute: "2-digit", timeZone: v.session.timezone })}
                 </p>
                 <div className="flex flex-col items-center">
                   <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${i === 0 ? "bg-nh-forest" : "bg-nh-ink/25"}`} />
@@ -204,7 +244,7 @@ export function SessionDetailPage() {
                 </div>
                 <div className="pb-4">
                   <p className="text-sm leading-tight font-extrabold">{t(item.label)}</p>
-                  <p className="text-xs text-nh-muted">{item.minutes} min</p>
+                  <p className="text-xs text-nh-muted">{fill(t("{n} min"), { n: item.minutes })}</p>
                 </div>
               </div>
             )
@@ -212,7 +252,8 @@ export function SessionDetailPage() {
         </div>
       </section>
 
-      {message ? (
+      {/* A denial for a requirement the page already shows would only repeat it. */}
+      {message && !(message.fix && unmet.includes(message.fix)) ? (
         <div
           className={`rounded-xl p-3 text-sm font-bold ${
             message.kind === "ok" ? "bg-nh-ok/15 text-nh-ok" : "bg-nh-danger/15 text-nh-danger"
@@ -231,7 +272,10 @@ export function SessionDetailPage() {
         <div className="flex flex-col gap-2">
           <div className="nh-card text-sm">
             {mine.status === "CONFIRMED" ? (
-              <p className="font-bold text-nh-ok">{t("You're booked. Scan your QR at the gate to check in.")}</p>
+              <>
+                <p className="font-bold text-nh-ok">{t("You're booked. Scan your QR at the gate to check in.")}</p>
+                {cancelNote ? <p className="mt-1 text-nh-muted">{cancelNote}</p> : null}
+              </>
             ) : mine.status === "CHECKED_IN" ? (
               <p className="font-bold text-nh-ok">{t("Checked in - enjoy the session!")}</p>
             ) : mine.promotionOfferedAt ? (
@@ -266,9 +310,12 @@ export function SessionDetailPage() {
           ) : null}
         </div>
       ) : bookable ? (
-        <button className="nh-btn-brand" disabled={book.isPending} onClick={() => void onBook()}>
-          {v.spotsLeft > 0 ? t("Book this class") : t("Join waitlist")}
-        </button>
+        <div className="flex flex-col gap-2">
+          <button className="nh-btn-brand" disabled={book.isPending} onClick={() => void onBook()}>
+            {v.spotsLeft > 0 ? t("Book this class") : t("Join waitlist")}
+          </button>
+          {cancelNote ? <p className="text-center text-xs text-nh-muted">{cancelNote}</p> : null}
+        </div>
       ) : (
         <div className="nh-card text-sm text-nh-muted">
           {fill(t("This class is {status}."), { status: t(v.session.status.toLowerCase()) })}
@@ -282,7 +329,15 @@ export function SessionDetailPage() {
         <div ref={cancelDialogRef} role="dialog" aria-modal="true" aria-labelledby="cancel-booking-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="nh-card w-full max-w-sm space-y-4">
             <h2 id="cancel-booking-title" className="nh-display text-xl">{mine?.status === "WAITLIST" ? t("Leave waitlist?") : t("Cancel this booking?")}</h2>
-            <p className="text-sm text-nh-muted">{mine?.status === "WAITLIST" ? t("Your place in the waitlist will be released.") : t("Late cancellation may forfeit your class credits. Check the cancellation deadline before continuing.")}</p>
+            <p className="text-sm text-nh-muted">{mine?.status === "WAITLIST"
+                ? t("Your place in the waitlist will be released.")
+                : v.cancelInfo?.late && v.cancelInfo.penaltyCredits > 0
+                  ? fill(t("Cancelling now forfeits {n} credit."), { n: v.cancelInfo.penaltyCredits })
+                  : v.cancelInfo?.late && v.cancelInfo.passStrike
+                    ? t("Cancelling now counts as a late cancellation on your pass.")
+                    : v.cancelInfo
+                      ? t("This cancellation is free.")
+                      : t("Late cancellation may forfeit your class credits. Check the cancellation deadline before continuing.")}</p>
             <div className="flex gap-2">
               <button className="nh-btn-ghost flex-1" onClick={() => setConfirmCancel(false)}>{t("Keep booking")}</button>
               <button className="nh-btn-brand flex-1" disabled={cancel.isPending} onClick={() => void onCancel()}>{t("Confirm cancellation")}</button>

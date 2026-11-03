@@ -3,7 +3,7 @@
 import { Users } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useLang } from "../lib/lang";
+import { localeFor, useLang } from "../lib/lang";
 import { joinDot } from "../lib/classes-view";
 import { useT } from "../lib/i18n";
 import { initialsOf } from "../lib/initials";
@@ -22,7 +22,7 @@ function dayKey(iso: string, timeZone?: string): string {
 /** A filter chip: one line, never squeezed, so the row scrolls sideways instead. */
 export function SchedulePage() {
   const t = useT();
-  const locale = useLang() === "id" ? "id-ID" : undefined;
+  const locale = localeFor(useLang());
   const [branchId, setBranchId] = useState<string>("");
   const [coachId, setCoachId] = useState<string>("");
   const { data: branches } = useBranches();

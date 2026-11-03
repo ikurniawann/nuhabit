@@ -181,6 +181,7 @@ export function ReviewCard({
         null ? (
         <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
           <textarea
+            aria-label="Tulis balasan ulasan"
             rows={3}
             autoFocus
             value={draft}

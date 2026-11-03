@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -33,6 +32,7 @@ import {
 } from "../ui";
 import { typeLabel } from "./feed-page";
 import { VisibilityPicker } from "./visibility-picker";
+import { BottomSheet } from "../components/bottom-sheet";
 
 export function ActivityDetailPage() {
   const { activityId = "" } = useParams<{ activityId: string }>();
@@ -320,6 +320,7 @@ export function ActivityDetailPage() {
           <div className="flex gap-2">
             <input
               className="nh-input flex-1 !py-2"
+              aria-label={t("Add a comment…")}
               placeholder={t("Add a comment…")}
               value={comment}
               maxLength={500}
@@ -400,45 +401,36 @@ function EditSheet({
   };
 
   return (
-    <div
-      className="nh-sheet-backdrop fixed inset-0 z-40 flex items-end justify-center bg-black/50"
-      onClick={onClose}
-    >
-      <div
-        className="nh-sheet-panel w-full max-w-md rounded-t-3xl bg-nh-cream p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="nh-display mb-4 text-xl">{t("Edit activity")}</h2>
-        <div className="flex flex-col gap-3">
-          <div>
-            <label className="nh-label">{t("Title")}</label>
-            <input
-              className="nh-input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="nh-label">{t("Description")}</label>
-            <textarea
-              className="nh-input min-h-20"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-          <VisibilityPicker value={visibility} onChange={setVisibility} />
-          {error ? (
-            <p className="text-sm font-bold text-nh-danger">{error}</p>
-          ) : null}
-          <button
-            className="nh-btn-brand"
-            disabled={busy || title.length < 1}
-            onClick={() => void save()}
-          >
-            {t("Save changes")}
-          </button>
+    <BottomSheet title={t("Edit activity")} onClose={onClose}>
+      <div className="flex flex-col gap-3">
+        <div>
+          <label className="nh-label" htmlFor="activity-detail-title">{t("Title")}</label>
+          <input id="activity-detail-title"
+            className="nh-input"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
         </div>
+        <div>
+          <label className="nh-label" htmlFor="activity-detail-description">{t("Description")}</label>
+          <textarea id="activity-detail-description"
+            className="nh-input min-h-20"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+        <VisibilityPicker value={visibility} onChange={setVisibility} />
+        {error ? (
+          <p className="text-sm font-bold text-nh-danger">{error}</p>
+        ) : null}
+        <button
+          className="nh-btn-brand"
+          disabled={busy || title.length < 1}
+          onClick={() => void save()}
+        >
+          {t("Save changes")}
+        </button>
       </div>
-    </div>
+    </BottomSheet>
   );
 }

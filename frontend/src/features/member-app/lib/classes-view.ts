@@ -31,6 +31,13 @@ export interface RawSession {
   my_booking: RawMyBooking | null;
   /** Branch zone (IANA) the session times read in. */
   timezone?: string;
+  /** Last free cancel moment for this member; session detail only. */
+  cancel_deadline?: string | null;
+  /** Booking needs a waiver or PAR-Q this member lacks; session detail only. */
+  waiver_missing?: boolean;
+  parq_missing?: boolean;
+  /** What cancelling the member's confirmed booking costs right now. */
+  cancel_info?: { deadline: string; late: boolean; penalty_credits: number; pass_strike: boolean } | null;
 }
 
 export interface RawCoach {
@@ -177,6 +184,10 @@ export interface SessionView {
   confirmedCount: number;
   waitlistCount: number;
   myBooking: MyBookingView | null;
+  cancelDeadline: string | null;
+  cancelInfo: { late: boolean; penaltyCredits: number; passStrike: boolean } | null;
+  waiverMissing: boolean;
+  parqMissing: boolean;
 }
 
 export interface TrainerView {
@@ -313,6 +324,12 @@ export function toSessionView(raw: RawSession, catalog: RawCatalog | undefined):
           promotionOfferedAt: mine.promotion_offered_at,
         }
       : null,
+    cancelDeadline: raw.cancel_info?.deadline ?? raw.cancel_deadline ?? null,
+    cancelInfo: raw.cancel_info
+      ? { late: raw.cancel_info.late, penaltyCredits: raw.cancel_info.penalty_credits, passStrike: raw.cancel_info.pass_strike }
+      : null,
+    waiverMissing: raw.waiver_missing ?? false,
+    parqMissing: raw.parq_missing ?? false,
   };
 }
 

@@ -17,6 +17,10 @@ export function useSubmitParq() {
   return useMutation({
     mutationFn: (input: { answers: Record<string, boolean>; details: string }) =>
       memberApi<ParqStatus>("/gym/health", { method: "POST", json: input }),
-    onSuccess: (status) => qc.setQueryData(key, status),
+    onSuccess: (status) => {
+      qc.setQueryData(key, status);
+      // An open class page may still say the declaration is missing.
+      void qc.invalidateQueries({ queryKey: ["member-app", "session"] });
+    },
   });
 }

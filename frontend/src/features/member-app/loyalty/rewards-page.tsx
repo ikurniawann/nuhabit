@@ -9,6 +9,8 @@ import { useT } from "../lib/i18n";
 import { loyaltyKeys, redeemReward, useLoyaltyMe, useRefresh, useRewards } from "../lib/queries-loyalty";
 import { EmptyState, Spinner, formatDay } from "../ui";
 import { Notice, PageTitle, ProgressBar, SectionHeader } from "./loyalty-ui";
+import Link from "next/link";
+import { m } from "../lib/links";
 
 const REDEMPTION_STATUS: Record<string, string> = {
   pending: "Waiting for pickup",
@@ -92,7 +94,7 @@ export function RewardsPage() {
       {isLoading ? <Spinner label={t("Loading rewards…")} /> : null}
       {loadError ? <Notice ok={false}>{loadError.message}</Notice> : null}
       {data && data.rewards.length === 0 ? (
-        <EmptyState title={t("No rewards to redeem yet")} hint={t("New rewards show up here.")} />
+        <EmptyState title={t("No rewards to redeem yet")} hint={t("New rewards show up here.")} action={<Link href={m("/classes")} className="nh-btn-brand mt-2">{t("Book a class")}</Link>} />
       ) : null}
 
       {data?.rewards.map((reward) => (

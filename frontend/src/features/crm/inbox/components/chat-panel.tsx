@@ -212,6 +212,7 @@ export function ChatPanel({
             <MessageSquareText className="size-4" />
           </button>
           <textarea
+            aria-label="Tulis balasan"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {

@@ -20,7 +20,7 @@ import { rememberPendingOrder } from '../pending-order';
 import { fetchShippingRates, previewPromoCode, submitShopCheckout, useShopMember, type RateQuote } from '../queries';
 
 const INPUT_CLASS =
-  'mt-1.5 w-full rounded-xl border border-forest/15 bg-white px-3.5 py-3 text-sm text-forest outline-none placeholder:text-gray-400 focus:border-forest focus:ring-2 focus:ring-forest/10';
+  'mt-1.5 w-full rounded-xl border border-forest/15 bg-white px-3.5 py-3 text-base text-forest outline-none placeholder:text-gray-500 sm:text-sm focus:border-forest focus:ring-2 focus:ring-forest/10';
 const LABEL_CLASS = 'block text-xs font-medium text-gray-600';
 const CHOICE_CLASS = 'flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition';
 const CHOICE_ON = 'border-forest bg-[#f5f7f3] ring-1 ring-forest';

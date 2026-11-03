@@ -89,6 +89,7 @@ export function GatePage() {
       onClick={() => inputRef.current?.focus()}
     >
       <input
+        aria-label="Pemindai tiket"
         ref={inputRef}
         autoFocus
         value={wedgeValue}

@@ -131,9 +131,10 @@ function TopUp() {
       {selected ? (
         <>
           <div>
-            <label className="nh-label">{t("Voucher code")}</label>
+            <label htmlFor="topup-voucher" className="nh-label">{t("Voucher code")}</label>
             <div className="flex gap-2">
               <input
+                id="topup-voucher"
                 className="nh-input flex-1 uppercase"
                 value={voucherCode}
                 onChange={(e) => {

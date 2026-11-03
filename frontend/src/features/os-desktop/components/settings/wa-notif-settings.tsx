@@ -124,6 +124,7 @@ function RecipientList({
       )}
       <div className="mt-3 flex gap-2">
         <input
+          aria-label="Nomor WhatsApp"
           value={input}
           onChange={(e) => {
             setInput(e.target.value);

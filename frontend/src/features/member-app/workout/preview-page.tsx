@@ -10,6 +10,7 @@ import { useT } from "../lib/i18n";
 import { m } from "../lib/links";
 import { api, useExerciseLibrary, useInvalidateAll, useWorkout } from "../lib/queries-workout";
 import { Spinner, formatDuration } from "../ui";
+import { BottomSheet } from "../components/bottom-sheet";
 
 export function BlockLine({ block }: { block: WorkoutBlock }) {
   const t = useT();
@@ -126,36 +127,28 @@ export function WorkoutPreviewPage() {
         <VideoSheet title={videoTarget.title} videoUrl={videoTarget.url} onClose={() => setVideoTarget(null)} />
       ) : null}
       {swapTarget ? (
-        <div
-          className="nh-sheet-backdrop fixed inset-0 z-40 flex items-end justify-center bg-black/50"
-          onClick={() => setSwapTarget(null)}
-        >
-          <div className="nh-sheet-panel w-full max-w-md rounded-t-3xl bg-nh-cream p-5" onClick={(e) => e.stopPropagation()}>
-            <h2 className="nh-display mb-1 text-xl">
-              {t("Replace")} {swapTarget.exerciseName}
-            </h2>
-            <p className="mb-3 text-sm text-nh-muted">{t("Substitutes ranked by similarity.")}</p>
-            <div className="flex flex-col gap-2">
-              {substitutesFor(swapTarget).map(({ exercise, rule }) => (
-                <button
-                  key={exercise.id}
-                  className="nh-card flex items-center justify-between !py-3 text-left"
-                  onClick={async () => {
-                    await api.workout.replaceBlock(workout.id, swapTarget.order, exercise.id);
-                    setSwapTarget(null);
-                    invalidate();
-                  }}
-                >
-                  <div>
-                    <p className="font-black">{exercise.name}</p>
-                    <p className="text-xs text-nh-muted">{rule.conversionNote}</p>
-                  </div>
-                  <span className="text-xs font-black text-nh-forest">{Math.round(rule.similarity * 100)}%</span>
-                </button>
-              ))}
-            </div>
+        <BottomSheet title={`${t("Replace")} ${swapTarget.exerciseName}`} onClose={() => setSwapTarget(null)}>
+          <p className="mb-3 text-sm text-nh-muted">{t("Substitutes ranked by similarity.")}</p>
+          <div className="flex flex-col gap-2">
+            {substitutesFor(swapTarget).map(({ exercise, rule }) => (
+              <button
+                key={exercise.id}
+                className="nh-card flex items-center justify-between !py-3 text-left"
+                onClick={async () => {
+                  await api.workout.replaceBlock(workout.id, swapTarget.order, exercise.id);
+                  setSwapTarget(null);
+                  invalidate();
+                }}
+              >
+                <div>
+                  <p className="font-black">{exercise.name}</p>
+                  <p className="text-xs text-nh-muted">{rule.conversionNote}</p>
+                </div>
+                <span className="text-xs font-black text-nh-forest">{Math.round(rule.similarity * 100)}%</span>
+              </button>
+            ))}
           </div>
-        </div>
+        </BottomSheet>
       ) : null}
     </div>
   );

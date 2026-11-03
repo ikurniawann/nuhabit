@@ -635,6 +635,9 @@ func TestMemberPortalReads(t *testing.T) {
 	expectError(t, f.asMember(m, "GET", "/api/member-portal/gym/coaches/xyz", nil), 400, "ID coach tidak valid")
 
 	detail := f.asMember(m, "GET", "/api/member-portal/gym/sessions/"+sessionID, nil).data()
+	if detail["cancel_deadline"] == nil {
+		t.Fatalf("session detail must carry the cancel deadline before booking: %v", detail)
+	}
 	if detail["id"] != sessionID || detail["my_booking"] != nil || detail["cancel_info"] != nil {
 		t.Fatalf("session detail: %v", detail)
 	}

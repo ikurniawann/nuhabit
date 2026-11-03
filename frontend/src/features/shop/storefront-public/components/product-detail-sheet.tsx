@@ -10,6 +10,7 @@ import { PriceTag, SaleBadge } from './price-tag';
 import { ProductPhoto } from './product-photo';
 import { ProductRow } from './product-row';
 import { RatingStars, StarRow } from './rating-stars';
+import { useEscapeKey } from './use-escape-key';
 
 const sellable = (stock: number, preorder: boolean) => stock > 0 || preorder;
 
@@ -55,11 +56,13 @@ export function ProductDetailSheet({
   const preorder = chosen ? chosen.preorder : product.preorder && product.stock <= 0;
   const sale = saleEndsText(product, formatDateEn);
   const related = relatedProducts(product, products);
+  useEscapeKey(onClose);
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
       <div
         role="dialog"
+        aria-modal="true"
         aria-label={product.name}
         className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl bg-white p-5 sm:rounded-3xl sm:p-7"
         onClick={(event) => event.stopPropagation()}

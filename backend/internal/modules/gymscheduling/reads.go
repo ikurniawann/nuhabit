@@ -261,6 +261,26 @@ func (s *Service) MemberSession(ctx context.Context, customerID, id string) (*Ro
 	if err := s.shiftBookingOpens(ctx, customerID, []*Row{session}); err != nil {
 		return nil, err
 	}
+	// Shown before booking, so the member knows the terms before the tap.
+	rules, err := s.branchRules(s.db)(ctx, session.StrPtr("branch_id"))
+	if err != nil {
+		return nil, err
+	}
+	perks, err := s.memberPerks(ctx, s.db, customerID)
+	if err != nil {
+		return nil, err
+	}
+	session.Set("cancel_deadline", jsTime(domain.CancellationDeadline(session.Time("starts_at"), perks.CancelRules(rules))))
+	member, err := s.Members.Get(ctx, s.db, customerID)
+	if err != nil {
+		return nil, err
+	}
+	parqMissing, err := s.parqMissing(ctx, s.db, rules, customerID, s.now())
+	if err != nil {
+		return nil, err
+	}
+	session.Set("waiver_missing", s.waiverMissing(rules, member))
+	session.Set("parq_missing", parqMissing)
 	details, err := s.repo.ClassDetails(ctx, s.db, session.Str("class_type_id"), session.StrPtr("coach_id"))
 	if err != nil {
 		return nil, err

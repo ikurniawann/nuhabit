@@ -109,6 +109,7 @@ func (c testCredits) ForBranch(ctx context.Context, q database.Querier, branchID
 		ClassReminderMinutes:      r.ClassReminderMinutes,
 		ScheduleHorizonDays:       r.ScheduleHorizonDays,
 		RequireWaiver:             r.RequireWaiver,
+		RequireParq:               r.RequireParq,
 		CheckinOpensMinBefore:     r.CheckinOpensMinBefore,
 		CheckinClosesMinAfter:     r.CheckinClosesMinAfter,
 		OpenGymEnabled:            r.OpenGymEnabled,

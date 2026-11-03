@@ -88,6 +88,7 @@ export function MarketplaceLinksSection({ account }: { account: MarketplaceAccou
         {listings.length > 0 ? (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto]">
             <select
+              aria-label="Listing marketplace"
               value={selListing}
               onChange={(event) => setSelListing(event.target.value)}
               className={SELECT_CLASS}
@@ -111,6 +112,7 @@ export function MarketplaceLinksSection({ account }: { account: MarketplaceAccou
               )}
             </select>
             <select
+              aria-label="Produk lokal"
               value={selLocal}
               onChange={(event) => setSelLocal(event.target.value)}
               className={SELECT_CLASS}

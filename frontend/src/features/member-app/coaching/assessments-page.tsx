@@ -12,14 +12,14 @@ import {
   type MetricPoint,
 } from "@/lib/gym/assessments";
 import { fill, useT } from "../lib/i18n";
-import { useLang } from "../lib/lang";
+import { localeFor, useLang } from "../lib/lang";
 import { useMyAssessments } from "../lib/queries-coaching";
 import { EmptyState, Spinner, chipClass, formatDay } from "../ui";
 
 /** Fitness assessments: latest numbers, progress chart per metric, and the full history. */
 export function AssessmentsPage() {
   const t = useT();
-  const locale = useLang() === "id" ? "id-ID" : "en-US";
+  const locale = localeFor(useLang());
   const { data, isLoading } = useMyAssessments();
   const [chosen, setChosen] = useState<MetricKey | "">("");
 

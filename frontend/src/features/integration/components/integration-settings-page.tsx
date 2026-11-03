@@ -82,6 +82,7 @@ export function IntegrationSettingsPage() {
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/35" />
               <input
+                aria-label="Search"
                 placeholder="Search"
                 className="w-full rounded-xl border border-black/5 bg-black/5 py-2 pl-9 pr-3 text-sm outline-none placeholder:text-black/35 focus:bg-white"
               />

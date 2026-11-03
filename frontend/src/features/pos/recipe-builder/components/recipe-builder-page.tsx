@@ -249,7 +249,7 @@ export function RecipeBuilderPage() {
               <h3 className="font-semibold text-gray-900">Pilih Bahan Baku</h3>
               <div className="relative mt-3">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Cari bahan baku..." className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500" autoFocus />
+                <input aria-label="Cari bahan baku" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Cari bahan baku..." className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500" autoFocus />
               </div>
             </div>
             <div className="max-h-[55vh] overflow-y-auto p-2">

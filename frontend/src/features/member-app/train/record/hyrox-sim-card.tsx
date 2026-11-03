@@ -62,7 +62,7 @@ export function HyroxSimCard({
           <Play size={18} fill="currentColor" />
           {simBusy ? t("Preparing…") : t("Start simulation")}
         </button>
-        <p className="mt-2.5 text-center text-xs text-white/40">
+        <p className="mt-2.5 text-center text-xs text-white/60">
           {t(
             "Finishing saves it to your training feed and race readiness.",
           )}

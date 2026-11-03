@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { ApiError, type ErrorParams } from "./api";
 import { useT, type T } from "./i18n";
-import { useLang, type Lang } from "./lang";
+import { localeFor, useLang, type Lang } from "./lang";
 
 /**
  * Server error codes the member app knows, mapped to English dictionary keys
@@ -106,7 +106,7 @@ function formatParams(params: ErrorParams | undefined, lang: Lang): Record<strin
   for (const [name, value] of Object.entries(params ?? {})) {
     const isTime = typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value);
     out[name] = isTime
-      ? new Date(value).toLocaleString(lang === "id" ? "id-ID" : "en-GB", {
+      ? new Date(value).toLocaleString(localeFor(lang), {
           timeZone: "Asia/Jakarta",
           weekday: "short",
           day: "numeric",

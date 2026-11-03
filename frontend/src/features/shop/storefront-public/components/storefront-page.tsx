@@ -217,7 +217,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
           </div>
         ) : null}
         {products.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-24 text-gray-400">
+          <div className="flex flex-col items-center gap-2 py-24 text-gray-500">
             <ShoppingBag className="h-10 w-10 opacity-40" />
             <p className="text-sm">No products in this store yet</p>
           </div>

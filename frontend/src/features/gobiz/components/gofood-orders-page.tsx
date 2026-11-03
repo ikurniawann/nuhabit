@@ -326,6 +326,7 @@ export function GofoodOrdersPage() {
                         ))}
                       </select>
                       <input
+                        aria-label="Keterangan"
                         value={rejecting.description}
                         onChange={(event) => setRejecting({ ...rejecting, description: event.target.value })}
                         className="h-9 rounded-lg border border-red-200 bg-white px-3 text-sm"

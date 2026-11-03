@@ -1,6 +1,7 @@
 package gymscheduling
 
 import (
+	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
+	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/testutil"
 )
@@ -48,6 +50,11 @@ func TestWaiverRequiredForBookingAndGate(t *testing.T) {
 	if res := f.book(m, sessionID); res.Status != 409 {
 		t.Fatalf("outdated waiver: %s", res.Raw)
 	}
+	// The class page says so before the member taps Book.
+	detailPath := "/api/member-portal/gym/sessions/" + sessionID
+	if d := f.asMember(m, "GET", detailPath, nil).data(); d["waiver_missing"] != true || d["parq_missing"] != false {
+		t.Fatalf("session detail before the waiver: %v", d)
+	}
 
 	// The gate checks the waiver before looking for a booking.
 	d := f.asStaff("POST", "/api/gym/checkin", map[string]any{"token": f.qrToken(m)}).data()
@@ -79,6 +86,9 @@ func TestWaiverRequiredForBookingAndGate(t *testing.T) {
 	if res := f.book(m, sessionID); res.Status != 200 || res.data()["status"] != "confirmed" {
 		t.Fatalf("booking after the waiver: %s", res.Raw)
 	}
+	if d := f.asMember(m, "GET", detailPath, nil).data(); d["waiver_missing"] != false {
+		t.Fatalf("session detail after the waiver: %v", d)
+	}
 
 	// With the rule off, no waiver is needed.
 	other := f.member(3)
@@ -86,6 +96,30 @@ func TestWaiverRequiredForBookingAndGate(t *testing.T) {
 	f.setRules(map[string]any{"requireWaiver": false})
 	if res := f.book(other, sessionID); res.Status != 200 {
 		t.Fatalf("rule off: %s", res.Raw)
+	}
+}
+
+// noParq is a member without a current PAR-Q declaration.
+type noParq struct{}
+
+func (noParq) ParqCurrent(context.Context, database.Querier, string, time.Time) (bool, error) {
+	return false, nil
+}
+
+func TestSessionDetailSaysParqIsMissing(t *testing.T) {
+	f := newFixture(t)
+	typeID, _ := f.classType(1)
+	sessionID := f.session(typeID, time.Now().Add(20*time.Minute), 5)
+	m := f.member(3)
+	f.svc.Health = noParq{}
+	path := "/api/member-portal/gym/sessions/" + sessionID
+
+	if d := f.asMember(m, "GET", path, nil).data(); d["parq_missing"] != false {
+		t.Fatalf("rule off: %v", d)
+	}
+	f.setRules(map[string]any{"requireParq": true})
+	if d := f.asMember(m, "GET", path, nil).data(); d["parq_missing"] != true {
+		t.Fatalf("rule on: %v", d)
 	}
 }
 

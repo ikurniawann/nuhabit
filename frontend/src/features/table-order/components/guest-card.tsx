@@ -140,6 +140,7 @@ export const GuestCard = forwardRef<
               inputMode="numeric"
               autoComplete="one-time-code"
               autoFocus
+              aria-label="Kode OTP 6 digit"
               placeholder="Kode OTP 6 digit"
               className="mt-3 h-11 w-full rounded-xl border border-gray-200 px-4 text-center text-lg font-bold tracking-[0.4em] outline-none focus:border-primary"
             />
@@ -175,7 +176,7 @@ export const GuestCard = forwardRef<
                   inputMode="tel"
                   autoComplete="tel"
                   placeholder="Nomor WhatsApp (0812…)"
-                  className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none"
+                  className="h-full min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm"
                 />
               </label>
               <label className="flex h-11 items-center gap-2 rounded-xl border border-gray-200 px-3 focus-within:border-primary">
@@ -186,7 +187,7 @@ export const GuestCard = forwardRef<
                   onKeyDown={(event) => event.key === "Enter" && void save()}
                   autoComplete="name"
                   placeholder="Nama untuk dipanggil"
-                  className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none"
+                  className="h-full min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm"
                 />
               </label>
             </div>

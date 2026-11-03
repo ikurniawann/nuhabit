@@ -89,9 +89,9 @@
   --color-nh-lime-soft: #eeffb1;
   --color-nh-lettuce: #abde67;
   --color-nh-muted: #5f6b62;
-  --color-nh-ok: #3f7a12;
-  --color-nh-warn: #9c7a14;
-  --color-nh-danger: #d13b40;
+  --color-nh-ok: #356a0e;
+  --color-nh-warn: #7a5f0f;
+  --color-nh-danger: #b92b30;
   --font-nh-display: var(--font-outfit), "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-nh-body: var(--font-manrope), "Manrope", ui-sans-serif, system-ui, sans-serif;
   --radius-card: 1.5rem;

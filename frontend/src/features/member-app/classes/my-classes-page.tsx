@@ -4,7 +4,7 @@ import { ArrowLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { activePackages, joinDot } from "../lib/classes-view";
-import { useT } from "../lib/i18n";
+import { fill, useT } from "../lib/i18n";
 import { classImage } from "../lib/images";
 import { m } from "../lib/links";
 import { useClassTypes, useSessions, useWallet } from "../lib/queries-classes";
@@ -96,7 +96,7 @@ export function MyClassesPage() {
                     <p className="text-sm text-nh-muted">{c.description}</p>
                     <div className="mt-2.5 flex flex-wrap gap-1.5">
                       <span className="nh-chip bg-nh-raised text-nh-muted">
-                        {c.default_duration_min} min · {c.default_credit_cost} cr
+                        {fill(t("{min} min · {cost} cr"), { min: c.default_duration_min, cost: c.default_credit_cost })}
                       </span>
                       {sources.slice(0, 2).map((p) => (
                         <span key={p.lotId} className="nh-chip bg-nh-forest/10 text-nh-forest">

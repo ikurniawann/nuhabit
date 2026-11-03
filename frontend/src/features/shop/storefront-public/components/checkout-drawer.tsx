@@ -11,7 +11,7 @@ import { AreaSuggestions } from '@/features/shop/shared/area-suggestions';
 import { fetchShippingRates, submitShopCheckout, type RateQuote } from '../queries';
 
 const INPUT_CLASS =
-  'w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-forest';
+  'w-full rounded-lg border border-gray-200 px-3 py-2.5 text-base outline-none sm:text-sm focus:border-forest';
 
 const sameRate = (a: RateQuote, b: RateQuote) =>
   a.courierCode === b.courierCode && a.serviceCode === b.serviceCode;
@@ -129,12 +129,16 @@ export function CheckoutDrawer({
             <input
               value={custName}
               onChange={(e) => setCustName(e.target.value)}
+              aria-label="Nama penerima"
+              autoComplete="name"
               placeholder="Nama penerima"
               className={INPUT_CLASS}
             />
             <input
               value={custPhone}
               onChange={(e) => setCustPhone(e.target.value)}
+              aria-label="No. WhatsApp"
+              autoComplete="tel"
               placeholder="No. WhatsApp (utk konfirmasi & member)"
               inputMode="tel"
               className={INPUT_CLASS}
@@ -142,6 +146,8 @@ export function CheckoutDrawer({
             <input
               value={custEmail}
               onChange={(e) => setCustEmail(e.target.value)}
+              aria-label="Email (opsional)"
+              autoComplete="email"
               placeholder="Email (opsional)"
               inputMode="email"
               className={INPUT_CLASS}
@@ -157,6 +163,8 @@ export function CheckoutDrawer({
                 ratesMutation.reset();
                 setAreaQuery(e.target.value);
               }}
+              aria-label="Kecamatan atau kota tujuan"
+              autoComplete="off"
               placeholder="Cari kecamatan/kota tujuan..."
               className={INPUT_CLASS}
             />
@@ -166,6 +174,8 @@ export function CheckoutDrawer({
           <textarea
             value={address}
             onChange={(e) => setAddress(e.target.value)}
+            aria-label="Alamat lengkap"
+            autoComplete="street-address"
             placeholder="Alamat lengkap (jalan, nomor, RT/RW, patokan)"
             rows={3}
             className={INPUT_CLASS}
@@ -173,7 +183,7 @@ export function CheckoutDrawer({
 
           {/* Pilihan kurir */}
           {ratesMutation.isPending ? (
-            <div className="flex items-center gap-2 py-3 text-sm text-gray-400">
+            <div className="flex items-center gap-2 py-3 text-sm text-gray-500">
               <Loader2 className="h-4 w-4 animate-spin" /> Menghitung ongkir...
             </div>
           ) : rates.length > 0 ? (
@@ -195,7 +205,7 @@ export function CheckoutDrawer({
                   <span>
                     <span className="font-medium text-gray-900">{rate.courierName}</span>{' '}
                     <span className="text-gray-500">{rate.serviceName}</span>
-                    {rate.etd ? <span className="block text-xs text-gray-400">{rate.etd}</span> : null}
+                    {rate.etd ? <span className="block text-xs text-gray-500">{rate.etd}</span> : null}
                   </span>
                   <span className="font-semibold text-gray-900">{formatRupiah(rate.total_price)}</span>
                 </button>
@@ -232,7 +242,7 @@ export function CheckoutDrawer({
             {checkout.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Bayar Sekarang
           </button>
-          <p className="mt-2 text-center text-xs text-gray-400">
+          <p className="mt-2 text-center text-xs text-gray-500">
             Pembayaran aman via Xendit (QRIS, VA, e-wallet, kartu)
           </p>
         </div>

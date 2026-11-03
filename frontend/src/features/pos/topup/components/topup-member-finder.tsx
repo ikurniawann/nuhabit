@@ -111,6 +111,7 @@ export function TopupMemberFinder({
         <div className="relative">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <input
+            aria-label="Cari member"
             ref={inputRef}
             type="text"
             value={input}

@@ -87,6 +87,7 @@ export function CommandPalette({
         <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
           <Search className="size-5 text-white/50" />
           <input
+            aria-label="Cari aplikasi dan transaksi"
             autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}

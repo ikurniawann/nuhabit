@@ -8,6 +8,8 @@ import { useT } from "../lib/i18n";
 import { loyaltyKeys, setBadgeShowcased, useBadges, useRefresh, type Badge } from "../lib/queries-loyalty";
 import { EmptyState, Spinner } from "../ui";
 import { Notice, PageTitle } from "./loyalty-ui";
+import Link from "next/link";
+import { m } from "../lib/links";
 
 /** Badge terbuka otomatis saat syaratnya tercapai; member memamerkan hingga 3. */
 export function BadgesPage() {
@@ -44,7 +46,7 @@ export function BadgesPage() {
           {t("{owned} of {total} badges unlocked", { owned, total: data.badges.length })}
         </p>
       ) : null}
-      {data && data.badges.length === 0 ? <EmptyState title={t("No badges yet")} /> : null}
+      {data && data.badges.length === 0 ? <EmptyState title={t("No badges yet")} action={<Link href={m("/classes")} className="nh-btn-brand mt-2">{t("Book a class")}</Link>} /> : null}
       <div className="grid grid-cols-3 gap-3">
         {data?.badges.map((badge) => {
           const target = badgeTarget(badge);

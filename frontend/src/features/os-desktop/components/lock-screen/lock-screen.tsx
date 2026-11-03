@@ -53,6 +53,7 @@ export function LockScreen({
         <div className="mt-1 text-sm text-white/55">{account.email}</div>
         <form onSubmit={submit} className="mt-6">
           <input
+            aria-label="Kata sandi"
             autoFocus
             type="password"
             value={password}

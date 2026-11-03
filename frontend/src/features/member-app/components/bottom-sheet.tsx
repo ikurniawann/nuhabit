@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { useT } from "../lib/i18n";
 
@@ -17,6 +17,11 @@ export function BottomSheet({
   children: ReactNode;
 }) {
   const t = useT();
+  // Read during render: the close button's autoFocus runs before any effect.
+  const [opener] = useState(() => document.activeElement);
+  useEffect(() => () => {
+    if (opener instanceof HTMLElement) opener.focus();
+  }, [opener]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);

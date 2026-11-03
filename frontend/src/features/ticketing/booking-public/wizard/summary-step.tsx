@@ -134,6 +134,7 @@ export function SummaryStep({
         ) : (
           <div className="flex gap-2">
             <input
+              aria-label="Kode promo"
               type="text"
               value={state.promoInput}
               onChange={(e) => dispatch({ type: "setPromoInput", value: e.target.value })}

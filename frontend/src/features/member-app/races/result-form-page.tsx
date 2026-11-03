@@ -208,7 +208,7 @@ function ResultForm({
               </div>
               {source === "race" ? (
                 options.races.length ? (
-                  <select className="nh-input" value={race} onChange={(e) => setRace(e.target.value)}>
+                  <select aria-label={t("Race")} className="nh-input" value={race} onChange={(e) => setRace(e.target.value)}>
                     {options.races.map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.name} · {formatDay(r.starts_at)}
@@ -219,7 +219,7 @@ function ResultForm({
                   <p className="text-sm text-nh-muted">{t("No started race without a result.")}</p>
                 )
               ) : options.simulations.length ? (
-                <select className="nh-input" value={session} onChange={(e) => pickSimulation(e.target.value)}>
+                <select aria-label={t("Pick a full simulation")} className="nh-input" value={session} onChange={(e) => pickSimulation(e.target.value)}>
                   <option value="">{t("Pick a full simulation")}</option>
                   {options.simulations.map((s) => (
                     <option key={s.session_id} value={s.session_id}>
@@ -235,8 +235,9 @@ function ResultForm({
 
           <div className="nh-card flex flex-col gap-3">
             <div>
-              <p className="nh-label">{t("Division")}</p>
+              <label htmlFor="result-division" className="nh-label">{t("Division")}</label>
               <select
+                id="result-division"
                 className="nh-input"
                 value={division}
                 onChange={(e) => setDivision(e.target.value as ResultDivision)}
@@ -249,8 +250,8 @@ function ResultForm({
               </select>
             </div>
             <div>
-              <p className="nh-label">{t("Age group (optional)")}</p>
-              <select className="nh-input" value={ageGroup} onChange={(e) => setAgeGroup(e.target.value as AgeGroup | "")}>
+              <label htmlFor="result-age" className="nh-label">{t("Age group (optional)")}</label>
+              <select id="result-age" className="nh-input" value={ageGroup} onChange={(e) => setAgeGroup(e.target.value as AgeGroup | "")}>
                 <option value="">-</option>
                 {AGE_GROUPS.map((a) => (
                   <option key={a} value={a}>
@@ -274,7 +275,8 @@ function ResultForm({
             {pasteOpen ? (
               <div className="flex flex-col gap-2">
                 <textarea
-                  className="nh-input min-h-32 font-mono text-xs"
+                  aria-label={t("Paste results")}
+                  className="nh-input min-h-32 font-mono text-base sm:text-xs"
                   value={paste}
                   onChange={(e) => setPaste(e.target.value)}
                   placeholder={"Running 1 4:05\nSkiErg 4:30\n…\nRoxzone 7:45\nTotal 1:22:33"}

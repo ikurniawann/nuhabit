@@ -57,7 +57,7 @@ function EmergencyContactForm({ contact }: { contact: EmergencyContact | null })
       </div>
       <div>
         <label htmlFor="emergency-phone" className="nh-label">{t("Contact phone")}</label>
-        <input id="emergency-phone" className="nh-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+62812…" />
+        <input id="emergency-phone" type="tel" inputMode="tel" className="nh-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+62812…" />
       </div>
       <div>
         <label htmlFor="emergency-relationship" className="nh-label">{t("Relationship")}</label>

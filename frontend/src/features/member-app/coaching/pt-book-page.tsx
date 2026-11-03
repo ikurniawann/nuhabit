@@ -8,7 +8,7 @@ import { ApiError } from "../lib/api";
 import { joinDot } from "../lib/classes-view";
 import { fill, useT } from "../lib/i18n";
 import { initialsOf } from "../lib/initials";
-import { useLang } from "../lib/lang";
+import { localeFor, useLang } from "../lib/lang";
 import { m } from "../lib/links";
 import { useMyPtSessions, usePtOptions, usePtSlots, useReschedulePt, useRequestPt } from "../lib/queries-coaching";
 import { addDays } from "@/lib/dates";
@@ -32,7 +32,7 @@ export function PtBookPage() {
 function PtBook() {
   const t = useT();
   const router = useRouter();
-  const locale = useLang() === "id" ? "id-ID" : undefined;
+  const locale = localeFor(useLang());
   const { data: options, isLoading } = usePtOptions();
   const moveId = useSearchParams().get("move") ?? "";
   const { data: sessions, isLoading: sessionsLoading } = useMyPtSessions();
@@ -252,8 +252,9 @@ function PtBook() {
 
       {!moving ? (
         <section className="flex flex-col gap-2">
-          <p className="nh-label !mb-0">{t("Note for the coach")}</p>
+          <label htmlFor="pt-note" className="nh-label !mb-0">{t("Note for the coach")}</label>
           <textarea
+            id="pt-note"
             className="nh-input min-h-20"
             value={notes}
             maxLength={500}

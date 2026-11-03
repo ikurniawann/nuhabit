@@ -49,7 +49,7 @@ export function CatalogFilterBar({
         <label className="relative min-w-56 flex-1 sm:max-w-md">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <span className="sr-only">Search products</span>
-          <input value={filters.search} onChange={(event) => patch({ search: event.target.value })} placeholder="Search products, sizes, collections" className="w-full rounded-full border border-border bg-white py-3 pl-11 pr-10 text-sm outline-none focus:border-forest" />
+          <input value={filters.search} onChange={(event) => patch({ search: event.target.value })} placeholder="Search products, sizes, collections" className="w-full rounded-full border border-border bg-white py-3 pl-11 pr-10 text-base outline-none sm:text-sm focus:border-forest" />
           {filters.search ? <button type="button" onClick={() => patch({ search: '' })} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"><X className="h-4 w-4" /></button> : null}
         </label>
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-white px-4 py-3 text-sm text-gray-700">

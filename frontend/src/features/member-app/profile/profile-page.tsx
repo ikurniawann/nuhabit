@@ -152,8 +152,8 @@ export function ProfilePage() {
         {editing ? (
           <>
             <div>
-              <label className="nh-label">{t("Full name")}</label>
-              <input
+              <label className="nh-label" htmlFor="profile-full-name">{t("Full name")}</label>
+              <input id="profile-full-name" autoComplete="name"
                 className="nh-input"
                 value={form.name}
                 maxLength={100}
@@ -161,12 +161,12 @@ export function ProfilePage() {
               />
             </div>
             <div>
-              <label className="nh-label">{t("Email")}</label>
-              <input className="nh-input" value={form.email} onChange={(e) => setField("email")(e.target.value)} />
+              <label className="nh-label" htmlFor="profile-email">{t("Email")}</label>
+              <input id="profile-email" type="email" inputMode="email" autoComplete="email" className="nh-input" value={form.email} onChange={(e) => setField("email")(e.target.value)} />
             </div>
             <div>
-              <label className="nh-label">{t("Date of birth")}</label>
-              <input
+              <label className="nh-label" htmlFor="profile-date-of-birth">{t("Date of birth")}</label>
+              <input id="profile-date-of-birth" autoComplete="bday"
                 className="nh-input"
                 type="date"
                 value={form.birth_date}
@@ -199,8 +199,8 @@ export function ProfilePage() {
               </div>
             </div>
             <div>
-              <label className="nh-label">{t("City")}</label>
-              <input
+              <label className="nh-label" htmlFor="profile-city">{t("City")}</label>
+              <input id="profile-city" autoComplete="address-level2"
                 className="nh-input"
                 value={form.city}
                 maxLength={100}
@@ -208,8 +208,8 @@ export function ProfilePage() {
               />
             </div>
             <div>
-              <label className="nh-label">{t("Phone")}</label>
-              <input className="nh-input opacity-60" value={member.phone} disabled />
+              <label className="nh-label" htmlFor="profile-phone">{t("Phone")}</label>
+              <input id="profile-phone" className="nh-input opacity-60" value={member.phone} disabled />
               <p className="mt-1 text-xs text-nh-muted">
                 {t("Phone is your sign-in number and cannot be changed here.")}
               </p>

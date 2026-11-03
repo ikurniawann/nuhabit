@@ -194,7 +194,7 @@ export function CartSheet({
                 onChange={(event) => onNote(event.target.value.slice(0, 300))}
                 rows={2}
                 placeholder="Contoh: tidak pedas, tanpa es"
-                className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-primary"
+                className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-base text-gray-900 outline-none focus:border-primary sm:text-sm"
               />
             </label>
           </div>

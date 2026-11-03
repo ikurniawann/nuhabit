@@ -59,6 +59,7 @@ export function NotificationsPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      {readAll.isError ? <p role="alert" className="text-sm font-bold text-nh-danger">{t("Could not mark these as read. Try again.")}</p> : null}
       <div className="flex items-center justify-between">
         <h1 className="nh-display text-3xl font-black">{t("Notifications")}</h1>
         <button

@@ -71,4 +71,7 @@ export const PROGRESS_ID: Record<string, string> = {
   "Saved payment methods are not available yet. You can still pay when you buy a package.": "Metode pembayaran tersimpan belum tersedia. Kamu tetap bisa bayar saat membeli paket.",
   "View available packages": "Lihat paket yang tersedia",
   "View packages": "Lihat paket",
+  "Browse the shop": "Lihat toko",
+  "Could not load this race": "Race ini gagal dimuat",
+  "Could not mark these as read. Try again.": "Gagal menandai sudah dibaca. Coba lagi.",
 };

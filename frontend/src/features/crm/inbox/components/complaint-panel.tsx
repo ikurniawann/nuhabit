@@ -169,6 +169,7 @@ export function ComplaintPanel({
         </p>
         <div className="flex gap-1.5">
           <textarea
+            aria-label="Tulis catatan"
             value={noteDraft}
             onChange={(event) => setNoteDraft(event.target.value)}
             rows={2}

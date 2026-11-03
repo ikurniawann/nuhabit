@@ -13,6 +13,7 @@ import { m } from "../lib/links";
 import { api, useInvalidateAll, useMyRaces, useMyResults, useRaces } from "../lib/queries-workout";
 import { Spinner, StatusBadge, formatDay, formatDuration } from "../ui";
 import { DIVISIONS } from "../workout/generator-page";
+import { BottomSheet } from "../components/bottom-sheet";
 
 const TABS = ["Upcoming", "Results", "My Races"] as const;
 type Tab = (typeof TABS)[number];
@@ -165,42 +166,39 @@ export function RegisterSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/50" onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-3xl bg-nh-cream p-5" onClick={(e) => e.stopPropagation()}>
-        <h2 className="nh-display mb-1 text-xl">{view.event.name}</h2>
-        <p className="mb-4 text-sm text-nh-muted">
-          {t("Adds the race to My Races for goal setting and training. Official registration happens on hyrox.com.")}
-        </p>
-        <div className="flex flex-col gap-3">
-          <div>
-            <p className="nh-label">{t("Division")}</p>
-            <div className="grid grid-cols-2 gap-2">
-              {DIVISIONS.map((d) => (
-                <button
-                  key={d.id}
-                  onClick={() => setDivision(d.id)}
-                  className={`rounded-xl border px-3 py-2 text-sm font-black uppercase ${
-                    division === d.id
-                      ? "border-nh-forest bg-nh-forest/10 text-nh-forest"
-                      : "border-nh-line bg-nh-cream text-nh-muted"
-                  }`}
-                >
-                  {d.label}
-                </button>
-              ))}
-            </div>
+    <BottomSheet title={view.event.name} onClose={onClose}>
+      <p className="mb-4 text-sm text-nh-muted">
+        {t("Adds the race to My Races for goal setting and training. Official registration happens on hyrox.com.")}
+      </p>
+      <div className="flex flex-col gap-3">
+        <div>
+          <p className="nh-label">{t("Division")}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {DIVISIONS.map((d) => (
+              <button
+                key={d.id}
+                onClick={() => setDivision(d.id)}
+                className={`rounded-xl border px-3 py-2 text-sm font-black uppercase ${
+                  division === d.id
+                    ? "border-nh-forest bg-nh-forest/10 text-nh-forest"
+                    : "border-nh-line bg-nh-cream text-nh-muted"
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
           </div>
-          <div>
-            <label className="nh-label">{t("Goal time (hh:mm:ss, optional)")}</label>
-            <input className="nh-input" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="01:30:00" />
-          </div>
-          {error ? <p className="text-sm font-bold text-nh-danger">{error}</p> : null}
-          <button className="nh-btn-brand" disabled={busy} onClick={() => void submit()}>
-            {t("Add to my races")}
-          </button>
         </div>
+        <div>
+          <label className="nh-label" htmlFor="races-goal-time-hh-mm-ss-optional">{t("Goal time (hh:mm:ss, optional)")}</label>
+          <input id="races-goal-time-hh-mm-ss-optional" className="nh-input" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="01:30:00" />
+        </div>
+        {error ? <p className="text-sm font-bold text-nh-danger">{error}</p> : null}
+        <button className="nh-btn-brand" disabled={busy} onClick={() => void submit()}>
+          {t("Add to my races")}
+        </button>
       </div>
-    </div>
+    </BottomSheet>
   );
 }
 

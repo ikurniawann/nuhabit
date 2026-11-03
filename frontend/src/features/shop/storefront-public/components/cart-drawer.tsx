@@ -6,6 +6,7 @@ import type { AppliedPromo, CatalogProduct, CatalogSku } from '@/lib/shop/types'
 import { PreorderBadge } from './preorder-note';
 import { PriceTag } from './price-tag';
 import { ProductPhoto } from './product-photo';
+import { useEscapeKey } from './use-escape-key';
 
 /**
  * Cart drawer: change the size in place, quantity stepper, remove a line,
@@ -37,6 +38,7 @@ export function CartDrawer({
   onCheckout: () => void;
   onClose: () => void;
 }) {
+  useEscapeKey(onClose);
   const productOf = (line: CartLine) => products.find((product) => product.id === line.productId);
   const hasIssue = cart.some((line) => cartLineIssue(line, products));
   const totals = checkoutTotals({ lines: cart, promo, method: 'ship', rateCost: null, freeShippingThreshold });
@@ -46,6 +48,7 @@ export function CartDrawer({
     <div className="fixed inset-0 z-40 flex justify-end bg-black/40" onClick={onClose}>
       <div
         role="dialog"
+        aria-modal="true"
         aria-label="Cart"
         className="flex h-full w-full max-w-md flex-col bg-white"
         onClick={(event) => event.stopPropagation()}
@@ -135,9 +138,10 @@ export function CartDrawer({
             <textarea
               value={note}
               onChange={(event) => onNoteChange(event.target.value)}
+              aria-label="Order note (optional)"
               placeholder="Order note (optional)"
               rows={2}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-forest"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-base sm:text-sm outline-none focus:border-forest"
             />
           ) : null}
         </div>

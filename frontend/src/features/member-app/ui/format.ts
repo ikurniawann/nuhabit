@@ -1,4 +1,5 @@
 import { zoneName, zoneSuffix } from '@/lib/timezone';
+import { currentLocale } from '../lib/lang';
 
 export function formatIdr(amount: number): string {
   return new Intl.NumberFormat('id-ID', {
@@ -18,7 +19,7 @@ const suffix = (timeZone?: string) => (timeZone ? zoneSuffix(timeZone) : '');
 
 export function formatDayTime(iso: string, timeZone?: string): string {
   return (
-    new Date(iso).toLocaleString(undefined, {
+    new Date(iso).toLocaleString(currentLocale(), {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
@@ -30,7 +31,7 @@ export function formatDayTime(iso: string, timeZone?: string): string {
 }
 
 export function formatDay(iso: string, timeZone?: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(iso).toLocaleDateString(currentLocale(), {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -39,7 +40,7 @@ export function formatDay(iso: string, timeZone?: string): string {
 }
 
 export function formatTime(iso: string, timeZone?: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', ...inZone(timeZone) }) + suffix(timeZone);
+  return new Date(iso).toLocaleTimeString(currentLocale(), { hour: '2-digit', minute: '2-digit', ...inZone(timeZone) }) + suffix(timeZone);
 }
 
 // ── Athlete formatting ────────────────────────────────────────────────────────

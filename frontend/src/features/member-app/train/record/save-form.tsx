@@ -156,16 +156,16 @@ export function SaveForm({
         </div>
       ) : null}
       <div>
-        <label className="nh-label">{t("Title")}</label>
-        <input
+        <label className="nh-label" htmlFor="save-form-title">{t("Title")}</label>
+        <input id="save-form-title"
           className="nh-input"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
       </div>
       <div>
-        <label className="nh-label">{t("Description")}</label>
-        <textarea
+        <label className="nh-label" htmlFor="save-form-description">{t("Description")}</label>
+        <textarea id="save-form-description"
           className="nh-input min-h-20"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -179,8 +179,8 @@ export function SaveForm({
       />
       {gear.length > 0 && type !== "WORKOUT" ? (
         <div>
-          <label className="nh-label">{t("Gear")}</label>
-          <select
+          <label className="nh-label" htmlFor="save-form-gear">{t("Gear")}</label>
+          <select id="save-form-gear"
             className="nh-input"
             value={gearId}
             onChange={(e) => setGearId(e.target.value)}

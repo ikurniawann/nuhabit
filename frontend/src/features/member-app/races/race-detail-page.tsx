@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useT } from "../lib/i18n";
 import { m } from "../lib/links";
 import { api, useInvalidateAll } from "../lib/queries-workout";
-import { Spinner, StatusBadge, formatDayTime, formatDuration } from "../ui";
+import { EmptyState, Spinner, StatusBadge, formatDayTime, formatDuration } from "../ui";
 import { RegisterSheet } from "./races-page";
 
 export function RaceDetailPage() {
@@ -17,12 +17,13 @@ export function RaceDetailPage() {
   const t = useT();
   const invalidate = useInvalidateAll();
   const [registerOpen, setRegisterOpen] = useState(false);
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["member-app", "race", raceId],
     queryFn: () => api.races.get(raceId),
   });
 
-  if (isLoading || !data) return <Spinner label={t("Loading race…")} />;
+  if (isLoading) return <Spinner label={t("Loading race…")} />;
+  if (isError || !data) return <EmptyState title={t("Could not load this race")} action={<button className="nh-btn-brand mt-2" onClick={() => void refetch()}>{t("Try again")}</button>} />;
   const { view, myRace, daysToRace } = data;
   const e = view.event;
   const upcoming = daysToRace > 0 && e.status !== "COMPLETED" && e.status !== "CANCELLED";

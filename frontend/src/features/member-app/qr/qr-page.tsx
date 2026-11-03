@@ -80,7 +80,7 @@ export function QrPage() {
             <p className="text-xs">{t("Refreshes automatically every {n}s.", { n: qr.data.ttlSeconds })}</p>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-[10px] font-bold tracking-[0.18em] text-white/40 uppercase">{t("Credits")}</p>
+            <p className="text-[10px] font-bold tracking-[0.18em] text-white/60 uppercase">{t("Credits")}</p>
             <p className="nh-display text-2xl leading-none text-nh-lime">{me?.balance ?? "…"}</p>
           </div>
         </div>

@@ -301,6 +301,7 @@ export function OrderAlertSettingsCard() {
               )}
             </p>
             <input
+              aria-label="Token bot Telegram"
               type="password"
               autoComplete="new-password"
               value={form.token}

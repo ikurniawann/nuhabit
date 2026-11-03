@@ -216,8 +216,8 @@ function Register({ channel, referralActive }: { channel: OtpChannel | null; ref
         {step === 0 ? (
           <div className="flex flex-col gap-4">
             <div>
-              <label className="nh-label">{t("Email")}</label>
-              <input
+              <label className="nh-label" htmlFor="register-email">{t("Email")}</label>
+              <input id="register-email" type="email" inputMode="email" autoComplete="email"
                 className="nh-input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -229,8 +229,8 @@ function Register({ channel, referralActive }: { channel: OtpChannel | null; ref
               ) : null}
             </div>
             <div>
-              <label className="nh-label">{t("WhatsApp number")}</label>
-              <input
+              <label className="nh-label" htmlFor="register-whatsapp-number">{t("WhatsApp number")}</label>
+              <input id="register-whatsapp-number" autoComplete="tel"
                 className="nh-input"
                 type="tel"
                 inputMode="tel"
@@ -241,8 +241,8 @@ function Register({ channel, referralActive }: { channel: OtpChannel | null; ref
             </div>
             {referralActive ? (
               <div>
-                <label className="nh-label">{t("Referral code (optional)")}</label>
-                <input
+                <label className="nh-label" htmlFor="register-referral-code-optional">{t("Referral code (optional)")}</label>
+                <input id="register-referral-code-optional"
                   className="nh-input uppercase"
                   value={referralCode}
                   onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
@@ -271,8 +271,8 @@ function Register({ channel, referralActive }: { channel: OtpChannel | null; ref
         {step === 1 ? (
           <div className="flex flex-col gap-4">
             <div>
-              <label className="nh-label">{t("Verification code")}</label>
-              <input
+              <label className="nh-label" htmlFor="register-verification-code">{t("Verification code")}</label>
+              <input id="register-verification-code"
                 className="nh-input text-center text-2xl tracking-[0.5em]"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -297,12 +297,12 @@ function Register({ channel, referralActive }: { channel: OtpChannel | null; ref
         {step === 2 ? (
           <div className="flex flex-col gap-4">
             <div>
-              <label className="nh-label">{t("Full name")}</label>
-              <input className="nh-input" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+              <label className="nh-label" htmlFor="register-full-name">{t("Full name")}</label>
+              <input id="register-full-name" autoComplete="name" className="nh-input" value={fullName} onChange={(e) => setFullName(e.target.value)} />
             </div>
             <div>
-              <label className="nh-label">{t("Date of birth")}</label>
-              <input
+              <label className="nh-label" htmlFor="register-date-of-birth">{t("Date of birth")}</label>
+              <input id="register-date-of-birth" autoComplete="bday"
                 type="date"
                 className="nh-input"
                 value={dateOfBirth}
@@ -337,16 +337,16 @@ function Register({ channel, referralActive }: { channel: OtpChannel | null; ref
         {step === 3 ? (
           <div className="flex flex-col gap-4">
             <div>
-              <label className="nh-label">{t("Contact name")}</label>
-              <input className="nh-input" value={ecName} onChange={(e) => setEcName(e.target.value)} />
+              <label className="nh-label" htmlFor="register-contact-name">{t("Contact name")}</label>
+              <input id="register-contact-name" className="nh-input" value={ecName} onChange={(e) => setEcName(e.target.value)} />
             </div>
             <div>
-              <label className="nh-label">{t("Contact phone")}</label>
-              <input className="nh-input" value={ecPhone} onChange={(e) => setEcPhone(e.target.value)} />
+              <label className="nh-label" htmlFor="register-contact-phone">{t("Contact phone")}</label>
+              <input id="register-contact-phone" type="tel" inputMode="tel" className="nh-input" value={ecPhone} onChange={(e) => setEcPhone(e.target.value)} />
             </div>
             <div>
-              <label className="nh-label">{t("Relationship")}</label>
-              <input
+              <label className="nh-label" htmlFor="register-relationship">{t("Relationship")}</label>
+              <input id="register-relationship"
                 className="nh-input"
                 value={ecRelation}
                 onChange={(e) => setEcRelation(e.target.value)}
