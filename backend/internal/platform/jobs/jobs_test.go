@@ -178,3 +178,33 @@ func TestAddRejectsBadJobs(t *testing.T) {
 		t.Fatalf("Names = %v", got)
 	}
 }
+
+// A burst of due jobs, as at startup, must not take more than the allowed
+// slots: on Postgres each run holds a connection and needs another.
+func TestRunnerBoundsConcurrentRuns(t *testing.T) {
+	r, _ := newRunner(&fakeLocker{}, time.Now())
+	var running, peak atomic.Int32
+	var wg sync.WaitGroup
+	for range maxConcurrentRuns * 5 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = r.RunOnce(context.Background(), Job{Name: "burst", Every: time.Minute, Run: func(context.Context, time.Time) error {
+				n := running.Add(1)
+				for {
+					old := peak.Load()
+					if n <= old || peak.CompareAndSwap(old, n) {
+						break
+					}
+				}
+				time.Sleep(5 * time.Millisecond)
+				running.Add(-1)
+				return nil
+			}})
+		}()
+	}
+	wg.Wait()
+	if got := peak.Load(); got < 1 || got > maxConcurrentRuns {
+		t.Fatalf("peak concurrent runs = %d, want 1..%d", got, maxConcurrentRuns)
+	}
+}

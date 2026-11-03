@@ -40,6 +40,7 @@ type Runner struct {
 	log    *slog.Logger
 	now    func() time.Time
 	jobs   []Job
+	slots  chan struct{}
 
 	runs        *metrics.CounterVec
 	failures    *metrics.CounterVec
@@ -47,6 +48,12 @@ type Runner struct {
 	lastSuccess *metrics.GaugeVec
 	duration    *metrics.HistogramVec
 }
+
+// maxConcurrentRuns bounds the jobs running at once. PostgresLocker holds a
+// pool connection for a whole run and the job queries on another, so a burst
+// of jobs as large as the pool, as at startup, waits on itself until the jobs
+// time out, and every HTTP request waits with them.
+const maxConcurrentRuns = 2
 
 // durationBuckets cover a quick sweep up to a slow reconciliation, in seconds.
 var durationBuckets = []float64{0.05, 0.1, 0.5, 1, 5, 15, 60, 300}
@@ -60,6 +67,7 @@ func NewRunner(locker Locker, log *slog.Logger, now func() time.Time, reg *metri
 		locker:      locker,
 		log:         log,
 		now:         now,
+		slots:       make(chan struct{}, maxConcurrentRuns),
 		runs:        reg.NewCounterVec("job_runs_total", "Background job runs started by this process.", "job"),
 		failures:    reg.NewCounterVec("job_failures_total", "Background job runs that returned an error, or could not take the lock.", "job"),
 		skipped:     reg.NewCounterVec("job_skipped_total", "Ticks skipped because another process held the job or it ran less than one interval ago.", "job"),
@@ -123,6 +131,12 @@ func (r *Runner) loop(ctx context.Context, j Job) {
 // RunOnce runs j now when the locker allows it. ran is false when it was
 // skipped. A run gets at most one interval; a panic counts as a failure.
 func (r *Runner) RunOnce(ctx context.Context, j Job) (ran bool, err error) {
+	select {
+	case r.slots <- struct{}{}:
+		defer func() { <-r.slots }()
+	case <-ctx.Done():
+		return false, ctx.Err()
+	}
 	if ctx.Err() != nil {
 		return false, ctx.Err()
 	}
