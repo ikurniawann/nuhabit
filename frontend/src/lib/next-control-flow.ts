@@ -1,4 +1,7 @@
-/** Next.js redirect/notFound throw special errors — must not be swallowed. */
+/**
+ * Next.js redirect/notFound and the "this route is dynamic" signal from
+ * cookies() during the build are special errors: they must not be swallowed.
+ */
 export function isNextControlFlowError(error: unknown): boolean {
   const digest =
     typeof error === "object" && error && "digest" in error
@@ -9,6 +12,7 @@ export function isNextControlFlowError(error: unknown): boolean {
     digest.startsWith("NEXT_REDIRECT") ||
     digest.startsWith("NEXT_NOT_FOUND") ||
     digest.startsWith("NEXT_HTTP_ERROR_FALLBACK") ||
+    digest === "DYNAMIC_SERVER_USAGE" ||
     message.includes("NEXT_REDIRECT") ||
     message.includes("NEXT_NOT_FOUND")
   );

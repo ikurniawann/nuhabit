@@ -69,3 +69,6 @@ frontend/e2e/.auth/
 frontend/e2e/playwright-report/
 frontend/e2e/test-results/
 frontend/e2e/*.log
+
+# Agent worktrees live inside the repo folder; never track them.
+.claude/worktrees/
