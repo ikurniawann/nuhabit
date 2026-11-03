@@ -3,6 +3,7 @@
 //
 //	go run ./cmd/demo-data -remove -dry-run   # list what would go and what stays, write nothing
 //	go run ./cmd/demo-data -remove            # delete the untouched demo rows
+//	go run ./cmd/demo-data -remove -other-users  # also delete every sign-in that is neither a super admin nor an employee
 //	go run ./cmd/demo-data -add               # load the demo set into a fresh database
 //
 // Target: DATABASE_URL (shell env, then backend/.env.local, then
@@ -27,9 +28,13 @@ func main() {
 	add := flag.Bool("add", false, "load the demo set (class types, coaches, packages, templates, site demo)")
 	dryRun := flag.Bool("dry-run", false, "with -remove: list what would be removed and what stays, write nothing")
 	allowRemote := flag.Bool("allow-remote", false, "allow a non-local target")
+	otherUsers := flag.Bool("other-users", false, "with -remove: also delete every sign-in that is neither a super admin nor an employee")
 	flag.Parse()
 	if *remove == *add {
 		fail("Pilih salah satu: -remove atau -add")
+	}
+	if *otherUsers && !*remove {
+		fail("-other-users hanya untuk -remove")
 	}
 
 	root := backendRoot()
@@ -46,6 +51,9 @@ func main() {
 			fmt.Println("Dry run: tidak ada yang ditulis.")
 		}
 		err = demo.Remove(ctx, db, *dryRun, os.Stdout)
+		if err == nil && *otherUsers {
+			err = demo.RemoveOtherUsers(ctx, db, *dryRun, os.Stdout)
+		}
 	}
 	if err != nil {
 		fail("ERROR: " + err.Error())

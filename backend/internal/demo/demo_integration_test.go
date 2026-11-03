@@ -169,10 +169,11 @@ func TestRemoveDeletesFixtures(t *testing.T) {
 		t.Fatalf("missing fixture summary: %s", out.String())
 	}
 	for sql, want := range map[string]string{
-		`SELECT count(*)::text FROM auth.users WHERE email LIKE 'demo-%@nuhabit.test'`:     "0",
-		`SELECT count(*)::text FROM hris.employees WHERE nip = 'DEMO-COACH'`:               "0",
-		`SELECT count(*)::text FROM gym.coaches WHERE lower(name) = 'demo coach'`:          "0",
-		`SELECT count(*)::text FROM pos.pos_customers WHERE phone = '` + memberPhone + `'`: "0",
+		`SELECT count(*)::text FROM auth.users WHERE email LIKE 'demo-%@nuhabit.test'`:        "1",
+		`SELECT count(*)::text FROM auth.users WHERE email = 'demo-super_admin@nuhabit.test'`: "1",
+		`SELECT count(*)::text FROM hris.employees WHERE nip = 'DEMO-COACH'`:                  "0",
+		`SELECT count(*)::text FROM gym.coaches WHERE lower(name) = 'demo coach'`:             "0",
+		`SELECT count(*)::text FROM pos.pos_customers WHERE phone = '` + memberPhone + `'`:    "0",
 	} {
 		if got := scalar(t, tx, sql); got != want {
 			t.Fatalf("%s = %s, want %s", sql, got, want)
@@ -183,6 +184,41 @@ func TestRemoveDeletesFixtures(t *testing.T) {
 	}
 	if got := scalar(t, tx, `SELECT tgenabled::text FROM pg_trigger WHERE tgname = 'trg_gym_credit_ledger_append_only'`); got != "O" {
 		t.Fatalf("the ledger trigger must be back on, got %q", got)
+	}
+}
+
+// RemoveOtherUsers keeps super admins and employees and lists the rest; a dry
+// run lists them and writes nothing.
+func TestRemoveOtherUsers(t *testing.T) {
+	tx := testutil.Tx(t)
+	ctx := context.Background()
+	if _, err := EnsureUsers(ctx, tx, Options{}); err != nil {
+		t.Fatal(err)
+	}
+	count := func(email string) string {
+		return scalar(t, tx, `SELECT count(*)::text FROM auth.users WHERE email = $1`, email)
+	}
+	var out bytes.Buffer
+	if err := RemoveOtherUsers(ctx, tx, true, &out); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "demo-marketing@nuhabit.test") || count("demo-marketing@nuhabit.test") != "1" {
+		t.Fatalf("dry run must list and keep the account: %s", out.String())
+	}
+	if err := RemoveOtherUsers(ctx, tx, false, &out); err != nil {
+		t.Fatal(err)
+	}
+	for email, want := range map[string]string{
+		"demo-marketing@nuhabit.test":   "0",
+		"demo-super_admin@nuhabit.test": "1", // super admin
+		"demo-gym_coach@nuhabit.test":   "1", // has an employee record
+	} {
+		if got := count(email); got != want {
+			t.Fatalf("%s = %s, want %s", email, got, want)
+		}
+	}
+	if got := scalar(t, tx, `SELECT count(*)::text FROM configuration.users WHERE email = 'demo-marketing@nuhabit.test'`); got != "0" {
+		t.Fatalf("profile left behind: %s", got)
 	}
 }
 

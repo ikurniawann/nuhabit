@@ -168,6 +168,7 @@ the `DEMO-COACH`, `E2E-STAFF` and `BCD-*` employees, and the E2E promo.
 cd backend
 go run ./cmd/demo-data -remove -dry-run   # list what would be removed and what stays, write nothing
 go run ./cmd/demo-data -remove            # delete the untouched demo rows
+go run ./cmd/demo-data -remove -other-users  # also delete every sign-in that is neither a super admin nor an employee
 go run ./cmd/demo-data -add               # load the demo set into a fresh database for walkthroughs
 ```
 
@@ -176,8 +177,11 @@ remote target needs `-allow-remote` or `ALLOW_REMOTE_DB=1`.
 
 `-remove` deletes the fixtures with everything they own (sessions, bookings,
 credit ledger, payroll); other rows that point at them keep existing with
-the reference cleared. `dev-super@example.test` stays so a local database
-can still be opened. Run `database/scripts/e2e-seed.js` before the next
+the reference cleared. `dev-super@example.test` and every account with the
+`super_admin` role stay, `demo-super_admin@nuhabit.test` included, so the
+dashboard can still be opened. `-other-users` goes further and takes the rows
+those accounts own. Never run it where staff without an employee record are
+real; read its `-dry-run` list first. Run `database/scripts/e2e-seed.js` before the next
 Playwright run. A site page staff edited (`updated_by` set) stays.
 
 For the demo catalog, `-remove` only deletes a row when nothing outside the

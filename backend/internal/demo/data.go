@@ -373,7 +373,7 @@ var errDryRun = errors.New("demo: dry run")
 // account for what the fixtures were holding.
 func Remove(ctx context.Context, db database.DB, dryRun bool, out io.Writer) error {
 	err := database.WithTx(ctx, db, func(tx pgx.Tx) error {
-		counts, err := removeFixtures(ctx, tx)
+		counts, err := removeRows(ctx, tx, fixtures)
 		if err != nil {
 			return err
 		}
@@ -387,6 +387,40 @@ func Remove(ctx context.Context, db database.DB, dryRun bool, out io.Writer) err
 			return errDryRun
 		}
 		return Apply(ctx, tx, plan)
+	})
+	if errors.Is(err, errDryRun) {
+		return nil
+	}
+	return err
+}
+
+// RemoveOtherUsers deletes every sign-in that is neither a super admin nor
+// an employee, with what they own, and lists the accounts it takes. It is a
+// separate step because Remove must stay safe on a live database, where a
+// staff account without an employee record can be real.
+func RemoveOtherUsers(ctx context.Context, db database.DB, dryRun bool, out io.Writer) error {
+	err := database.WithTx(ctx, db, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT COALESCE(email, id::text) FROM auth.users WHERE `+otherUsers+` ORDER BY 1`)
+		if err != nil {
+			return err
+		}
+		emails, err := pgx.CollectRows(rows, pgx.RowTo[string])
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "Akun lain di luar super admin dan karyawan: %d\n", len(emails))
+		for _, email := range emails {
+			fmt.Fprintf(out, "  %s\n", email)
+		}
+		counts, err := removeRows(ctx, tx, []rowSet{{"auth.users", otherUsers}, {"configuration.users", otherUsers}})
+		if err != nil {
+			return err
+		}
+		printFixtures(out, counts, dryRun)
+		if dryRun {
+			return errDryRun
+		}
+		return nil
 	})
 	if errors.Is(err, errDryRun) {
 		return nil

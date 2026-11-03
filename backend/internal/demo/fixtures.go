@@ -9,13 +9,16 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// rowSet is the rows of one table that a removal purges.
+type rowSet struct{ table, where string }
+
 // Fixtures are test rows the seeders and Playwright create: sign-in
 // accounts, members, employees and the local apparel tenant. Unlike the demo
 // catalog, nothing real hangs off them, so what they own goes with them.
 //
 // Keep local sign-ins such as dev-super@example.test off this list: removing
 // them locks the developer out of the dashboard.
-var fixtures = []struct{ table, where string }{
+var fixtures = []rowSet{
 	{"auth.users", fixtureEmails},
 	{"configuration.users", fixtureEmails},
 	{"pos.pos_customers", `phone ~ '^0812000000[0-9]{2}$' OR phone = '081200000999' OR phone LIKE '08999000%'
@@ -35,8 +38,16 @@ var fixtures = []struct{ table, where string }{
 	{"promo.promo_campaigns", `name LIKE 'E2E%'`},
 }
 
-const fixtureEmails = `lower(email) LIKE 'demo-%@nuhabit.test' OR lower(email) LIKE 'e2e-%@nuhabit.test'
-	OR lower(email) IN ('demo@sulu.id', 'demo@suluapparel.id', 'apparel@arkivworld.com')`
+const fixtureEmails = `(lower(email) LIKE 'demo-%@nuhabit.test' OR lower(email) LIKE 'e2e-%@nuhabit.test'
+	OR lower(email) IN ('demo@sulu.id', 'demo@suluapparel.id', 'apparel@arkivworld.com')) AND ` + notSuperAdmin
+
+// notSuperAdmin keeps every super admin, so no removal can lock the dashboard.
+const notSuperAdmin = `id NOT IN (
+	SELECT ur.user_id FROM iam.user_roles ur JOIN iam.roles r ON r.id = ur.role_id WHERE r.code = 'super_admin'
+	UNION SELECT id FROM configuration.users WHERE role = 'super_admin')`
+
+// otherUsers are sign-ins that are neither a super admin nor an employee.
+const otherUsers = notSuperAdmin + ` AND id NOT IN (SELECT user_id FROM hris.employees WHERE user_id IS NOT NULL)`
 
 // ownerColumns are nullable references that mean "this row belongs to the
 // parent": the row goes with a fixture parent. Other nullable references,
@@ -89,16 +100,16 @@ func purge(ctx context.Context, tx pgx.Tx, table string, ids []string, counts ma
 	return nil
 }
 
-// removeFixtures deletes every fixture on tx and returns the rows per table.
-// The credit ledger refuses deletes by trigger; a fixture's ledger is test
-// data, so the trigger is lifted until the fixtures are gone. A failure rolls
-// the lift back with the transaction.
-func removeFixtures(ctx context.Context, tx pgx.Tx) (map[string]int64, error) {
+// removeRows deletes every row set on tx and returns the rows per table.
+// The credit ledger refuses deletes by trigger; these rows' ledger is test
+// data, so the trigger is lifted until they are gone. A failure rolls the
+// lift back with the transaction.
+func removeRows(ctx context.Context, tx pgx.Tx, sets []rowSet) (map[string]int64, error) {
 	if _, err := tx.Exec(ctx, `ALTER TABLE gym.credit_ledger DISABLE TRIGGER trg_gym_credit_ledger_append_only`); err != nil {
 		return nil, err
 	}
 	counts := map[string]int64{}
-	for _, f := range fixtures {
+	for _, f := range sets {
 		rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT id::text FROM %s WHERE %s`, f.table, f.where))
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", f.table, err)
