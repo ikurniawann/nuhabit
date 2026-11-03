@@ -61,7 +61,7 @@ export function CheckoutDrawer({
 
   const checkout = useMutation({
     mutationFn: async () => {
-      if (!selectedArea || !selectedRate) throw new Error('Pilih kurir dulu');
+      if (!selectedArea || !selectedRate) throw new Error('Choose a courier first');
       return submitShopCheckout(slug, buildCheckoutPayload({
         lines: cart,
         customer: { name: custName, phone: custPhone, email: custEmail },
@@ -80,7 +80,7 @@ export function CheckoutDrawer({
       if ('status' in result && result.status === 'paid') onPaid();
       window.location.assign('invoice_url' in result ? result.invoice_url : result.statusUrl);
     },
-    onError: (error) => setFormError(error instanceof Error ? error.message : 'Checkout gagal'),
+    onError: (error) => setFormError(error instanceof Error ? error.message : 'Checkout failed'),
   });
 
   if (!open) return null;
@@ -108,9 +108,9 @@ export function CheckoutDrawer({
   };
 
   const ratesError = ratesMutation.isError
-    ? ratesMutation.error.message || 'Gagal cek ongkir'
+    ? ratesMutation.error.message || 'Could not check shipping rates'
     : ratesMutation.isSuccess && rates.length === 0 && ratesMutation.data.signature === signature
-      ? 'Tidak ada layanan kurir ke area ini'
+      ? 'No courier delivers to this area'
       : null;
   const message = formError ?? ratesError;
   const subtotal = cartSubtotal(cart);
@@ -119,8 +119,8 @@ export function CheckoutDrawer({
     <div className="fixed inset-0 z-40 flex justify-end bg-black/40">
       <div className="flex h-full w-full max-w-md flex-col bg-white">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <h2 className="text-base font-semibold text-gray-900">Pengiriman & Pembayaran</h2>
-          <button type="button" onClick={onClose} aria-label="Tutup">
+          <h2 className="text-base font-semibold text-gray-900">Shipping & Payment</h2>
+          <button type="button" onClick={onClose} aria-label="Close">
             <X className="h-5 w-5 text-gray-400" />
           </button>
         </div>
@@ -129,26 +129,26 @@ export function CheckoutDrawer({
             <input
               value={custName}
               onChange={(e) => setCustName(e.target.value)}
-              aria-label="Nama penerima"
+              aria-label="Recipient name"
               autoComplete="name"
-              placeholder="Nama penerima"
+              placeholder="Recipient name"
               className={INPUT_CLASS}
             />
             <input
               value={custPhone}
               onChange={(e) => setCustPhone(e.target.value)}
-              aria-label="No. WhatsApp"
+              aria-label="WhatsApp number"
               autoComplete="tel"
-              placeholder="No. WhatsApp (utk konfirmasi & member)"
+              placeholder="WhatsApp number (for confirmation and membership)"
               inputMode="tel"
               className={INPUT_CLASS}
             />
             <input
               value={custEmail}
               onChange={(e) => setCustEmail(e.target.value)}
-              aria-label="Email (opsional)"
+              aria-label="Email (optional)"
               autoComplete="email"
-              placeholder="Email (opsional)"
+              placeholder="Email (optional)"
               inputMode="email"
               className={INPUT_CLASS}
             />
@@ -163,9 +163,9 @@ export function CheckoutDrawer({
                 ratesMutation.reset();
                 setAreaQuery(e.target.value);
               }}
-              aria-label="Kecamatan atau kota tujuan"
+              aria-label="Destination district or city"
               autoComplete="off"
-              placeholder="Cari kecamatan/kota tujuan..."
+              placeholder="Search destination district or city..."
               className={INPUT_CLASS}
             />
             <AreaSuggestions areas={areas} onSelect={selectArea} />
@@ -174,9 +174,9 @@ export function CheckoutDrawer({
           <textarea
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            aria-label="Alamat lengkap"
+            aria-label="Full address"
             autoComplete="street-address"
-            placeholder="Alamat lengkap (jalan, nomor, RT/RW, patokan)"
+            placeholder="Full address (street, number, RT/RW, landmark)"
             rows={3}
             className={INPUT_CLASS}
           />
@@ -226,7 +226,7 @@ export function CheckoutDrawer({
             <span className="text-gray-900">{formatRupiah(subtotal)}</span>
           </div>
           <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="text-gray-500">Ongkir</span>
+            <span className="text-gray-500">Shipping</span>
             <span className="text-gray-900">{selectedRate ? formatRupiah(selectedRate.total_price) : '—'}</span>
           </div>
           <div className="mb-3 flex items-center justify-between text-base font-semibold">
