@@ -45,11 +45,13 @@ import { CartDrawer } from './cart-drawer';
 import { CatalogFilterBar } from './catalog-filter-bar';
 import { CheckoutSheet } from './checkout-sheet';
 import { CollectionNav } from './collection-nav';
+import { HowToUseSheet } from './how-to-use-sheet';
 import { ProductGrid } from './product-card';
 import { ProductDetailSheet } from './product-detail-sheet';
 import { ProductRow } from './product-row';
 import { PromoBanner } from './promo-banner';
 import { StorefrontHero } from './storefront-hero';
+import { StoreQuickSearch } from './store-quick-search';
 
 export function ShopStorefrontPage({ slug }: { slug: string }) {
   const catalog = useStorefrontCatalog(slug);
@@ -60,6 +62,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
   // cart. null means checkout uses the cart.
   const [buyNow, setBuyNow] = useState<{ lines: CartLine[]; note: string; promo: AppliedPromo | null } | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [howToOpen, setHowToOpen] = useState(false);
   const [pendingOrderUrl, setPendingOrderUrl] = useState<string | null>(null);
   // Filters live in the URL query (the server render shows the loader, so
   // reading the query here never changes the first markup).
@@ -194,6 +197,25 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
 
       <div className="px-3 py-3 md:px-4">
         {pendingOrderUrl ? <Link href={pendingOrderUrl} className="mb-4 block rounded-xl border border-forest/20 bg-lemon px-4 py-3 text-sm font-semibold text-forest">You have an order awaiting payment. Check its status or continue paying →</Link> : null}
+        <div className="relative z-10 mb-3 flex items-center gap-2">
+          {products.length > 0 ? (
+            <StoreQuickSearch
+              products={products}
+              onSelect={openProduct}
+              onSeeAll={(query) => {
+                setFilters({ ...EMPTY_FILTERS, search: query });
+                document.getElementById('shop-products')?.scrollIntoView();
+              }}
+            />
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setHowToOpen(true)}
+            className="ml-auto h-11 shrink-0 rounded-full border border-border bg-white px-4 text-sm font-semibold text-forest hover:bg-surface"
+          >
+            How to use
+          </button>
+        </div>
         <StorefrontHero storefront={storefront} products={products} onSelect={openProduct} />
 
         {storefront.banner ? <PromoBanner banner={storefront.banner} onCopyCode={copyBannerCode} /> : null}
@@ -237,6 +259,8 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
           ))
         )}
       </div>
+
+      {howToOpen ? <HowToUseSheet onClose={() => setHowToOpen(false)} /> : null}
 
       {detailProduct ? (
         <ProductDetailSheet
