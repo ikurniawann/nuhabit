@@ -4,12 +4,8 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Loader2, Truck, X } from 'lucide-react';
 import { formatRupiah } from '@/lib/format';
-import {
-  cartSignature,
-  cartSubtotal,
-  checkoutFormError,
-  type CartLine,
-} from '@/lib/shop/storefront-cart';
+import { cartSignature, cartSubtotal, type CartLine } from '@/lib/shop/storefront-cart';
+import { buildCheckoutPayload, checkoutDraftError } from '@/lib/shop/storefront-checkout';
 import { useAreaSearch, type AreaSuggestion } from '@/features/shop/shared/area-search';
 import { AreaSuggestions } from '@/features/shop/shared/area-suggestions';
 import { fetchShippingRates, submitShopCheckout, type RateQuote } from '../queries';
@@ -66,22 +62,23 @@ export function CheckoutDrawer({
   const checkout = useMutation({
     mutationFn: async () => {
       if (!selectedArea || !selectedRate) throw new Error('Pilih kurir dulu');
-      return submitShopCheckout(slug, {
-        items: cart.map((line) => ({ product_id: line.productId, sku_id: line.skuId, quantity: line.quantity })),
-        customer: { name: custName.trim(), phone: custPhone.trim(), email: custEmail.trim() || null },
-        destination: {
-          area_id: selectedArea.id,
-          label: selectedArea.label,
-          postal_code: selectedArea.postalCode,
-          address: address.trim(),
-        },
-        courier: { code: selectedRate.courierCode, service_code: selectedRate.serviceCode },
-        notes: note.trim() || null,
-      });
+      return submitShopCheckout(slug, buildCheckoutPayload({
+        lines: cart,
+        customer: { name: custName, phone: custPhone, email: custEmail },
+        method: 'ship',
+        branchId: null,
+        area: selectedArea,
+        address,
+        courier: { code: selectedRate.courierCode, serviceCode: selectedRate.serviceCode },
+        promo: null,
+        payment: 'xendit',
+        note,
+      }));
     },
-    onSuccess: ({ invoice_url }) => {
-      onPaid();
-      window.location.assign(invoice_url);
+    onSuccess: (result) => {
+      // An invoice is an unpaid order. Keep the cart until payment succeeds.
+      if ('status' in result && result.status === 'paid') onPaid();
+      window.location.assign('invoice_url' in result ? result.invoice_url : result.statusUrl);
     },
     onError: (error) => setFormError(error instanceof Error ? error.message : 'Checkout gagal'),
   });
@@ -96,13 +93,16 @@ export function CheckoutDrawer({
   };
 
   const submit = () => {
-    const error = checkoutFormError({
+    const error = checkoutDraftError({
       name: custName,
       phone: custPhone,
+      email: custEmail,
+      method: 'ship',
+      branchId: null,
       address,
       hasArea: selectedArea !== null,
       hasRate: selectedRate !== null,
-    });
+    }, []);
     setFormError(error);
     if (!error) checkout.mutate();
   };
