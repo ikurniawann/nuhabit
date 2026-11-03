@@ -147,6 +147,45 @@ func TestRemoveKeepsTouchedRows(t *testing.T) {
 	}
 }
 
+// Remove takes the demo accounts with everything they own, including a
+// credit ledger, and leaves the real member alone.
+func TestRemoveDeletesFixtures(t *testing.T) {
+	real := testutil.CreateMember(t)
+	tx := testutil.Tx(t)
+	ctx := context.Background()
+	if _, err := EnsureUsers(ctx, tx, Options{}); err != nil {
+		t.Fatal(err)
+	}
+	member := scalar(t, tx, `SELECT id::text FROM pos.pos_customers WHERE phone = $1`, memberPhone)
+	exec(t, tx, `INSERT INTO gym.credit_lots (customer_id, credits, expires_at) VALUES ($1, 5, now() + interval '30 days')`, member)
+	exec(t, tx, `INSERT INTO gym.credit_ledger (customer_id, lot_id, type, amount, idempotency_key)
+		SELECT $1, id, 'adjustment', 5, 'demo-fixture-' || id::text FROM gym.credit_lots WHERE customer_id = $1`, member)
+
+	var out bytes.Buffer
+	if err := Remove(ctx, tx, false, &out); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "Data uji dihapus") {
+		t.Fatalf("missing fixture summary: %s", out.String())
+	}
+	for sql, want := range map[string]string{
+		`SELECT count(*)::text FROM auth.users WHERE email LIKE 'demo-%@nuhabit.test'`:     "0",
+		`SELECT count(*)::text FROM hris.employees WHERE nip = 'DEMO-COACH'`:               "0",
+		`SELECT count(*)::text FROM gym.coaches WHERE lower(name) = 'demo coach'`:          "0",
+		`SELECT count(*)::text FROM pos.pos_customers WHERE phone = '` + memberPhone + `'`: "0",
+	} {
+		if got := scalar(t, tx, sql); got != want {
+			t.Fatalf("%s = %s, want %s", sql, got, want)
+		}
+	}
+	if got := scalar(t, tx, `SELECT count(*)::text FROM pos.pos_customers WHERE id = $1`, real.CustomerID); got != "1" {
+		t.Fatal("a real member must stay")
+	}
+	if got := scalar(t, tx, `SELECT tgenabled::text FROM pg_trigger WHERE tgname = 'trg_gym_credit_ledger_append_only'`); got != "O" {
+		t.Fatalf("the ledger trigger must be back on, got %q", got)
+	}
+}
+
 // Demo accounts are created once and reset on re-run; the coach gets its
 // employee, salary and coach rows; missing roles are skipped.
 func TestEnsureUsers(t *testing.T) {

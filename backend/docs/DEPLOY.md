@@ -214,10 +214,9 @@ the detail of each step.
 3. Demo content removed: `go run ./cmd/demo-data -remove -dry-run
    -allow-remote` against the target, read the kept rows and their
    reasons, then run it without `-dry-run`. Do this before the real data
-   goes in, so nothing real references a demo row by then. Demo accounts
-   from `cmd/demo-users` (`demo-*@nuhabit.test`) must not exist on
-   production; disable them in Manajemen User if a copy of a demo
-   database was promoted.
+   goes in, so nothing real references a demo row by then. The same
+   command deletes the demo accounts from `cmd/demo-users`
+   (`demo-*@nuhabit.test`) and the test fixtures.
 4. Real data entered in the order of DATA_SETUP.md: companies and branches
    (with their time zones), departments and positions, login accounts and
    employees, class types and coaches, schedule templates (then `Generate

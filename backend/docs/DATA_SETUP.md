@@ -126,6 +126,26 @@ Opening balances carry no money, so they never touch the journals; the
 deferred revenue of packages sold before go-live is a separate step, see
 [GYM_OPENING_BALANCE.md](GYM_OPENING_BALANCE.md).
 
+Employees from the HR sheet (`Data Karyawan`, with identity, bank and PKWT
+columns the CSV template lacks) load through a seeder. The sheet holds NIK,
+NPWP and account numbers, so it stays out of the repo and the path is
+required:
+
+```
+cd backend/database
+node seeders/hris-employees-from-xlsx.js --xlsx="/path/Data Karyawan.xlsx" --dry-run
+HRIS_SEED_PASSWORD=<password> node seeders/hris-employees-from-xlsx.js --xlsx="/path/Data Karyawan.xlsx"
+```
+
+Rows match on NIK, then email, so a corrected sheet can run again. A row with
+`PKWT` = `Y` gets an active contract. The sheet has no department column: the
+seeder derives it from the position title, so check new titles in the dry run.
+Each employee gets a login on the sheet's email with the `employee` role (ESS
+menus only); raise the role in Manajemen User. `HRIS_SEED_PASSWORD` sets the
+password of new accounts, and without it the seeder prints one random password
+once. Existing accounts keep their password and role. The seeder also lists
+employees missing from the sheet. A remote target needs `--allow-remote`.
+
 ## Demo data
 
 A fresh database carries demo content from the migrations (the class types
@@ -136,8 +156,13 @@ Trial Class, Starter 5, 10 Visit Pack, 20 Visit Pack, Race Prep Block,
 PT 1 Sesi, PT 10 Sesi and the four passes; two weeks of sessions and the
 weekly templates behind them) and, when `site-demo.sql` ran, the branches
 DEMO-SENOPATI and DEMO-CANGGU, the class types Station, Engine and Race
-Sim, twelve "Demo Booker" customers with their bookings, and the demo
-articles and events.
+Sim, twelve "Demo Booker" customers with their bookings, the demo articles
+and events, and the `home` and `training` site pages.
+
+Seeders and Playwright add test fixtures: the `demo-*` and `e2e-*` accounts,
+`demo@sulu.id`, the Sulu Apparel tenant with its catalog and stock, members
+on the demo phone numbers or `@nuhabit.test` and `@example.test` emails,
+the `DEMO-COACH`, `E2E-STAFF` and `BCD-*` employees, and the E2E promo.
 
 ```
 cd backend
@@ -149,8 +174,15 @@ go run ./cmd/demo-data -add               # load the demo set into a fresh datab
 Target: `DATABASE_URL` (shell env, then `.env.local`, then `.env`). A
 remote target needs `-allow-remote` or `ALLOW_REMOTE_DB=1`.
 
-`-remove` only deletes a demo row when nothing outside the demo set still
-references it, checked through every foreign key in the database. A demo
+`-remove` deletes the fixtures with everything they own (sessions, bookings,
+credit ledger, payroll); other rows that point at them keep existing with
+the reference cleared. `dev-super@example.test` stays so a local database
+can still be opened. Run `database/scripts/e2e-seed.js` before the next
+Playwright run. A site page staff edited (`updated_by` set) stays.
+
+For the demo catalog, `-remove` only deletes a row when nothing outside the
+demo set still references it, checked through every foreign key in the
+database. A demo
 session with a real booking stays, and with it its class type, coach and
 template; a package someone bought stays; a session a staff member
 created with a demo class type keeps that class type. The dry run lists

@@ -15,6 +15,7 @@
     "db:seed:sulu-stall-purchasing": "node seeders/sulu-stall-purchasing-users.js",
     "db:seed:hris-master": "node seeders/hris-master-data.js",
     "db:seed:hris-from-xlsx": "node seeders/reset-hris-from-employee-xlsx.js",
+    "db:seed:hris-employees": "node seeders/hris-employees-from-xlsx.js",
     "db:seed:items-from-draft-menu": "node seeders/reset-items-from-draft-menu.js",
     "db:seed:items-from-menu-matrix": "node seeders/reset-items-from-menu-matrix.js",
     "db:seed:items-units": "node seeders/items-units.js",

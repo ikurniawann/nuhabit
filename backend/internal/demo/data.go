@@ -1,6 +1,7 @@
 // Package demo adds and removes the seeded demo gym content (class types,
 // coaches, packages, schedule templates, the site demo sessions, bookers
-// and branches) and creates the demo staff accounts. cmd/demo-data and
+// and branches) and the test fixtures, and creates the demo staff accounts.
+// cmd/demo-data and
 // cmd/demo-users wrap it; see backend/docs/DATA_SETUP.md.
 package demo
 
@@ -25,7 +26,8 @@ var (
 		"Station", "Engine", "Race Sim", "Personal Training", "Small Group PT"}
 	Coaches  = []string{"Kevin Hartono", "Maya Kusuma", "Rizky Ramadhan", "Tara Widjaja"}
 	Packages = []string{"Trial Class", "Starter 5", "10 Visit Pack", "20 Visit Pack", "Race Prep Block",
-		"Pass 4 Minggu", "Pass 8 Minggu", "Pass 6 Bulan", "Holiday Pass 1 Minggu", "PT 1 Sesi", "PT 10 Sesi"}
+		"Pass 4 Minggu", "Pass 8 Minggu", "Pass 6 Bulan", "Holiday Pass 1 Minggu", "PT 1 Sesi", "PT 10 Sesi",
+		"4-Week Pass", "8-Week Pass", "6-Month Pass", "1-Week Holiday Pass"}
 	BranchCodes = []string{"DEMO-SENOPATI", "DEMO-CANGGU"}
 )
 
@@ -56,7 +58,7 @@ type Plan struct {
 // referencing it is removed too, so children come first.
 var tableOrder = []string{
 	"gym.bookings", "gym.class_sessions", "gym.session_templates", "gym.credit_packages",
-	"gym.class_types", "gym.coaches", "configuration.branches", "site.articles", "site.events", "pos.pos_customers",
+	"gym.class_types", "gym.coaches", "configuration.branches", "site.articles", "site.events", "pos.pos_customers", "site.content", "item.brands",
 }
 
 // dependents hold rows that only exist for their parent and go with it
@@ -96,6 +98,11 @@ func candidates(ctx context.Context, q database.Querier) (map[string][]Item, err
 		"configuration.branches": {`SELECT id::text, name || ' (' || code || ')' FROM configuration.branches WHERE code = ANY($1) ORDER BY code`, []any{BranchCodes}},
 		"site.articles":          {`SELECT id::text, slug FROM site.articles WHERE slug LIKE 'demo-%' ORDER BY slug`, nil},
 		"site.events":            {`SELECT id::text, slug FROM site.events WHERE slug LIKE 'demo-%' ORDER BY slug`, nil},
+		// Staff edits set updated_by, so edited pages stay; the code defaults take over for the rest.
+		"site.content": {`SELECT key, key FROM site.content WHERE key IN ('home', 'training') AND updated_by IS NULL ORDER BY key`, nil},
+		// The branch sync trigger leaves a brand behind for every demo branch and integration test branch.
+		"item.brands": {`SELECT id::text, name FROM item.brands
+			WHERE name ~ '^([A-Z] [0-9a-f]{8}$|Go Test )' OR name IN ('Canggu', 'Senopati', 'Sulu Apparel Workshop') ORDER BY name`, nil},
 	}
 	out := map[string][]Item{}
 	for _, table := range tableOrder {
@@ -130,28 +137,30 @@ func tableExists(ctx context.Context, q database.Querier, table string) (bool, e
 	return exists, err
 }
 
-// foreignKey is one single-column foreign key pointing at a table.
+// foreignKey is one single-column foreign key pointing at a table's id.
 type foreignKey struct {
 	Table, Column string
+	Nullable      bool
 	HasID         bool // the referencing table has an id column
 }
 
-// foreignKeysTo lists the single-column foreign keys that reference table.
+// foreignKeysTo lists the single-column foreign keys that reference table's id.
 func foreignKeysTo(ctx context.Context, q database.Querier, table string) ([]foreignKey, error) {
-	rows, err := q.Query(ctx, `SELECT n.nspname || '.' || r.relname, a.attname,
+	rows, err := q.Query(ctx, `SELECT n.nspname || '.' || r.relname, a.attname, NOT a.attnotnull,
 			EXISTS (SELECT 1 FROM pg_attribute i WHERE i.attrelid = r.oid AND i.attname = 'id' AND NOT i.attisdropped)
 		FROM pg_constraint c
 		JOIN pg_class r ON r.oid = c.conrelid
 		JOIN pg_namespace n ON n.oid = r.relnamespace
 		JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
-		WHERE c.contype = 'f' AND c.confrelid = $1::regclass AND array_length(c.conkey, 1) = 1
+		JOIN pg_attribute t ON t.attrelid = c.confrelid AND t.attnum = c.confkey[1]
+		WHERE c.contype = 'f' AND c.confrelid = $1::regclass AND array_length(c.conkey, 1) = 1 AND t.attname = 'id'
 		ORDER BY 1, 2`, table)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (foreignKey, error) {
 		var fk foreignKey
-		err := r.Scan(&fk.Table, &fk.Column, &fk.HasID)
+		err := r.Scan(&fk.Table, &fk.Column, &fk.Nullable, &fk.HasID)
 		return fk, err
 	})
 }
@@ -314,6 +323,12 @@ func Apply(ctx context.Context, tx pgx.Tx, plan *Plan) error {
 				return fmt.Errorf("%s: %w", fk.Table, err)
 			}
 		}
+		if table == "site.content" {
+			if _, err := tx.Exec(ctx, `DELETE FROM site.content WHERE key = ANY($1)`, ids); err != nil {
+				return fmt.Errorf("%s: %w", table, err)
+			}
+			continue
+		}
 		if _, err := tx.Exec(ctx, fmt.Sprintf(`DELETE FROM %s WHERE id = ANY($1::uuid[])`, table), ids); err != nil {
 			return fmt.Errorf("%s: %w", table, err)
 		}
@@ -353,9 +368,16 @@ func (p *Plan) Print(w io.Writer, dryRun bool) {
 
 var errDryRun = errors.New("demo: dry run")
 
-// Remove plans and, unless dryRun, deletes the demo rows in one transaction.
+// Remove deletes the test fixtures, then plans and deletes the demo rows, in
+// one transaction. A dry run does the same and rolls back, so its numbers
+// account for what the fixtures were holding.
 func Remove(ctx context.Context, db database.DB, dryRun bool, out io.Writer) error {
 	err := database.WithTx(ctx, db, func(tx pgx.Tx) error {
+		counts, err := removeFixtures(ctx, tx)
+		if err != nil {
+			return err
+		}
+		printFixtures(out, counts, dryRun)
 		plan, err := PlanRemoval(ctx, tx)
 		if err != nil {
 			return err
