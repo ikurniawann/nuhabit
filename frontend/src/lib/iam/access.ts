@@ -33,6 +33,9 @@ export const ESS_HOME_PATH = "/dashboard/me";
 export const TASKS_HOME_PATH = "/dashboard/tasks";
 
 /** True bila path berada di dalam Area Karyawan (ESS). */
+/** The staff guide; every signed-in user may open it, whatever their menus. */
+export const HOW_TO_USE_PATH = "/dashboard/how-to-use"
+
 export function isEssPath(pathname: string): boolean {
   return pathname === ESS_HOME_PATH || pathname.startsWith(`${ESS_HOME_PATH}/`);
 }

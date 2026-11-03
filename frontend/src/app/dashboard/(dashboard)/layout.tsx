@@ -10,6 +10,7 @@ import {
 import {
   allowedModulePaths,
   canAccessPath,
+  HOW_TO_USE_PATH,
   isEssPath,
   isPathAllowedByMenus,
   ESS_HOME_PATH,
@@ -56,6 +57,7 @@ export default async function DashboardGroupLayout({
   const allowed =
     !pathname ||
     isEssPath(pathname) ||
+    pathname === HOW_TO_USE_PATH ||
     menuAllowed ||
     fallbackAllowed;
   // Halaman fitur loyalty nonaktif (ARK Coin / XP). Guard menu di atas cocok

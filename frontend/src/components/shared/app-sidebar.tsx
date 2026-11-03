@@ -11,6 +11,7 @@ import {
   Loader2,
   LogOut,
   Monitor,
+  CircleHelp,
   MonitorSmartphone,
   Moon,
   PanelLeftClose,
@@ -55,9 +56,9 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { brandOsName } from "@/lib/branding";
 import type { NavItem } from "@/lib/iam/types";
-import { isEssOnlyRole } from "@/lib/iam/access";
+import { HOW_TO_USE_PATH, isEssOnlyRole } from "@/lib/iam/access";
 import { buildNavBreadcrumbs } from "@/lib/iam/nav-breadcrumbs";
-import { flattenNavLeaves } from "@/lib/iam/nav-leaves";
+import { flattenNavLeaves, type NavLeaf } from "@/lib/iam/nav-leaves";
 import { useNavFrom } from "@/lib/iam/use-nav-from";
 import AppSidebarNav from "./app-sidebar-nav";
 import { DashboardBreadcrumbs } from "./dashboard-breadcrumbs";
@@ -150,6 +151,7 @@ function AppSidebarContent({
   const [accountOpen, setAccountOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const leaves = useMemo(() => flattenNavLeaves(navItems), [navItems]);
+  const searchLeaves = useMemo(() => [...leaves, HOW_TO_USE_LEAF], [leaves]);
   const useActivityNotification = pathname.startsWith("/dashboard/purchasing");
   const canUseCentralCashier =
     user.has_central_cashier_menu === true && user.can_central_checkout === true;
@@ -237,14 +239,14 @@ function AppSidebarContent({
           </Link>
           <HeaderTitle navItems={navItems} branchName={user.branch_name ?? user.company_name} />
           <GlobalSearch
-            leaves={leaves}
+            leaves={searchLeaves}
             className="hidden min-w-0 flex-1 md:ml-4 md:block md:max-w-md"
           />
           <div className="ml-auto flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => setSearchOpen((open) => !open)}
-              aria-label="Cari halaman"
+              aria-label="Quick search"
               aria-expanded={searchOpen}
               className={cn(ROUND_BUTTON, "md:hidden")}
             >
@@ -260,6 +262,9 @@ function AppSidebarContent({
                 <MonitorSmartphone className="size-5" />
               </Link>
             )}
+            <Link href={HOW_TO_USE_PATH} className={ROUND_BUTTON} title="How to use" aria-label="How to use">
+              <CircleHelp className="size-5" />
+            </Link>
             <ThemeToggle />
             {useActivityNotification ? <ActivityLogBell /> : <NotificationBell />}
             <button
@@ -284,7 +289,7 @@ function AppSidebarContent({
         </header>
         {searchOpen && (
           <div className="-mt-2 md:hidden print:hidden">
-            <GlobalSearch leaves={leaves} autoFocus onNavigate={() => setSearchOpen(false)} />
+            <GlobalSearch leaves={searchLeaves} autoFocus onNavigate={() => setSearchOpen(false)} />
           </div>
         )}
 
@@ -338,6 +343,14 @@ export default function AppSidebar(props: AppSidebarProps) {
     </Suspense>
   );
 }
+
+// The guide sits outside the IAM menu, so quick search lists it by hand.
+const HOW_TO_USE_LEAF: NavLeaf = {
+  href: HOW_TO_USE_PATH,
+  label: "How to use",
+  icon: "home",
+  section: "Panduan dan bantuan",
+};
 
 const ROUND_BUTTON =
   "inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-card text-foreground shadow-card transition-colors hover:bg-surface active:scale-95 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none";
