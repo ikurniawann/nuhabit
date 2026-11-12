@@ -3,6 +3,6 @@ import { IAM } from "@/lib/iam/prefixes";
 import { ShopMarketplacePage } from "@/features/shop/marketplace";
 
 export default async function ShopMarketplaceRoute() {
-  await requireIamPage(IAM.shop);
+  await requireIamPage(IAM.shopMarketplace);
   return <ShopMarketplacePage />;
 }

@@ -38,6 +38,36 @@ var (
 	HrisPerformance            = []string{"hris.performance"}
 	HrisRecruitment            = []string{"hris.recruitment"}
 	Accounting                 = []string{"accounting"}
+	AccountingOverview         = []string{"accounting.dashboard.overview"}
+	AccountingCoa              = []string{"accounting.master.chart-of-accounts"}
+	AccountingAccountTypes     = []string{"accounting.master.account-types"}
+	AccountingJournalMappings  = []string{"accounting.master.journal-mappings"}
+	AccountingJournalEntries   = []string{"accounting.ledger.journal-entries"}
+	AccountingJournalHistory   = []string{"accounting.ledger.journal-history"}
+	AccountingGeneralLedger    = []string{"accounting.ledger.general-ledger"}
+	AccountingSubsidiary       = []string{"accounting.ledger.subsidiary"}
+	AccountingTrialBalance     = []string{"accounting.ledger.trial-balance"}
+	AccountingCashBank         = []string{"accounting.cash-bank.accounts"}
+	AccountingCashIn           = []string{"accounting.cash-bank.cash-in"}
+	AccountingCashOut          = []string{"accounting.cash-bank.cash-out"}
+	AccountingCashTransfer     = []string{"accounting.cash-bank.transfer"}
+	AccountingAr               = []string{"accounting.receivable.list"}
+	AccountingArInvoices       = []string{"accounting.receivable.invoices"}
+	AccountingArInvoicesB2b    = []string{"accounting.receivable.invoices-b2b"}
+	AccountingArReceipts       = []string{"accounting.receivable.receipts"}
+	AccountingArAging          = []string{"accounting.receivable.aging"}
+	AccountingAp               = []string{"accounting.accounts-payable.payable"}
+	AccountingApInvoices       = []string{"accounting.accounts-payable.invoices"}
+	AccountingApPayments       = []string{"accounting.accounts-payable.payments"}
+	AccountingApAging          = []string{"accounting.accounts-payable.aging"}
+	AccountingFiscalYears      = []string{"accounting.period.fiscal-years"}
+	AccountingBeginningBalance = []string{"accounting.period.beginning-balance"}
+	AccountingPeriods          = []string{"accounting.period.accounting-period"}
+	AccountingClosing          = []string{"accounting.period.closing"}
+	AccountingBalanceSheet     = []string{"accounting.reports.balance-sheet"}
+	AccountingIncomeStatement  = []string{"accounting.reports.income-statement"}
+	AccountingCashFlow         = []string{"accounting.reports.cash-flow"}
+	AccountingCoaItemReaders   = []string{"items.raw-material.master.materials"}
 	Crm                        = []string{"crm"}
 	CrmSettings                = []string{"crm.settings"}
 	CrmMembers                 = []string{"crm.members"}
@@ -59,7 +89,13 @@ var (
 	SettingsPaymentGateways    = []string{"settings.payment-gateways"}
 	SettingsWaGateway          = []string{"settings.wa_gateway"}
 	SettingsAudit              = []string{"settings.audit"}
+	SettingsWaNotifications    = []string{"settings.wa_notifications"}
+	SettingsShipping           = []string{"settings.shipping"}
 	Shop                       = []string{"shop"}
+	ShopOrders                 = []string{"shop.orders"}
+	ShopSettings               = []string{"shop.settings"}
+	ShopWholesale              = []string{"shop.wholesale"}
+	ShopMarketplace            = []string{"shop.marketplace"}
 	Ticketing                  = []string{"ticketing"}
 	TicketingAdmin             = []string{"ticketing.settings", "ticketing.tickets", "ticketing.channel-manager", "ticketing.mapping"}
 	TicketingOperator          = []string{"ticketing.loket", "ticketing.gate", "ticketing.booking", "ticketing.gate_pass", "ticketing.passes"}
@@ -93,6 +129,10 @@ var (
 	GymReferrals               = []string{"gym.referrals"}
 	Investor                   = []string{"investor"}
 	InvestorUpdates            = []string{"investor.updates"}
+	InvestorOverview           = []string{"investor.overview"}
+	InvestorPerformance        = []string{"investor.performance"}
+	InvestorProgress           = []string{"investor.progress"}
+	InvestorDocuments          = []string{"investor.documents"}
 	GymComplaints              = []string{"gym.complaints"}
 	Tasks                      = []string{"tasks"}
 	TasksTeam                  = []string{"tasks.team"}
@@ -142,6 +182,7 @@ var (
 	SiteArticles               = []string{"site.articles"}
 	SiteEvents                 = []string{"site.events"}
 	EventsCalendar             = []string{"events.calendar"}
+	EventsAdmin                = []string{"crm.engagement.events", "site.events"}
 	ItemsPrApproval            = []string{"items.general.purchasing.approval-pr", "items.product.approval.pr", "items.raw-material.approval.pr"}
 )
 
@@ -180,6 +221,36 @@ var ByKey = map[string][]string{
 	"hrisPerformance":            HrisPerformance,
 	"hrisRecruitment":            HrisRecruitment,
 	"accounting":                 Accounting,
+	"accountingOverview":         AccountingOverview,
+	"accountingCoa":              AccountingCoa,
+	"accountingAccountTypes":     AccountingAccountTypes,
+	"accountingJournalMappings":  AccountingJournalMappings,
+	"accountingJournalEntries":   AccountingJournalEntries,
+	"accountingJournalHistory":   AccountingJournalHistory,
+	"accountingGeneralLedger":    AccountingGeneralLedger,
+	"accountingSubsidiary":       AccountingSubsidiary,
+	"accountingTrialBalance":     AccountingTrialBalance,
+	"accountingCashBank":         AccountingCashBank,
+	"accountingCashIn":           AccountingCashIn,
+	"accountingCashOut":          AccountingCashOut,
+	"accountingCashTransfer":     AccountingCashTransfer,
+	"accountingAr":               AccountingAr,
+	"accountingArInvoices":       AccountingArInvoices,
+	"accountingArInvoicesB2b":    AccountingArInvoicesB2b,
+	"accountingArReceipts":       AccountingArReceipts,
+	"accountingArAging":          AccountingArAging,
+	"accountingAp":               AccountingAp,
+	"accountingApInvoices":       AccountingApInvoices,
+	"accountingApPayments":       AccountingApPayments,
+	"accountingApAging":          AccountingApAging,
+	"accountingFiscalYears":      AccountingFiscalYears,
+	"accountingBeginningBalance": AccountingBeginningBalance,
+	"accountingPeriods":          AccountingPeriods,
+	"accountingClosing":          AccountingClosing,
+	"accountingBalanceSheet":     AccountingBalanceSheet,
+	"accountingIncomeStatement":  AccountingIncomeStatement,
+	"accountingCashFlow":         AccountingCashFlow,
+	"accountingCoaItemReaders":   AccountingCoaItemReaders,
 	"crm":                        Crm,
 	"crmSettings":                CrmSettings,
 	"crmMembers":                 CrmMembers,
@@ -201,7 +272,13 @@ var ByKey = map[string][]string{
 	"settingsPaymentGateways":    SettingsPaymentGateways,
 	"settingsWaGateway":          SettingsWaGateway,
 	"settingsAudit":              SettingsAudit,
+	"settingsWaNotifications":    SettingsWaNotifications,
+	"settingsShipping":           SettingsShipping,
 	"shop":                       Shop,
+	"shopOrders":                 ShopOrders,
+	"shopSettings":               ShopSettings,
+	"shopWholesale":              ShopWholesale,
+	"shopMarketplace":            ShopMarketplace,
 	"ticketing":                  Ticketing,
 	"ticketingAdmin":             TicketingAdmin,
 	"ticketingOperator":          TicketingOperator,
@@ -235,6 +312,10 @@ var ByKey = map[string][]string{
 	"gymReferrals":               GymReferrals,
 	"investor":                   Investor,
 	"investorUpdates":            InvestorUpdates,
+	"investorOverview":           InvestorOverview,
+	"investorPerformance":        InvestorPerformance,
+	"investorProgress":           InvestorProgress,
+	"investorDocuments":          InvestorDocuments,
 	"gymComplaints":              GymComplaints,
 	"tasks":                      Tasks,
 	"tasksTeam":                  TasksTeam,
@@ -284,5 +365,6 @@ var ByKey = map[string][]string{
 	"siteArticles":               SiteArticles,
 	"siteEvents":                 SiteEvents,
 	"eventsCalendar":             EventsCalendar,
+	"eventsAdmin":                EventsAdmin,
 	"itemsPrApproval":            ItemsPrApproval,
 }

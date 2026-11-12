@@ -19,6 +19,7 @@ import (
 	"nuhabit/backend/internal/contracts/production"
 	"nuhabit/backend/internal/contracts/storedvalue"
 	acct "nuhabit/backend/internal/modules/accounting"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/outbox"
 	"nuhabit/backend/internal/platform/testutil"
@@ -55,8 +56,8 @@ SELECT holding_id, 'Go Acct '||$1, 'GA'||$1 FROM configuration.companies LIMIT 1
 	t.Cleanup(func() {
 		_, _ = deps.DB.Exec(context.Background(), `DELETE FROM configuration.companies WHERE id = $1`, company)
 	})
-	staff := testutil.CreateStaff(t, testutil.StaffOptions{Role: "admin", CompanyID: &company, Menus: map[string][]string{"accounting": nil}})
-	noCompany := testutil.CreateStaff(t, testutil.StaffOptions{Role: "admin", Menus: map[string][]string{"accounting": nil}})
+	staff := testutil.CreateStaff(t, testutil.StaffOptions{Role: "admin", CompanyID: &company, Menus: allAccountingMenus()})
+	noCompany := testutil.CreateStaff(t, testutil.StaffOptions{Role: "admin", Menus: allAccountingMenus()})
 	tx, err := deps.DB.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -67,6 +68,19 @@ SELECT holding_id, 'Go Acct '||$1, 'GA'||$1 FROM configuration.companies LIMIT 1
 		t.Fatal(err)
 	}
 	return &env{t: t, ctx: ctx, tx: tx, mux: testutil.Mux(m), deps: deps, staff: staff, noCompany: noCompany, company: company}
+}
+
+// allAccountingMenus grants every accounting sub-module, as the admin role has.
+func allAccountingMenus() map[string][]string {
+	menus := map[string][]string{}
+	for _, codes := range iam.ByKey {
+		for _, code := range codes {
+			if strings.HasPrefix(code, "accounting.") {
+				menus[code] = nil
+			}
+		}
+	}
+	return menus
 }
 
 func (e *env) call(s testutil.Staff, method, path string, body any, status int) map[string]any {

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"slices"
 	"time"
 
 	"nuhabit/backend/internal/modules/integrations/domain"
@@ -16,6 +17,11 @@ import (
 	"nuhabit/backend/internal/platform/validate"
 	"nuhabit/backend/internal/platform/whatsapp"
 )
+
+// waNotifMenus open the WA notification settings: the Notifikasi WA page
+// (settings.wa_notifications) and integration admins, who reach the same
+// panel from the /os desktop.
+var waNotifMenus = slices.Concat(iam.SettingsWaNotifications, iam.SettingsIntegrations)
 
 // The self-hosted WhatsApp gateway (services/wa-gateway) page: stored URL
 // and token, live status and pairing QR (super_admin: the QR is the
@@ -316,7 +322,7 @@ func (h *Handler) loadWaNotif(ctx context.Context) (domain.WaNotifConfig, error)
 // GET /api/settings/wa-notifications: the config, the type catalog and the
 // shift-report recipients (a separate audience: supervisors, finance).
 func (h *Handler) getWaNotif(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.RequireMenuPrefix(r, iam.SettingsIntegrations...); err != nil {
+	if _, err := h.guard.RequireMenuPrefix(r, waNotifMenus...); err != nil {
 		return err
 	}
 	cfg, err := h.loadWaNotif(r.Context())
@@ -340,7 +346,7 @@ func (h *Handler) getWaNotif(w http.ResponseWriter, r *http.Request) error {
 // PUT /api/settings/wa-notifications: a partial update over the stored
 // config; nothing is written when a field is invalid.
 func (h *Handler) putWaNotif(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.RequireMenuPrefix(r, iam.SettingsIntegrations...); err != nil {
+	if _, err := h.guard.RequireMenuPrefix(r, waNotifMenus...); err != nil {
 		return err
 	}
 	raw, err := strictBody(r)
@@ -399,7 +405,7 @@ type testResult struct {
 // flash, today's real Daily Flash Report) to every saved recipient through
 // the gateway the real notifications use.
 func (h *Handler) testWaNotif(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.RequireMenuPrefix(r, iam.SettingsIntegrations...); err != nil {
+	if _, err := h.guard.RequireMenuPrefix(r, waNotifMenus...); err != nil {
 		return err
 	}
 	ctx := r.Context()

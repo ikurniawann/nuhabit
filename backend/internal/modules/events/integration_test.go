@@ -50,7 +50,7 @@ func setup(t *testing.T) *env {
 	deps := testutil.Deps(t, func() time.Time { return fixedNow })
 	org := testutil.CreateOrg(t, nil)
 	staff := testutil.CreateStaff(t, testutil.StaffOptions{
-		Menus:    map[string][]string{"events.calendar": {"read"}, "crm.engagement": {"read", "create", "update"}},
+		Menus:    map[string][]string{"events.calendar": {"read"}, "crm.engagement.events": {"read", "create", "update"}},
 		BranchID: &org.BranchID,
 	})
 	tx := testutil.Tx(t)

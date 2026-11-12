@@ -7,7 +7,6 @@ import (
 	"nuhabit/backend/internal/modules/accounting/domain"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/httpx"
-	"nuhabit/backend/internal/platform/iam"
 )
 
 /* ── Cash & bank ─────────────────────────────────────────────────────── */
@@ -441,8 +440,8 @@ func (h *Handler) recordArReceipt(w http.ResponseWriter, r *http.Request, u *aut
 
 type financeFunc func(w http.ResponseWriter, r *http.Request, u FinanceUser) error
 
-// finance is requireFinanceUser(): a session plus an accounting menu grant.
-func (h *Handler) finance(fn financeFunc) http.Handler { return h.financeFor(iam.Accounting, fn) }
+// finance is requireFinanceUser(): a session plus a B2B invoice menu grant.
+func (h *Handler) finance(fn financeFunc) http.Handler { return h.financeFor(financeMenus, fn) }
 
 // financeFor is requireFinanceUser with the menu prefixes it accepts.
 func (h *Handler) financeFor(menus []string, fn financeFunc) http.Handler {

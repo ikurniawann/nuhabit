@@ -19,18 +19,22 @@ type handler struct {
 	guard auth.Granter
 }
 
-// Routes lists the staff routes. Investor pages need read on any investor
-// menu; the editor needs the matching action on investor.updates. The
-// digest toggle is the one write an investor has, on their own row.
+// Routes lists the staff routes. Each portal page reads with its own
+// investor menu; Ringkasan (/dashboard/investor) covers every portal page,
+// so investor.overview reads them all. The editor needs the matching action
+// on investor.updates. The digest toggle is the one write an investor has,
+// on their own row.
 func (h *handler) Routes() []module.Route {
-	portal, editor := iam.Investor, iam.InvestorUpdates
-	read := func(fn auth.StaffFunc) http.Handler { return auth.Staff(h.guard, fn, iam.Can("read", portal)) }
+	overview, editor := iam.InvestorOverview, iam.InvestorUpdates
+	read := func(fn auth.StaffFunc, pages ...[]string) http.Handler {
+		return auth.Staff(h.guard, fn, iam.Can("read", append(pages, overview)...))
+	}
 	return []module.Route{
 		{Pattern: "GET /api/investor/overview", Handler: read(h.overview)},
-		{Pattern: "GET /api/investor/performance", Handler: read(h.performance)},
-		{Pattern: "GET /api/investor/branches", Handler: read(h.branches)},
-		{Pattern: "GET /api/investor/updates", Handler: read(h.published)},
-		{Pattern: "GET /api/investor/documents", Handler: read(h.documents)},
+		{Pattern: "GET /api/investor/performance", Handler: read(h.performance, iam.InvestorPerformance)},
+		{Pattern: "GET /api/investor/branches", Handler: read(h.branches, iam.InvestorPerformance)},
+		{Pattern: "GET /api/investor/updates", Handler: read(h.published, iam.InvestorProgress)},
+		{Pattern: "GET /api/investor/documents", Handler: read(h.documents, iam.InvestorDocuments)},
 		{Pattern: "GET /api/investor/digest", Handler: read(h.digest)},
 		{Pattern: "PUT /api/investor/digest", Handler: read(h.setDigest)},
 		{Pattern: "GET /api/investor/updates/manage", Handler: auth.Staff(h.guard, h.manage, iam.Can("read", editor))},

@@ -12,7 +12,7 @@ import { OrderAlertSettingsCard } from "@/features/configuration/order-alerts/or
  * (terang) ia dirender dengan tone="light" — satu form dua kulit, bukan dua salinan.
  */
 export default async function WaNotificationsSettingsPage() {
-  await requireIamPage(IAM.settingsIntegrations);
+  await requireIamPage([...IAM.settingsWaNotifications, ...IAM.settingsIntegrations]);
 
   return (
     <div className="mx-auto max-w-3xl">

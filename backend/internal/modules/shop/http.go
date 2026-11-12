@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -22,8 +23,7 @@ type Guard interface {
 	RequireMenuPrefix(r *http.Request, prefixes ...string) (*auth.User, error)
 }
 
-// storefrontSettingsMenu is the IAM menu of the storefront settings form.
-const storefrontSettingsMenu = "shop.settings"
+type staffFunc func(w http.ResponseWriter, r *http.Request, u *auth.User) error
 
 type handler struct {
 	svc   *Service
@@ -37,9 +37,11 @@ type handler struct {
 // dispatcher serves both, with the static "order" segment winning as in the
 // Next app router.
 func (h *handler) Routes() []module.Route {
-	staff := func(pattern string, fn func(w http.ResponseWriter, r *http.Request, u *auth.User) error) module.Route {
+	// staff passes callers granted one of menus: the shop sub-modules whose
+	// pages call the route.
+	staff := func(pattern string, menus []string, fn staffFunc) module.Route {
 		return module.Route{Pattern: pattern, Handler: httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
-			u, err := h.guard.RequireMenuPrefix(r, iam.Shop...)
+			u, err := h.guard.RequireMenuPrefix(r, menus...)
 			if err != nil {
 				return err
 			}
@@ -57,38 +59,32 @@ func (h *handler) Routes() []module.Route {
 	public := func(pattern string, fn httpx.HandlerFunc) module.Route {
 		return module.Route{Pattern: pattern, Handler: httpx.Handle(fn)}
 	}
-	// The storefront settings form has its own IAM menu under shop.
-	settings := func(pattern string, fn func(w http.ResponseWriter, r *http.Request, u *auth.User) error) module.Route {
-		return module.Route{Pattern: pattern, Handler: httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
-			u, err := h.guard.RequireMenuPrefix(r, storefrontSettingsMenu)
-			if err != nil {
-				return err
-			}
-			return fn(w, r, u)
-		})}
-	}
+	orders, marketplace := iam.ShopOrders, iam.ShopMarketplace
+	// The wholesale tab lists partner orders in the same order dialog.
+	orderDetail := slices.Concat(orders, iam.ShopWholesale)
 	routes := []module.Route{
-		staff("GET /api/shop/orders", h.listOrders),
-		staff("GET /api/shop/orders/{id}", h.orderDetail),
-		staff("PATCH /api/shop/orders/{id}", h.transitionOrder),
-		staff("POST /api/shop/orders/{id}/shipment", h.createShipment),
-		settings("GET /api/shop/storefront-settings", h.getStorefrontSettings),
-		settings("PUT /api/shop/storefront-settings", h.putStorefrontSettings),
-		staff("GET /api/shop/reviews", h.listReviews),
-		staff("PATCH /api/shop/reviews/{id}", h.moderateReview),
+		staff("GET /api/shop/orders", orders, h.listOrders),
+		staff("GET /api/shop/orders/{id}", orderDetail, h.orderDetail),
+		staff("PATCH /api/shop/orders/{id}", orderDetail, h.transitionOrder),
+		staff("POST /api/shop/orders/{id}/shipment", orderDetail, h.createShipment),
+		staff("GET /api/shop/storefront-settings", iam.ShopSettings, h.getStorefrontSettings),
+		staff("PUT /api/shop/storefront-settings", iam.ShopSettings, h.putStorefrontSettings),
+		// Reviews are a tab of the orders page.
+		staff("GET /api/shop/reviews", orders, h.listReviews),
+		staff("PATCH /api/shop/reviews/{id}", orders, h.moderateReview),
 
-		staff("GET /api/shop/marketplace/accounts", h.listAccounts),
-		staff("PATCH /api/shop/marketplace/accounts", h.updateAccount),
-		staff("GET /api/shop/marketplace/links", h.listLinks),
-		staff("POST /api/shop/marketplace/links", h.createLink),
-		staff("DELETE /api/shop/marketplace/links", h.deleteLink),
-		staff("GET /api/shop/marketplace/listings", h.listings),
-		staff("GET /api/shop/marketplace/connect", h.connect),
+		staff("GET /api/shop/marketplace/accounts", marketplace, h.listAccounts),
+		staff("PATCH /api/shop/marketplace/accounts", marketplace, h.updateAccount),
+		staff("GET /api/shop/marketplace/links", marketplace, h.listLinks),
+		staff("POST /api/shop/marketplace/links", marketplace, h.createLink),
+		staff("DELETE /api/shop/marketplace/links", marketplace, h.deleteLink),
+		staff("GET /api/shop/marketplace/listings", marketplace, h.listings),
+		staff("GET /api/shop/marketplace/connect", marketplace, h.connect),
 		module.Route{Pattern: "GET /api/shop/marketplace/callback", Handler: httpx.Handle(h.callback)},
 		module.Route{Pattern: "POST /api/shop/marketplace/sync", Handler: httpx.Handle(h.sync)},
 
-		staff("GET /api/shop/shipping/settings", h.getShippingSettings),
-		staff("PATCH /api/shop/shipping/settings", h.updateShippingSettings),
+		staff("GET /api/shop/shipping/settings", iam.SettingsShipping, h.getShippingSettings),
+		staff("PATCH /api/shop/shipping/settings", iam.SettingsShipping, h.updateShippingSettings),
 		pos("POST /api/shop/shipping/rates", h.adminRates),
 		pos("GET /api/shop/shipping/track", h.track),
 		pos("GET /api/shop/shipping/areas", h.adminAreas),
@@ -108,9 +104,10 @@ func (h *handler) Routes() []module.Route {
 }
 
 // requirePosSession is `if (!(await getPosSession())) throw unauthorized`:
-// no session and no POS menu grant are both a 401.
+// no session and no POS menu grant are both a 401. The shipping settings
+// page (settings.shipping) runs its rate test and origin search here too.
 func (h *handler) requirePosSession(r *http.Request) error {
-	_, err := h.guard.RequireMenuPrefix(r, iam.Pos...)
+	_, err := h.guard.RequireMenuPrefix(r, slices.Concat(iam.Pos, iam.SettingsShipping)...)
 	var e *httpx.Error
 	if errors.As(err, &e) && (e.Status == http.StatusUnauthorized || e.Status == http.StatusForbidden) {
 		return httpx.Unauthorized("")
@@ -350,7 +347,7 @@ const marketplaceDashboard = "/dashboard/shop/marketplace"
 // callback is the redirect back from Shopee (?code&shop_id). It needs the
 // admin session; after that every failure redirects to the dashboard.
 func (h *handler) callback(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.RequireMenuPrefix(r, iam.Shop...); err != nil {
+	if _, err := h.guard.RequireMenuPrefix(r, iam.ShopMarketplace...); err != nil {
 		return err
 	}
 	redirect := func(query string) error {
@@ -395,7 +392,7 @@ func encodeURIComponent(s string) string {
 // x-sync-token = MARKETPLACE_SYNC_TOKEN instead of an admin session.
 func (h *handler) sync(w http.ResponseWriter, r *http.Request) error {
 	if !domain.SafeEqual(r.Header.Get("x-sync-token"), h.svc.ports.Getenv("MARKETPLACE_SYNC_TOKEN")) {
-		if _, err := h.guard.RequireMenuPrefix(r, iam.Shop...); err != nil {
+		if _, err := h.guard.RequireMenuPrefix(r, iam.ShopMarketplace...); err != nil {
 			return err
 		}
 	}

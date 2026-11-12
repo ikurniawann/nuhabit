@@ -4,6 +4,6 @@ import { InvestorPerformancePage } from "@/features/investor";
 
 // Investor → Laporan Kinerja: tabel dan grafik bulanan, unduh CSV.
 export default async function Page() {
-  await requireIamPage(IAM.investor);
+  await requireIamPage([...IAM.investorPerformance, ...IAM.investorOverview]);
   return <InvestorPerformancePage />;
 }

@@ -4,6 +4,6 @@ import { InvestorProgressPage } from "@/features/investor";
 
 // Investor → Progres: update yang diterbitkan direksi.
 export default async function Page() {
-  await requireIamPage(IAM.investor);
+  await requireIamPage([...IAM.investorProgress, ...IAM.investorOverview]);
   return <InvestorProgressPage />;
 }

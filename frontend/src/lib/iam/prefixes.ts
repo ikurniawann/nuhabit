@@ -41,6 +41,42 @@ export const IAM = {
   hrisPerformance: ["hris.performance"],
   hrisRecruitment: ["hris.recruitment"],
   accounting: ["accounting"],
+  /**
+   * Accounting per sub-modul (kode menu daun). Guard API memakai kode halaman
+   * yang memanggilnya; href induk (Overview, Payable, Receivable, Cash & Bank,
+   * Fiscal Years) ikut menutup halaman di bawah path-nya.
+   */
+  accountingOverview: ["accounting.dashboard.overview"],
+  accountingCoa: ["accounting.master.chart-of-accounts"],
+  accountingAccountTypes: ["accounting.master.account-types"],
+  accountingJournalMappings: ["accounting.master.journal-mappings"],
+  accountingJournalEntries: ["accounting.ledger.journal-entries"],
+  accountingJournalHistory: ["accounting.ledger.journal-history"],
+  accountingGeneralLedger: ["accounting.ledger.general-ledger"],
+  accountingSubsidiary: ["accounting.ledger.subsidiary"],
+  accountingTrialBalance: ["accounting.ledger.trial-balance"],
+  accountingCashBank: ["accounting.cash-bank.accounts"],
+  accountingCashIn: ["accounting.cash-bank.cash-in"],
+  accountingCashOut: ["accounting.cash-bank.cash-out"],
+  accountingCashTransfer: ["accounting.cash-bank.transfer"],
+  accountingAr: ["accounting.receivable.list"],
+  accountingArInvoices: ["accounting.receivable.invoices"],
+  accountingArInvoicesB2b: ["accounting.receivable.invoices-b2b"],
+  accountingArReceipts: ["accounting.receivable.receipts"],
+  accountingArAging: ["accounting.receivable.aging"],
+  accountingAp: ["accounting.accounts-payable.payable"],
+  accountingApInvoices: ["accounting.accounts-payable.invoices"],
+  accountingApPayments: ["accounting.accounts-payable.payments"],
+  accountingApAging: ["accounting.accounts-payable.aging"],
+  accountingFiscalYears: ["accounting.period.fiscal-years"],
+  accountingBeginningBalance: ["accounting.period.beginning-balance"],
+  accountingPeriods: ["accounting.period.accounting-period"],
+  accountingClosing: ["accounting.period.closing"],
+  accountingBalanceSheet: ["accounting.reports.balance-sheet"],
+  accountingIncomeStatement: ["accounting.reports.income-statement"],
+  accountingCashFlow: ["accounting.reports.cash-flow"],
+  /** Form bahan baku memilih akun COA (lookup GET chart-of-accounts). */
+  accountingCoaItemReaders: ["items.raw-material.master.materials"],
   crm: ["crm"],
   crmSettings: ["crm.settings"],
   crmMembers: ["crm.members"],
@@ -66,7 +102,16 @@ export const IAM = {
   settingsWaGateway: ["settings.wa_gateway"],
   /** Settings → Audit Trail (jejak audit server-side). */
   settingsAudit: ["settings.audit"],
+  /** Settings → Notifikasi WA (penerima, ambang, alert order). */
+  settingsWaNotifications: ["settings.wa_notifications"],
+  /** Settings → Pengiriman (kurir dan origin toko online). */
+  settingsShipping: ["settings.shipping"],
   shop: ["shop"],
+  /** Toko Online per sub-modul: pesanan (dan ulasan), storefront, mitra wholesale, marketplace. */
+  shopOrders: ["shop.orders"],
+  shopSettings: ["shop.settings"],
+  shopWholesale: ["shop.wholesale"],
+  shopMarketplace: ["shop.marketplace"],
   ticketing: ["ticketing"],
   ticketingAdmin: [
     "ticketing.settings",
@@ -136,6 +181,11 @@ export const IAM = {
   investor: ["investor"],
   /** Investor → Update untuk Investor: editor progres yang dikelola direksi. */
   investorUpdates: ["investor.updates"],
+  /** Investor per halaman portal; Ringkasan (/dashboard/investor) menutup semua halaman baca. */
+  investorOverview: ["investor.overview"],
+  investorPerformance: ["investor.performance"],
+  investorProgress: ["investor.progress"],
+  investorDocuments: ["investor.documents"],
   /** Gym → Keluhan (tiket keluhan member, SLA, eskalasi, laporan). */
   gymComplaints: ["gym.complaints"],
   /** Tugas Saya: daftar tugas sendiri (baca, buat, ubah milik sendiri). */
@@ -215,6 +265,8 @@ export const IAM = {
   siteEvents: ["site.events"],
   /** Event → Kalender Event: satu kalender untuk event, kelas dan PT. */
   eventsCalendar: ["events.calendar"],
+  /** Halaman pengelola event yang memakai dialog kalender (tautan, checklist, tempat). */
+  eventsAdmin: ["crm.engagement.events", "site.events"],
   /** Items → approval PR per modul. */
   itemsPrApproval: [
     "items.general.purchasing.approval-pr",

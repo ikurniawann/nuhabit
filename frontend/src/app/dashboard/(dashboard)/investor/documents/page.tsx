@@ -4,6 +4,6 @@ import { InvestorDocumentsPage } from "@/features/investor";
 
 // Investor → Dokumen: lampiran update yang diterbitkan.
 export default async function Page() {
-  await requireIamPage(IAM.investor);
+  await requireIamPage([...IAM.investorDocuments, ...IAM.investorOverview]);
   return <InvestorDocumentsPage />;
 }

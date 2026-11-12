@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"slices"
 	"strings"
 
 	"nuhabit/backend/internal/platform/httpx"
-	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/storage"
 )
 
@@ -46,10 +44,10 @@ func (s *Service) fakturPajakInvoice(ctx context.Context, id string, u FinanceUs
 	return inv, nil
 }
 
-// financeViewer is requireFinanceUser(INVOICE_VIEWER_ROLES): an accounting or
+// financeViewer is requireFinanceUser(INVOICE_VIEWER_ROLES): a B2B invoice or
 // a sales-funnel menu grant.
 func (h *Handler) financeViewer(fn financeFunc) http.Handler {
-	return h.financeFor(slices.Concat(iam.Accounting, iam.SalesFunnel), fn)
+	return h.financeFor(financeViewerMenus, fn)
 }
 
 type successMessage struct {

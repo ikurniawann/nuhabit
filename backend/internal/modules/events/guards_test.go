@@ -30,16 +30,18 @@ func describe(grants []iam.Grant) string {
 
 func TestStaffRouteGrants(t *testing.T) {
 	const (
-		view   = "read events.calendar,crm.engagement,site.events"
-		manage = "update crm.engagement,site.events | create crm.engagement,site.events"
-		anyID  = "0b7a8f8e-2d7c-4f3e-9a1b-5c6d7e8f9a0b"
+		calendar = "read events.calendar"
+		admin    = "read crm.engagement.events,site.events"
+		view     = "read events.calendar,crm.engagement.events,site.events"
+		manage   = "update crm.engagement.events,site.events | create crm.engagement.events,site.events"
+		anyID    = "0b7a8f8e-2d7c-4f3e-9a1b-5c6d7e8f9a0b"
 	)
 	want := map[string]string{
-		"GET /api/events/calendar":             view,
+		"GET /api/events/calendar":             calendar,
 		"GET /api/events/options":              view,
-		"GET /api/events/export.csv":           view,
+		"GET /api/events/export.csv":           calendar,
 		"GET /api/events/overrides":            view,
-		"GET /api/events/link/candidates":      view,
+		"GET /api/events/link/candidates":      admin,
 		"POST /api/events/link":                manage,
 		"POST /api/events/link/publish":        manage,
 		"DELETE /api/events/link/{crmEventId}": manage,
@@ -47,9 +49,9 @@ func TestStaffRouteGrants(t *testing.T) {
 		"POST /api/events/tasks":               manage,
 		"PATCH /api/events/tasks/{id}":         manage,
 		"DELETE /api/events/tasks/{id}":        manage,
-		"GET /api/events/feeds":                view,
-		"POST /api/events/feeds":               view,
-		"DELETE /api/events/feeds/{id}":        view,
+		"GET /api/events/feeds":                calendar,
+		"POST /api/events/feeds":               calendar,
+		"DELETE /api/events/feeds/{id}":        calendar,
 	}
 	guard := &recordingGuard{}
 	h := &handler{svc: NewService(nil, Ports{}, nil, nil), guard: guard}

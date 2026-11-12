@@ -8,6 +8,7 @@ import (
 	"nuhabit/backend/internal/modules/shop/domain"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -16,8 +17,8 @@ import (
 // /api/wholesale/** for partners (nh_wholesale cookie session).
 
 // wholesaleRoutes adds the wholesale routes; staff wraps a handler in the
-// shop IAM guard.
-func (h *handler) wholesaleRoutes(staff func(string, func(http.ResponseWriter, *http.Request, *auth.User) error) module.Route) []module.Route {
+// IAM guard of the given shop menus.
+func (h *handler) wholesaleRoutes(staff func(string, []string, staffFunc) module.Route) []module.Route {
 	partner := func(pattern string, fn func(w http.ResponseWriter, r *http.Request, acct WholesaleAccount) error) module.Route {
 		return module.Route{Pattern: pattern, Handler: httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
 			acct, err := h.svc.WholesaleSession(r.Context(), wholesaleToken(r))
@@ -30,13 +31,14 @@ func (h *handler) wholesaleRoutes(staff func(string, func(http.ResponseWriter, *
 			return fn(w, r, *acct)
 		})}
 	}
+	wholesale := iam.ShopWholesale
 	return []module.Route{
-		staff("GET /api/shop/wholesale/accounts", h.listWholesaleAccounts),
-		staff("POST /api/shop/wholesale/accounts", h.createWholesaleAccount),
-		staff("PATCH /api/shop/wholesale/accounts/{id}", h.updateWholesaleAccount),
-		staff("GET /api/shop/wholesale/orders", h.listWholesaleOrdersAdmin),
-		staff("GET /api/shop/wholesale/products", h.listWholesaleProducts),
-		staff("PATCH /api/shop/wholesale/products/{id}", h.updateWholesaleProduct),
+		staff("GET /api/shop/wholesale/accounts", wholesale, h.listWholesaleAccounts),
+		staff("POST /api/shop/wholesale/accounts", wholesale, h.createWholesaleAccount),
+		staff("PATCH /api/shop/wholesale/accounts/{id}", wholesale, h.updateWholesaleAccount),
+		staff("GET /api/shop/wholesale/orders", wholesale, h.listWholesaleOrdersAdmin),
+		staff("GET /api/shop/wholesale/products", wholesale, h.listWholesaleProducts),
+		staff("PATCH /api/shop/wholesale/products/{id}", wholesale, h.updateWholesaleProduct),
 
 		{Pattern: "POST /api/wholesale/login", Handler: httpx.Handle(h.wholesaleLogin)},
 		{Pattern: "POST /api/wholesale/logout", Handler: http.HandlerFunc(h.wholesaleLogout)},

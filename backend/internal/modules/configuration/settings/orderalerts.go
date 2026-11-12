@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -18,6 +19,11 @@ import (
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/validate"
 )
+
+// waNotifMenus open the WA notification settings: the Notifikasi WA page
+// (settings.wa_notifications) and integration admins, who reach the same
+// panel from the /os desktop.
+var waNotifMenus = slices.Concat(iam.SettingsWaNotifications, iam.SettingsIntegrations)
 
 /* ── Telegram Bot API (lib/telegram/client.ts) ───────────────────────── */
 
@@ -291,7 +297,7 @@ func (h *handler) respondSnapshot(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (h *handler) getOrderAlerts(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.d.Auth.RequireMenuPrefix(r, iam.SettingsIntegrations...); err != nil {
+	if _, err := h.d.Auth.RequireMenuPrefix(r, waNotifMenus...); err != nil {
 		return err
 	}
 	return h.respondSnapshot(w, r)
@@ -326,7 +332,7 @@ func (h *handler) connectTelegram(r *http.Request, token string) error {
 }
 
 func (h *handler) putOrderAlerts(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.d.Auth.RequireMenuPrefix(r, iam.SettingsIntegrations...); err != nil {
+	if _, err := h.d.Auth.RequireMenuPrefix(r, waNotifMenus...); err != nil {
 		return err
 	}
 	f := validate.New(validate.ReadBody(r))
@@ -365,7 +371,7 @@ func (h *handler) putOrderAlerts(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) postOrderAlerts(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.d.Auth.RequireMenuPrefix(r, iam.SettingsIntegrations...); err != nil {
+	if _, err := h.d.Auth.RequireMenuPrefix(r, waNotifMenus...); err != nil {
 		return err
 	}
 	body, _ := validate.ReadBody(r)

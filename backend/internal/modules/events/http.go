@@ -20,12 +20,15 @@ type handler struct {
 	guard auth.Granter
 }
 
-// Grants. Anyone who sees the calendar or manages events on either side
-// reads; writing the checklist, the links and the feeds takes a write
-// grant on the CRM or site events menu.
+// Grants. The calendar page owns the calendar, export and feeds; the CRM
+// and site event pages (eventsAdmin) share its link dialog, checklist and
+// place fields. Writing the checklist and the links takes a write grant on
+// one of those event pages.
 var (
-	view   = iam.Can("read", iam.EventsCalendar, iam.CrmEngagement, iam.SiteEvents)
-	manage = []iam.Grant{iam.Can("update", iam.CrmEngagement, iam.SiteEvents), iam.Can("create", iam.CrmEngagement, iam.SiteEvents)}
+	calendar = iam.Can("read", iam.EventsCalendar)
+	admin    = iam.Can("read", iam.EventsAdmin)
+	view     = iam.Can("read", iam.EventsCalendar, iam.EventsAdmin)
+	manage   = []iam.Grant{iam.Can("update", iam.EventsAdmin), iam.Can("create", iam.EventsAdmin)}
 )
 
 // Routes lists the staff (/api/events/**) routes and the public ICS feed.
@@ -34,11 +37,11 @@ func (h *handler) Routes() []module.Route {
 		return module.Route{Pattern: pattern, Handler: auth.Staff(h.guard, fn, grants...)}
 	}
 	return []module.Route{
-		staff("GET /api/events/calendar", h.calendar, view),
+		staff("GET /api/events/calendar", h.calendar, calendar),
 		staff("GET /api/events/options", h.options, view),
-		staff("GET /api/events/export.csv", h.exportCSV, view),
+		staff("GET /api/events/export.csv", h.exportCSV, calendar),
 		staff("GET /api/events/overrides", h.overrides, view),
-		staff("GET /api/events/link/candidates", h.linkCandidates, view),
+		staff("GET /api/events/link/candidates", h.linkCandidates, admin),
 		staff("POST /api/events/link", h.link, manage...),
 		staff("POST /api/events/link/publish", h.publishToSite, manage...),
 		staff("DELETE /api/events/link/{crmEventId}", h.unlink, manage...),
@@ -46,9 +49,9 @@ func (h *handler) Routes() []module.Route {
 		staff("POST /api/events/tasks", h.addTask, manage...),
 		staff("PATCH /api/events/tasks/{id}", h.patchTask, manage...),
 		staff("DELETE /api/events/tasks/{id}", h.removeTask, manage...),
-		staff("GET /api/events/feeds", h.feeds, view),
-		staff("POST /api/events/feeds", h.createFeed, view),
-		staff("DELETE /api/events/feeds/{id}", h.revokeFeed, view),
+		staff("GET /api/events/feeds", h.feeds, calendar),
+		staff("POST /api/events/feeds", h.createFeed, calendar),
+		staff("DELETE /api/events/feeds/{id}", h.revokeFeed, calendar),
 		{Pattern: "GET " + FeedPath, Handler: httpx.Handle(h.feedICS)},
 	}
 }

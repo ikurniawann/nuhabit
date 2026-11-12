@@ -3,6 +3,6 @@ import { IAM } from "@/lib/iam/prefixes";
 import { ShopWholesalePage } from "@/features/shop/wholesale";
 
 export default async function ShopWholesaleRoute() {
-  await requireIamPage(IAM.shop);
+  await requireIamPage(IAM.shopWholesale);
   return <ShopWholesalePage />;
 }

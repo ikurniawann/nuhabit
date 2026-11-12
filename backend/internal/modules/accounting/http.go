@@ -2,6 +2,7 @@ package accounting
 
 import (
 	"net/http"
+	"slices"
 	"strings"
 
 	"nuhabit/backend/internal/modules/accounting/domain"
@@ -22,10 +23,17 @@ type Handler struct {
 
 type staffFunc func(w http.ResponseWriter, r *http.Request, u *auth.User) error
 
-// staff is requireIamMenuPrefix(IAM.accounting) inside apiHandler.
-func (h *Handler) staff(fn staffFunc) http.Handler {
+// staff passes callers granted a menu under menus: the accounting
+// sub-modules whose pages call the route.
+func (h *Handler) staff(menus []string, fn staffFunc) http.Handler {
+	return h.staffBy(func(*http.Request) []string { return menus }, fn)
+}
+
+// staffBy picks the menus from the request, for a route shared by pages of
+// different sub-modules (GET /reports/{report}).
+func (h *Handler) staffBy(menus func(*http.Request) []string, fn staffFunc) http.Handler {
 	return httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
-		u, err := h.auth.RequireMenuPrefix(r, iam.Accounting...)
+		u, err := h.auth.RequireMenuPrefix(r, menus(r)...)
 		if err != nil {
 			return err
 		}
@@ -119,77 +127,124 @@ const (
 	apiFinance    = "/api/finance"
 )
 
+// Sub-module menus of the routes. A route allows every sub-module whose
+// dashboard page calls it, counting pages a parent href covers (Payable
+// covers /accounts-payable/**, Receivable /receivable/**, Cash & Bank
+// Accounts /cash-bank/**, Overview /reports/**, Fiscal Years
+// /fiscal-years/beginning-balance/{id}).
+var (
+	coaReaders = slices.Concat(iam.AccountingCoa, iam.AccountingJournalMappings, iam.AccountingJournalEntries,
+		iam.AccountingJournalHistory, iam.AccountingBeginningBalance, iam.AccountingFiscalYears, iam.AccountingCoaItemReaders)
+	fiscalYearReaders = slices.Concat(iam.AccountingFiscalYears, iam.AccountingPeriods, iam.AccountingBeginningBalance,
+		iam.AccountingJournalEntries)
+	openingBalance = slices.Concat(iam.AccountingBeginningBalance, iam.AccountingFiscalYears)
+
+	// reportMenus maps GET /reports/{report} to its page; the Overview href
+	// covers every /reports/** page.
+	reportMenus = map[string][]string{
+		"trial-balance":    slices.Concat(iam.AccountingTrialBalance, iam.AccountingOverview),
+		"balance-sheet":    slices.Concat(iam.AccountingBalanceSheet, iam.AccountingOverview),
+		"income-statement": slices.Concat(iam.AccountingIncomeStatement, iam.AccountingOverview),
+		"cash-flow":        slices.Concat(iam.AccountingCashFlow, iam.AccountingOverview),
+		"general-ledger":   slices.Concat(iam.AccountingGeneralLedger, iam.AccountingOverview),
+	}
+
+	// B2B invoices live under Receivable; sales-funnel pages link the faktur.
+	financeMenus       = slices.Concat(iam.AccountingArInvoicesB2b, iam.AccountingAr)
+	financeViewerMenus = slices.Concat(financeMenus, iam.SalesFunnel)
+)
+
+// withParent adds the sub-module whose href covers the pages of groups.
+func withParent(parent []string, groups ...[]string) []string {
+	return slices.Concat(append(groups, parent)...)
+}
+
+func reportMenusFor(r *http.Request) []string {
+	if menus, ok := reportMenus[r.PathValue("report")]; ok {
+		return menus
+	}
+	return iam.AccountingOverview
+}
+
 // Routes lists every route of /api/accounting and /api/finance.
 func (h *Handler) Routes() []module.Route {
-	a := func(method, path string, fn staffFunc) module.Route {
-		return module.Route{Pattern: method + " " + apiAccounting + path, Handler: h.staff(fn)}
+	a := func(method, path string, menus []string, fn staffFunc) module.Route {
+		return module.Route{Pattern: method + " " + apiAccounting + path, Handler: h.staff(menus, fn)}
 	}
+	types, coa, mappings := iam.AccountingAccountTypes, iam.AccountingCoa, iam.AccountingJournalMappings
+	years, periods, closing := iam.AccountingFiscalYears, iam.AccountingPeriods, iam.AccountingClosing
+	entries := iam.AccountingJournalEntries
+	cash := func(groups ...[]string) []string { return withParent(iam.AccountingCashBank, groups...) }
+	ap := func(groups ...[]string) []string { return withParent(iam.AccountingAp, groups...) }
+	ar := func(groups ...[]string) []string { return withParent(iam.AccountingAr, groups...) }
 	return []module.Route{
-		a("GET", "/account-types", h.listAccountTypes),
-		a("POST", "/account-types", h.createAccountType),
-		a("PUT", "/account-types/{id}", h.updateAccountType),
-		a("DELETE", "/account-types/{id}", h.deleteAccountType),
+		a("GET", "/account-types", slices.Concat(types, coa), h.listAccountTypes),
+		a("POST", "/account-types", types, h.createAccountType),
+		a("PUT", "/account-types/{id}", types, h.updateAccountType),
+		a("DELETE", "/account-types/{id}", types, h.deleteAccountType),
 
-		a("GET", "/chart-of-accounts", h.listAccounts),
-		a("POST", "/chart-of-accounts", h.createAccount),
-		a("PUT", "/chart-of-accounts/{id}", h.updateAccount),
-		a("DELETE", "/chart-of-accounts/{id}", h.deleteAccount),
-		a("POST", "/chart-of-accounts/import", h.importAccounts),
+		a("GET", "/chart-of-accounts", coaReaders, h.listAccounts),
+		a("POST", "/chart-of-accounts", coa, h.createAccount),
+		a("PUT", "/chart-of-accounts/{id}", coa, h.updateAccount),
+		a("DELETE", "/chart-of-accounts/{id}", coa, h.deleteAccount),
+		a("POST", "/chart-of-accounts/import", coa, h.importAccounts),
 
-		a("GET", "/journal-mappings", h.listMappings),
-		a("POST", "/journal-mappings", h.createMapping),
-		a("GET", "/journal-mappings/{id}", h.getMapping),
-		a("PUT", "/journal-mappings/{id}", h.updateMapping),
-		a("DELETE", "/journal-mappings/{id}", h.deleteMapping),
+		a("GET", "/journal-mappings", mappings, h.listMappings),
+		a("POST", "/journal-mappings", mappings, h.createMapping),
+		a("GET", "/journal-mappings/{id}", mappings, h.getMapping),
+		a("PUT", "/journal-mappings/{id}", mappings, h.updateMapping),
+		a("DELETE", "/journal-mappings/{id}", mappings, h.deleteMapping),
 
-		a("GET", "/fiscal-years", h.listFiscalYears),
-		a("POST", "/fiscal-years", h.createFiscalYear),
-		a("GET", "/fiscal-years/{id}", h.getFiscalYear),
-		a("PUT", "/fiscal-years/{id}", h.updateFiscalYear),
-		a("DELETE", "/fiscal-years/{id}", h.deleteFiscalYear),
-		a("GET", "/fiscal-years/{id}/beginning-balance", h.getOpening),
-		a("POST", "/fiscal-years/{id}/beginning-balance", h.saveOpening),
+		a("GET", "/fiscal-years", fiscalYearReaders, h.listFiscalYears),
+		a("POST", "/fiscal-years", years, h.createFiscalYear),
+		a("GET", "/fiscal-years/{id}", years, h.getFiscalYear),
+		a("PUT", "/fiscal-years/{id}", years, h.updateFiscalYear),
+		a("DELETE", "/fiscal-years/{id}", years, h.deleteFiscalYear),
+		a("GET", "/fiscal-years/{id}/beginning-balance", openingBalance, h.getOpening),
+		a("POST", "/fiscal-years/{id}/beginning-balance", openingBalance, h.saveOpening),
 
-		a("GET", "/fiscal-periods", h.listPeriods),
-		a("POST", "/fiscal-periods/{id}/open", h.openPeriod),
-		a("GET", "/fiscal-periods/{id}/close", h.closePreview),
-		a("POST", "/fiscal-periods/{id}/close", h.closePeriod),
+		a("GET", "/fiscal-periods", slices.Concat(periods, closing), h.listPeriods),
+		// The journal entry form opens a closed period from its coverage banner.
+		a("POST", "/fiscal-periods/{id}/open", slices.Concat(periods, entries), h.openPeriod),
+		a("GET", "/fiscal-periods/{id}/close", closing, h.closePreview),
+		a("POST", "/fiscal-periods/{id}/close", closing, h.closePeriod),
 
-		a("GET", "/journal-entries", h.listEntries),
-		a("POST", "/journal-entries", h.createEntry),
-		a("GET", "/journal-entries/{id}", h.getEntry),
-		a("PUT", "/journal-entries/{id}", h.updateEntry),
-		a("DELETE", "/journal-entries/{id}", h.deleteEntry),
-		a("POST", "/journal-entries/{id}/post", h.postEntry),
+		a("GET", "/journal-entries", slices.Concat(entries, iam.AccountingJournalHistory), h.listEntries),
+		a("POST", "/journal-entries", entries, h.createEntry),
+		a("GET", "/journal-entries/{id}", entries, h.getEntry),
+		a("PUT", "/journal-entries/{id}", entries, h.updateEntry),
+		a("DELETE", "/journal-entries/{id}", entries, h.deleteEntry),
+		a("POST", "/journal-entries/{id}/post", entries, h.postEntry),
 
-		a("GET", "/cash-bank", h.cashBankAccounts),
-		a("GET", "/cash-bank/accounts-options", h.accountOptions),
-		a("GET", "/cash-bank/{accountId}/ledger", h.cashBankLedger),
-		a("GET", "/cash-bank/cash-in", h.listCash("cash_in")),
-		a("POST", "/cash-bank/cash-in", h.createCash("cash_in")),
-		a("GET", "/cash-bank/cash-out", h.listCash("cash_out")),
-		a("POST", "/cash-bank/cash-out", h.createCash("cash_out")),
-		a("GET", "/cash-bank/transfer", h.listTransfers),
-		a("POST", "/cash-bank/transfer", h.createTransfer),
+		a("GET", "/cash-bank", cash(iam.AccountingCashTransfer), h.cashBankAccounts),
+		a("GET", "/cash-bank/accounts-options", cash(iam.AccountingCashIn, iam.AccountingCashOut), h.accountOptions),
+		a("GET", "/cash-bank/{accountId}/ledger", cash(), h.cashBankLedger),
+		a("GET", "/cash-bank/cash-in", cash(iam.AccountingCashIn), h.listCash("cash_in")),
+		a("POST", "/cash-bank/cash-in", cash(iam.AccountingCashIn), h.createCash("cash_in")),
+		a("GET", "/cash-bank/cash-out", cash(iam.AccountingCashOut), h.listCash("cash_out")),
+		a("POST", "/cash-bank/cash-out", cash(iam.AccountingCashOut), h.createCash("cash_out")),
+		a("GET", "/cash-bank/transfer", cash(iam.AccountingCashTransfer), h.listTransfers),
+		a("POST", "/cash-bank/transfer", cash(iam.AccountingCashTransfer), h.createTransfer),
 
-		a("GET", "/reports/{report}", h.report),
-		a("GET", "/dashboard", h.dashboard),
-		a("GET", "/ledger/subsidiary", h.subsidiary),
+		{Pattern: "GET " + apiAccounting + "/reports/{report}", Handler: h.staffBy(reportMenusFor, h.report)},
+		a("GET", "/dashboard", iam.AccountingOverview, h.dashboard),
+		a("GET", "/ledger/subsidiary", iam.AccountingSubsidiary, h.subsidiary),
 
-		a("GET", "/ap/invoices", h.listApInvoices),
-		a("GET", "/ap/invoices/{id}", h.getApInvoice),
-		a("GET", "/ap/payable", h.apPayable),
-		a("GET", "/ap/aging", h.apAging),
-		a("GET", "/ap/payments", h.listApPayments),
-		a("POST", "/ap/payments", h.recordApPayment),
-		a("POST", "/ap/payments/{id}/void", h.voidApPayment),
+		a("GET", "/ap/invoices", ap(iam.AccountingApInvoices, iam.AccountingApPayments), h.listApInvoices),
+		a("GET", "/ap/invoices/{id}", ap(iam.AccountingApInvoices), h.getApInvoice),
+		a("GET", "/ap/payable", ap(), h.apPayable),
+		a("GET", "/ap/aging", ap(iam.AccountingApAging), h.apAging),
+		a("GET", "/ap/payments", ap(iam.AccountingApPayments), h.listApPayments),
+		// The PO detail opened from an AP invoice records the payment too.
+		a("POST", "/ap/payments", ap(iam.AccountingApPayments, iam.AccountingApInvoices), h.recordApPayment),
+		a("POST", "/ap/payments/{id}/void", ap(iam.AccountingApPayments), h.voidApPayment),
 
-		a("GET", "/ar/invoices", h.listArInvoices),
-		a("GET", "/ar/receivable", h.arReceivable),
-		a("GET", "/ar/aging", h.arAging),
-		a("GET", "/ar/by-sales-invoice/{salesInvoiceId}", h.arBySalesInvoice),
-		a("GET", "/ar/receipts", h.listArReceipts),
-		a("POST", "/ar/receipts", h.recordArReceipt),
+		a("GET", "/ar/invoices", ar(iam.AccountingArInvoices, iam.AccountingArReceipts), h.listArInvoices),
+		a("GET", "/ar/receivable", ar(), h.arReceivable),
+		a("GET", "/ar/aging", ar(iam.AccountingArAging), h.arAging),
+		a("GET", "/ar/by-sales-invoice/{salesInvoiceId}", ar(iam.AccountingArReceipts), h.arBySalesInvoice),
+		a("GET", "/ar/receipts", ar(iam.AccountingArReceipts), h.listArReceipts),
+		a("POST", "/ar/receipts", ar(iam.AccountingArReceipts), h.recordArReceipt),
 
 		{Pattern: "GET " + apiFinance + "/invoices", Handler: h.finance(h.listFinanceInvoices)},
 		{Pattern: "GET " + apiFinance + "/invoices/{id}", Handler: h.finance(h.getFinanceInvoice)},
