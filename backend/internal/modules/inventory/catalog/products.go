@@ -10,6 +10,7 @@ import (
 	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/stall"
 	"nuhabit/backend/internal/platform/validate"
@@ -51,7 +52,7 @@ func (h *handler) attachVariantCounts(ctx context.Context, rows kit.Rows) (kit.R
 
 /* GET /api/purchasing/products */
 func (h *handler) listProducts(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.catalogStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(productReaders))
 	if err != nil {
 		return err
 	}
@@ -127,7 +128,7 @@ func inScope(scope *ps.Scope, row *kit.Row) bool {
 
 /* GET /api/purchasing/products/{id} — detail + costed BOM. */
 func (h *handler) getProduct(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(productViewers))
 	if err != nil {
 		return err
 	}
@@ -211,7 +212,7 @@ func syncMessage(sync any, synced, plain string) string {
 
 /* POST /api/purchasing/products */
 func (h *handler) createProduct(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsProductMaster))
 	if err != nil {
 		return err
 	}
@@ -310,7 +311,7 @@ func (h *handler) activeProduct(ctx context.Context, id string) (*kit.Row, error
 
 /* PUT /api/purchasing/products/{id} */
 func (h *handler) updateProduct(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsProductMaster))
 	if err != nil {
 		return err
 	}
@@ -395,7 +396,7 @@ func firstNonNil(a, b *kit.Row, key string) string {
 
 /* DELETE /api/purchasing/products/{id} — soft delete (no scope check, as in TS). */
 func (h *handler) deleteProduct(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsProductMaster)(r)
 	if err != nil {
 		return err
 	}
@@ -414,7 +415,7 @@ func (h *handler) deleteProduct(w http.ResponseWriter, r *http.Request) error {
 
 /* POST /api/purchasing/products/{id}/apply-recipe-hpp — harga_modal ← recipe HPP. */
 func (h *handler) applyRecipeHpp(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(productViewers))
 	if err != nil {
 		return err
 	}

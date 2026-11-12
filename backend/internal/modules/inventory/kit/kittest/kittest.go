@@ -32,11 +32,22 @@ type T struct {
 	Cookies []*http.Cookie
 }
 
-// Menus grants the IAM inventory and items prefixes most routes need.
+// Menus grants every Items sub-module, the menus the inventory routes check.
 var Menus = map[string][]string{
-	"items":                        {"read", "create", "update", "delete"},
-	"items.raw-material.inventory": nil,
-	"items.product.inventory":      nil,
+	"items.product.master":          {"read", "create", "update", "delete"},
+	"items.raw-material.master":     {"read", "create", "update", "delete"},
+	"items.general.master":          {"read", "create", "update", "delete"},
+	"items.product.purchasing":      {"read", "create", "update", "delete"},
+	"items.raw-material.purchasing": {"read", "create", "update", "delete"},
+	"items.general.purchasing":      {"read", "create", "update", "delete"},
+	"items.product.inventory":       {"read", "create", "update", "delete"},
+	"items.raw-material.inventory":  {"read", "create", "update", "delete"},
+	"items.general.inventory":       {"read", "create", "update", "delete"},
+	"items.product.approval":        {"read", "create", "update", "delete"},
+	"items.raw-material.approval":   {"read", "create", "update", "delete"},
+	"items.product.production":      {"read", "create", "update", "delete"},
+	"items.raw-material.production": {"read", "create", "update", "delete"},
+	"items.reports":                 {"read", "create", "update", "delete"},
 }
 
 // Setup opens the transaction and a staff session (role "admin" unless
@@ -205,3 +216,44 @@ func (e *T) Product(o Org, warehouseID, kode, nama string, hargaModal float64) s
 
 // Ptr returns &v.
 func Ptr[V any](v V) *V { return &v }
+
+// Guard is one sub-module check: a GET of Path answers 200 to a role granted
+// only one of Allow and 403 to a role granted only one of Refuse.
+type Guard struct {
+	Path          string
+	Allow, Refuse []string
+}
+
+// CheckGuards runs the guards, each menu code as its own staff role.
+func (e *T) CheckGuards(guards []Guard) {
+	e.Helper()
+	owner := e.Staff
+	defer func() { e.Staff = owner }()
+	roles := map[string]testutil.Staff{}
+	as := func(code string) {
+		s, ok := roles[code]
+		if !ok {
+			s = testutil.CreateStaff(e.T, testutil.StaffOptions{Role: "admin",
+				Menus: map[string][]string{code: {"read", "create", "update", "delete"}}})
+			// Cleanups run last-in first-out: roll back before the staff
+			// rows are deleted, or the delete waits on the transaction.
+			e.Cleanup(func() { _ = e.Tx.Rollback(context.Background()) })
+			roles[code] = s
+		}
+		e.Staff = s
+	}
+	for _, g := range guards {
+		for _, code := range g.Allow {
+			as(code)
+			if rec := e.Do("GET", g.Path, nil); rec.Code != http.StatusOK {
+				e.Errorf("%s as %s: %d, want 200: %s", g.Path, code, rec.Code, rec.Body.String())
+			}
+		}
+		for _, code := range g.Refuse {
+			as(code)
+			if rec := e.Do("GET", g.Path, nil); rec.Code != http.StatusForbidden {
+				e.Errorf("%s as %s: %d, want 403: %s", g.Path, code, rec.Code, rec.Body.String())
+			}
+		}
+	}
+}

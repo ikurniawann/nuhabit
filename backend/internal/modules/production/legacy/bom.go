@@ -6,6 +6,7 @@ import (
 
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -90,7 +91,7 @@ func costLines(rows kit.Rows, costOf func(*kit.Row) float64) kit.Rows {
 
 /* GET /api/purchasing/products/{id}/bom — active recipe lines costed per small unit. */
 func (h *handler) listProductBom(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.catalogStaff(r); err != nil {
+	if _, err := h.env.Staff(productBomReaders)(r); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -208,7 +209,7 @@ func (b bomInput) createColumns() (qty float64, satuan any, waste float64) {
 
 /* POST /api/purchasing/products/{id}/bom */
 func (h *handler) addProductBom(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.catalogStaff(r); err != nil {
+	if _, err := h.env.Staff(productBomEditors)(r); err != nil {
 		return err
 	}
 	f := validate.New(validate.ReadBody(r))
@@ -249,7 +250,7 @@ func (h *handler) addProductBom(w http.ResponseWriter, r *http.Request) error {
 
 /* PUT /api/purchasing/bom/{id} — only the sent fields. */
 func (h *handler) updateProductBom(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.catalogStaff(r); err != nil {
+	if _, err := h.env.Staff(productBomEditors)(r); err != nil {
 		return err
 	}
 	f := validate.New(validate.ReadBody(r))
@@ -291,7 +292,7 @@ func (h *handler) updateBom(w http.ResponseWriter, r *http.Request, table string
 
 /* DELETE /api/purchasing/bom/{id} — soft delete. */
 func (h *handler) deleteProductBom(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.catalogStaff(r); err != nil {
+	if _, err := h.env.Staff(productBomEditors)(r); err != nil {
 		return err
 	}
 	id := r.PathValue("id")
@@ -306,7 +307,7 @@ func (h *handler) deleteProductBom(w http.ResponseWriter, r *http.Request) error
 
 /* GET /api/purchasing/raw-materials/{id}/bom */
 func (h *handler) listRawMaterialBom(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(rawMaterialBomReaders)(r); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -338,7 +339,7 @@ func (h *handler) requireActiveMaterial(ctx context.Context, id, msg string) err
 
 /* POST /api/purchasing/raw-materials/{id}/bom */
 func (h *handler) addRawMaterialBom(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(iam.ItemsRawMaterialMaster)(r); err != nil {
 		return err
 	}
 	f := validate.New(validate.ReadBody(r))
@@ -378,7 +379,7 @@ func (h *handler) addRawMaterialBom(w http.ResponseWriter, r *http.Request) erro
 
 /* PUT /api/purchasing/raw-material-bom/{id} */
 func (h *handler) updateRawMaterialBom(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(iam.ItemsRawMaterialMaster)(r); err != nil {
 		return err
 	}
 	f := validate.New(validate.ReadBody(r))
@@ -395,7 +396,7 @@ func (h *handler) updateRawMaterialBom(w http.ResponseWriter, r *http.Request) e
 
 /* DELETE /api/purchasing/raw-material-bom/{id} */
 func (h *handler) deleteRawMaterialBom(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(iam.ItemsRawMaterialMaster)(r); err != nil {
 		return err
 	}
 	id := r.PathValue("id")

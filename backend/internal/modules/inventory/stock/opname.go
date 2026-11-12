@@ -5,8 +5,6 @@ import (
 	"errors"
 	"math"
 	"net/http"
-	"nuhabit/backend/internal/platform/audit"
-	ps "nuhabit/backend/internal/platform/scope"
 	"strconv"
 	"strings"
 	"time"
@@ -14,9 +12,12 @@ import (
 	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/modules/inventory/ledger"
+	"nuhabit/backend/internal/platform/audit"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
+	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -268,7 +269,7 @@ func detailLines(detail *kit.Row) []*kit.Row {
 
 /* GET /api/inventory/stock-opnames */
 func (h *handler) listStockOpnames(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.inventoryStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialInventory))
 	if err != nil {
 		return err
 	}
@@ -324,7 +325,7 @@ func (h *handler) listStockOpnames(w http.ResponseWriter, r *http.Request) error
 
 /* GET /api/inventory/stock-opnames/preview?warehouse_id= */
 func (h *handler) stockOpnamePreview(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.inventoryStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialInventory))
 	if err != nil {
 		return err
 	}
@@ -374,7 +375,7 @@ POST /api/inventory/stock-opnames — a draft session listing every
 	material of the warehouse's branch with its system quantity.
 */
 func (h *handler) createStockOpname(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.inventoryStaff(r)
+	u, err := h.env.Staff(iam.ItemsRawMaterialInventory)(r)
 	if err != nil {
 		return err
 	}
@@ -471,7 +472,7 @@ func (h *handler) stockOpnameOr404(ctx context.Context, id string, scope *ps.Sco
 
 /* GET /api/inventory/stock-opnames/{id} */
 func (h *handler) getStockOpname(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.inventoryStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialInventory))
 	if err != nil {
 		return err
 	}
@@ -484,7 +485,7 @@ func (h *handler) getStockOpname(w http.ResponseWriter, r *http.Request) error {
 
 /* PATCH /api/inventory/stock-opnames/{id} — cancel, or save counts. */
 func (h *handler) patchStockOpname(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.inventoryStaff(r)
+	u, err := h.env.Staff(iam.ItemsRawMaterialInventory)(r)
 	if err != nil {
 		return err
 	}
@@ -539,7 +540,7 @@ POST /api/inventory/stock-opnames/{id}/complete — apply the variances to
 	warehouse stock, then post the variance journal.
 */
 func (h *handler) completeStockOpname(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.inventoryStaff(r)
+	u, err := h.env.Staff(iam.ItemsRawMaterialInventory)(r)
 	if err != nil {
 		return err
 	}

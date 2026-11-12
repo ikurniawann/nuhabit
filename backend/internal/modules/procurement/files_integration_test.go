@@ -19,7 +19,22 @@ import (
 // Receipt archive, receipt scan and the supplier spreadsheet routes on
 // real multipart bodies and a temporary STORAGE_DIR.
 
-var itemsOnly = map[string][]string{"items": {"read", "create", "update", "delete"}}
+var itemsOnly = map[string][]string{
+	"items.product.master":          {"read", "create", "update", "delete"},
+	"items.raw-material.master":     {"read", "create", "update", "delete"},
+	"items.general.master":          {"read", "create", "update", "delete"},
+	"items.product.purchasing":      {"read", "create", "update", "delete"},
+	"items.raw-material.purchasing": {"read", "create", "update", "delete"},
+	"items.general.purchasing":      {"read", "create", "update", "delete"},
+	"items.product.inventory":       {"read", "create", "update", "delete"},
+	"items.raw-material.inventory":  {"read", "create", "update", "delete"},
+	"items.general.inventory":       {"read", "create", "update", "delete"},
+	"items.product.approval":        {"read", "create", "update", "delete"},
+	"items.raw-material.approval":   {"read", "create", "update", "delete"},
+	"items.product.production":      {"read", "create", "update", "delete"},
+	"items.raw-material.production": {"read", "create", "update", "delete"},
+	"items.reports":                 {"read", "create", "update", "delete"},
+}
 
 // pngBytes sniffs as PNG.
 var pngBytes = append([]byte{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a}, []byte("receipt-image")...)

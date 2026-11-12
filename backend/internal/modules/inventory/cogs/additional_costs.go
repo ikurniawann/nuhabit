@@ -72,7 +72,7 @@ func (h *handler) additionalCosts(ctx context.Context, a *kit.Args, where []stri
 
 /* GET /api/purchasing/cogs/additional-cost?reference_type=&reference_id=&tipe_biaya= */
 func (h *handler) listAdditionalCosts(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(additionalCostEditors)(r); err != nil {
 		return err
 	}
 	q := r.URL.Query()
@@ -102,7 +102,7 @@ func (h *handler) listAdditionalCosts(w http.ResponseWriter, r *http.Request) er
 
 /* POST /api/purchasing/cogs/additional-cost */
 func (h *handler) createAdditionalCost(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(additionalCostEditors)(r)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (h *handler) createAdditionalCost(w http.ResponseWriter, r *http.Request) e
 
 /* DELETE /api/purchasing/cogs/additional-cost/{id} — soft delete. */
 func (h *handler) deleteAdditionalCost(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(additionalCostEditors)(r)
 	if err != nil {
 		return err
 	}

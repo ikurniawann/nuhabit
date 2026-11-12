@@ -12,6 +12,7 @@ import (
 	"nuhabit/backend/internal/modules/production/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -22,7 +23,7 @@ const orderNotFound = "Production order not found"
 
 /* GET /api/purchasing/production/orders?status=&search=&production_context=&limit= */
 func (h *handler) listOrders(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsProduction)(r)
 	if err != nil {
 		return err
 	}
@@ -132,7 +133,7 @@ func parseCreate(r *http.Request) (createInput, error) {
 
 /* POST /api/purchasing/production/orders — a DRAFT order planned from the BOM. */
 func (h *handler) createOrder(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsProduction)(r)
 	if err != nil {
 		return err
 	}

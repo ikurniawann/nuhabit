@@ -9,6 +9,7 @@ import (
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/modules/inventory/ledger"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -147,7 +148,7 @@ func (h *handler) cogsStock(ctx context.Context, lines []cogsLine, columns strin
 
 /* GET /api/purchasing/cogs/product/{produk_id} */
 func (h *handler) productCogs(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsProduction)(r)
 	if err != nil {
 		return err
 	}
@@ -218,7 +219,7 @@ func (h *handler) productCogs(w http.ResponseWriter, r *http.Request) error {
 
 /* GET /api/purchasing/cogs/raw-material/{id} */
 func (h *handler) rawMaterialCogs(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(iam.ItemsProduction)(r); err != nil {
 		return err
 	}
 	ctx := r.Context()

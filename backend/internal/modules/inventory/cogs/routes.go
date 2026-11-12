@@ -5,13 +5,10 @@ package cogs
 
 import (
 	"context"
-	"net/http"
 
 	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
-	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
-	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -50,11 +47,6 @@ func Routes(env kit.Env, ports Ports) []module.Route {
 		kit.Route("GET /api/purchasing/cogs/product/{produk_id}", h.productCogs),
 		kit.Route("GET /api/purchasing/cogs/raw-material/{id}", h.rawMaterialCogs),
 	}
-}
-
-// itemsStaff is requireIamMenuPrefix(IAM.items).
-func (h *handler) itemsStaff(r *http.Request) (*auth.User, error) {
-	return h.env.Auth.RequireMenuPrefix(r, iam.Items...)
 }
 
 func positive(msg string) func(float64) (string, string, bool) {

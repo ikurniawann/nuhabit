@@ -81,7 +81,7 @@ func totalPagesF(total, limit float64) any {
 /* ── GRN ─────────────────────────────────────────────────────────────── */
 
 func (h *Handler) listGrns(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, grnReaders...)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (h *Handler) listGrns(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) createGrn(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (h *Handler) patchGrnCollection(w http.ResponseWriter, r *http.Request) err
 }
 
 func (h *Handler) grnDetail(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	grn, err := h.svc.GrnDetail(r.Context(), r.PathValue("id"))
@@ -146,7 +146,7 @@ func (h *Handler) grnDetail(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) updateGrn(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ func (h *Handler) updateGrn(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) deleteGrn(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func (h *Handler) deleteGrn(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) grnItems(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	data, err := h.svc.GrnItems(r.Context(), r.PathValue("id"))
@@ -213,7 +213,7 @@ func recordBody(r *http.Request) (map[string]any, error) {
 }
 
 func (h *Handler) addGrnItem(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	body, err := recordBody(r)
@@ -233,7 +233,7 @@ func (h *Handler) addGrnItem(w http.ResponseWriter, r *http.Request) error {
 const qcDoneMessage = "Quality control completed and stock updated"
 
 func (h *Handler) submitGrnQc(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}
@@ -259,7 +259,7 @@ func (h *Handler) submitGrnQc(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) submitLegacyQc(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func (h *Handler) submitLegacyQc(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) returnableItems(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	data, err := h.svc.ReturnableGrnItems(r.Context(), r.PathValue("id"), queryPtr(r, "exclude_return_id"))
@@ -292,7 +292,7 @@ func (h *Handler) returnableItems(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (h *Handler) grnVendorCredits(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	data, err := h.svc.GrnVendorCredits(r.Context(), r.PathValue("id"))
@@ -303,7 +303,7 @@ func (h *Handler) grnVendorCredits(w http.ResponseWriter, r *http.Request) error
 }
 
 func (h *Handler) receivingWorkspace(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	data, err := h.svc.ReceivingWorkspace(r.Context(), domain.ModuleType(r.URL.Query().Get("module_type")))
@@ -316,7 +316,7 @@ func (h *Handler) receivingWorkspace(w http.ResponseWriter, r *http.Request) err
 /* ── Delivery ────────────────────────────────────────────────────────── */
 
 func (h *Handler) listDeliveries(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -352,7 +352,7 @@ func (h *Handler) listDeliveries(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) createDelivery(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -376,7 +376,7 @@ func (h *Handler) createDelivery(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) deliveriesForGrn(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -392,7 +392,7 @@ func (h *Handler) deliveriesForGrn(w http.ResponseWriter, r *http.Request) error
 }
 
 func (h *Handler) poOptionsForDelivery(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -409,7 +409,7 @@ func (h *Handler) poOptionsForDelivery(w http.ResponseWriter, r *http.Request) e
 }
 
 func (h *Handler) deliveryDetail(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...); err != nil {
 		return err
 	}
 	d, err := h.svc.DeliveryDetail(r.Context(), r.PathValue("id"))
@@ -420,7 +420,7 @@ func (h *Handler) deliveryDetail(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) updateDelivery(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -448,7 +448,7 @@ func (h *Handler) updateDelivery(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) deleteDelivery(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -459,7 +459,7 @@ func (h *Handler) deleteDelivery(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) arriveDelivery(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -487,7 +487,7 @@ func (h *Handler) arriveDelivery(w http.ResponseWriter, r *http.Request) error {
 /* ── QC reads ────────────────────────────────────────────────────────── */
 
 func (h *Handler) listQc(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}
@@ -512,7 +512,7 @@ func (h *Handler) listQc(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) qcDetail(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	data, err := h.svc.QcInspection(r.Context(), r.PathValue("id"))
@@ -526,7 +526,7 @@ func (h *Handler) qcDetail(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) grnQc(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	data, err := h.svc.GrnQcInspection(r.Context(), r.PathValue("id"))
@@ -542,7 +542,7 @@ func (h *Handler) grnQc(w http.ResponseWriter, r *http.Request) error {
 /* ── Legacy /deliveries ──────────────────────────────────────────────── */
 
 func (h *Handler) listLegacyDeliveries(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -559,7 +559,7 @@ func (h *Handler) listLegacyDeliveries(w http.ResponseWriter, r *http.Request) e
 }
 
 func (h *Handler) legacyDeliveryDetail(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...); err != nil {
 		return err
 	}
 	data, err := h.svc.LegacyDelivery(r.Context(), r.PathValue("id"))
@@ -573,7 +573,7 @@ func (h *Handler) legacyDeliveryDetail(w http.ResponseWriter, r *http.Request) e
 }
 
 func (h *Handler) createLegacyDelivery(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...); err != nil {
 		return err
 	}
 	f, err := bodyForm(r)
@@ -592,7 +592,7 @@ func (h *Handler) createLegacyDelivery(w http.ResponseWriter, r *http.Request) e
 }
 
 func (h *Handler) updateLegacyDelivery(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...); err != nil {
 		return err
 	}
 	body, err := recordBody(r)
@@ -607,7 +607,7 @@ func (h *Handler) updateLegacyDelivery(w http.ResponseWriter, r *http.Request) e
 }
 
 func (h *Handler) cancelLegacyDelivery(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...); err != nil {
 		return err
 	}
 	if err := h.svc.CancelLegacyDelivery(r.Context(), r.PathValue("id")); err != nil {

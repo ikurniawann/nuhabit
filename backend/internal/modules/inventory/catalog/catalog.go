@@ -11,7 +11,6 @@ import (
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
-	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 	ps "nuhabit/backend/internal/platform/scope"
 )
@@ -98,16 +97,6 @@ func Routes(env kit.Env, ports Ports) []module.Route {
 		kit.Route("GET /api/purchasing/export/products", h.exportProducts),
 		kit.Route("GET /api/purchasing/export/raw-materials", h.exportRawMaterials),
 	}
-}
-
-// itemsStaff is requireIamMenuPrefix(IAM.items).
-func (h *handler) itemsStaff(r *http.Request) (*auth.User, error) {
-	return h.env.Auth.RequireMenuPrefix(r, iam.Items...)
-}
-
-// catalogStaff is requireIamMenuPrefix(IAM.itemsCatalog) (items or pos.catalog).
-func (h *handler) catalogStaff(r *http.Request) (*auth.User, error) {
-	return h.env.Auth.RequireMenuPrefix(r, iam.ItemsCatalog...)
 }
 
 // staffScope guards and loads the caller's business scope.

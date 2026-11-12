@@ -10,6 +10,7 @@ import (
 	"nuhabit/backend/internal/modules/inventory/ledger"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/stall"
 	"nuhabit/backend/internal/platform/xlsx"
@@ -372,7 +373,7 @@ func (m *rawMaterialImport) insert(ctx context.Context, kode, kategori string, f
 
 /* POST /api/purchasing/import/raw-materials: form-data `file` (CSV/XLSX) */
 func (h *handler) importRawMaterials(w http.ResponseWriter, r *http.Request) error {
-	user, scope, err := h.staffScope(r, h.itemsStaff)
+	user, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialMaster))
 	if err != nil {
 		return err
 	}
@@ -433,7 +434,7 @@ func (h *handler) importRawMaterials(w http.ResponseWriter, r *http.Request) err
 
 /* GET /api/purchasing/export/raw-materials: .xlsx with the raw material import columns */
 func (h *handler) exportRawMaterials(w http.ResponseWriter, r *http.Request) error {
-	user, scope, err := h.staffScope(r, h.itemsStaff)
+	user, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialMaster))
 	if err != nil {
 		return err
 	}

@@ -39,7 +39,7 @@ const unitNotFound = "Satuan tidak ditemukan"
 
 /* GET /api/purchasing/units */
 func (h *handler) listUnits(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(unitReaders))
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (h *handler) unitExists(ctx context.Context, kode string, companyID *string
 
 /* POST /api/purchasing/units */
 func (h *handler) createUnit(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(unitEditors))
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (h *handler) activeUnit(ctx context.Context, id string) (*kit.Row, error) {
 
 /* GET /api/purchasing/units/{id} */
 func (h *handler) getUnit(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(unitEditors)(r); err != nil {
 		return err
 	}
 	row, err := h.activeUnit(r.Context(), r.PathValue("id"))
@@ -142,7 +142,7 @@ func (h *handler) getUnit(w http.ResponseWriter, r *http.Request) error {
 
 /* PUT /api/purchasing/units/{id} */
 func (h *handler) updateUnit(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(unitEditors)(r); err != nil {
 		return err
 	}
 	f := validate.New(validate.ReadBody(r))
@@ -185,7 +185,7 @@ func (h *handler) updateUnit(w http.ResponseWriter, r *http.Request) error {
 
 /* DELETE /api/purchasing/units/{id} — refused while raw materials use it. */
 func (h *handler) deleteUnit(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(unitEditors)(r)
 	if err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func (h *handler) deleteUnit(w http.ResponseWriter, r *http.Request) error {
 
 /* GET /api/purchasing/warehouses?branch_id=&is_active= */
 func (h *handler) listWarehouses(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.env.Auth.RequireMenuPrefix(r, "items.product", "items.raw-material", "pos.catalog", "settings.users")
+	u, err := h.env.Auth.RequireMenuPrefix(r, warehouseReaders...)
 	if err != nil {
 		return err
 	}
@@ -270,7 +270,7 @@ func lookupTable(r *http.Request) (string, error) {
 
 /* GET /api/purchasing/items/{lookup} */
 func (h *handler) listLookup(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(lookupEditors))
 	if err != nil {
 		return err
 	}
@@ -334,7 +334,7 @@ func (h *handler) lookupCodeTaken(ctx context.Context, table, code string, compa
 
 /* POST /api/purchasing/items/{lookup} */
 func (h *handler) createLookup(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(lookupEditors))
 	if err != nil {
 		return err
 	}
@@ -362,7 +362,7 @@ func (h *handler) createLookup(w http.ResponseWriter, r *http.Request) error {
 
 /* PUT /api/purchasing/items/{lookup}/{id} */
 func (h *handler) updateLookup(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(lookupEditors)(r); err != nil {
 		return err
 	}
 	table, err := lookupTable(r)
@@ -398,7 +398,7 @@ func (h *handler) updateLookup(w http.ResponseWriter, r *http.Request) error {
 
 /* DELETE /api/purchasing/items/{lookup}/{id} */
 func (h *handler) deleteLookup(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(lookupEditors)(r); err != nil {
 		return err
 	}
 	table, err := lookupTable(r)

@@ -5,212 +5,232 @@ package iam
 
 // Menu code prefixes, one var per key of IAM in prefixes.ts.
 var (
-	Dashboard               = []string{"dashboard"}
-	Ess                     = []string{"ess"}
-	Items                   = []string{"items"}
-	ItemsPurchasing         = []string{"items.product.purchasing", "items.raw-material.purchasing"}
-	ItemsInventory          = []string{"items.product.inventory", "items.raw-material.inventory"}
-	ItemsApproval           = []string{"items.product.approval", "items.raw-material.approval"}
-	ItemsReports            = []string{"items.reports"}
-	ItemsProduction         = []string{"items.product.production", "items.raw-material.production"}
-	Pos                     = []string{"pos"}
-	PosOperations           = []string{"pos.operations", "pos.cashier.central"}
-	PosMemberBills          = []string{"pos.operations.member-bills"}
-	PosCatalog              = []string{"pos.catalog"}
-	PosKitchen              = []string{"pos.kitchen"}
-	PosLoyalty              = []string{"pos.loyalty"}
-	PosReports              = []string{"pos.reports"}
-	PosSupervisors          = []string{"pos.settings.supervisors"}
-	Hris                    = []string{"hris"}
-	HrisKepegawaian         = []string{"hris.kepegawaian"}
-	HrisWorkforce           = []string{"hris.workforce"}
-	HrisCompensation        = []string{"hris.compensation"}
-	HrisPerformance         = []string{"hris.performance"}
-	HrisRecruitment         = []string{"hris.recruitment"}
-	Accounting              = []string{"accounting"}
-	Crm                     = []string{"crm"}
-	CrmSettings             = []string{"crm.settings"}
-	CrmMembers              = []string{"crm.members"}
-	CrmInbox                = []string{"crm.members.inbox"}
-	CrmReviews              = []string{"crm.members.reviews"}
-	CrmLoyalty              = []string{"crm.loyalty"}
-	CrmReports              = []string{"crm.reports"}
-	CrmPromo                = []string{"crm.promo", "promo"}
-	CrmEngagement           = []string{"crm.engagement"}
-	CrmMemberReviews        = []string{"crm.members.member-reviews"}
-	CrmPartners             = []string{"crm.loyalty.partners"}
-	Settings                = []string{"settings"}
-	SettingsUsers           = []string{"settings.users"}
-	SettingsRoles           = []string{"settings.roles"}
-	SettingsMenus           = []string{"settings.menus"}
-	SettingsBusiness        = []string{"settings.business"}
-	SettingsIntegrations    = []string{"settings.integrations"}
-	SettingsAppearance      = []string{"settings.appearance"}
-	SettingsPaymentGateways = []string{"settings.payment-gateways"}
-	SettingsWaGateway       = []string{"settings.wa_gateway"}
-	SettingsAudit           = []string{"settings.audit"}
-	Shop                    = []string{"shop"}
-	Ticketing               = []string{"ticketing"}
-	TicketingAdmin          = []string{"ticketing.settings", "ticketing.tickets", "ticketing.channel-manager", "ticketing.mapping"}
-	TicketingOperator       = []string{"ticketing.loket", "ticketing.gate", "ticketing.booking", "ticketing.gate_pass", "ticketing.passes"}
-	TicketingReports        = []string{"ticketing.reports"}
-	SalesFunnel             = []string{"sales-funnel"}
-	Promo                   = []string{"promo", "crm.promo"}
-	Dataroom                = []string{"dataroom"}
-	Resort                  = []string{"resort"}
-	PosWallet               = []string{"pos.loyalty.wallet"}
-	GymExercises            = []string{"gym.exercises"}
-	GymRaces                = []string{"gym.races"}
-	GymIncentives           = []string{"gym.incentives"}
-	GymPackages             = []string{"gym.packages"}
-	GymCredits              = []string{"gym.credits"}
-	GymRules                = []string{"gym.rules"}
-	GymScheduling           = []string{"gym.schedule", "gym.sessions", "gym.bookings", "gym.class-types", "gym.coaches"}
-	GymCheckin              = []string{"gym.checkin", "gym.sessions"}
-	Gym                     = []string{"gym"}
-	GymSchedule             = []string{"gym.schedule"}
-	GymSessions             = []string{"gym.sessions"}
-	GymBookings             = []string{"gym.bookings"}
-	GymClassTypes           = []string{"gym.class-types"}
-	GymCoaches              = []string{"gym.coaches"}
-	GymMembers              = []string{"gym.members"}
-	GymReports              = []string{"gym.reports"}
-	GymMyClasses            = []string{"gym.my-classes"}
-	GymCoachLeave           = []string{"gym.coach-leave"}
-	GymPt                   = []string{"gym.pt"}
-	GymAssessments          = []string{"gym.assessments"}
-	GymGateDevices          = []string{"gym.gate-devices"}
-	GymReferrals            = []string{"gym.referrals"}
-	Investor                = []string{"investor"}
-	InvestorUpdates         = []string{"investor.updates"}
-	GymComplaints           = []string{"gym.complaints"}
-	Tasks                   = []string{"tasks"}
-	TasksTeam               = []string{"tasks.team"}
-	TasksKpi                = []string{"tasks.kpi"}
-	GymLoyalty              = []string{"gym.loyalty"}
-	GymMemberFlags          = []string{"gym.member-flags"}
-	GymSop                  = []string{"gym.sop"}
-	GymAutomation           = []string{"gym.automation"}
-	GymNews                 = []string{"gym.news"}
-	HrisMaster              = []string{"hris.master"}
-	HrisOrganization        = []string{"hris.organization"}
-	HrisInsights            = []string{"hris.insights"}
-	HrisFeedbackAdmin       = []string{"hris.performance.feedback-360", "hris.performance.kpi-scorecard", "hris.performance.kpi-config"}
-	PosCatalogProducts      = []string{"pos.catalog.products"}
-	PosLoyaltySettings      = []string{"pos.loyalty.settings"}
-	SettingsBilling         = []string{"settings.billing"}
-	ItemsCatalog            = []string{"items", "pos.catalog"}
-	ItemsPr                 = []string{"items.general.purchasing.pr", "items.product.purchasing.pr", "items.raw-material.purchasing.pr"}
-	Site                    = []string{"site"}
-	SiteContent             = []string{"site.content"}
-	SiteArticles            = []string{"site.articles"}
-	SiteEvents              = []string{"site.events"}
-	EventsCalendar          = []string{"events.calendar"}
-	ItemsPrApproval         = []string{"items.general.purchasing.approval-pr", "items.product.approval.pr", "items.raw-material.approval.pr"}
+	Dashboard                  = []string{"dashboard"}
+	Ess                        = []string{"ess"}
+	Items                      = []string{"items"}
+	ItemsPurchasing            = []string{"items.product.purchasing", "items.raw-material.purchasing"}
+	ItemsInventory             = []string{"items.product.inventory", "items.raw-material.inventory"}
+	ItemsApproval              = []string{"items.product.approval", "items.raw-material.approval"}
+	ItemsReports               = []string{"items.reports"}
+	ItemsProduction            = []string{"items.product.production", "items.raw-material.production"}
+	ItemsProductMaster         = []string{"items.product.master"}
+	ItemsRawMaterialMaster     = []string{"items.raw-material.master"}
+	ItemsGeneralMaster         = []string{"items.general.master"}
+	ItemsProductPurchasing     = []string{"items.product.purchasing"}
+	ItemsRawMaterialPurchasing = []string{"items.raw-material.purchasing"}
+	ItemsGeneralPurchasing     = []string{"items.general.purchasing"}
+	ItemsProductInventory      = []string{"items.product.inventory"}
+	ItemsRawMaterialInventory  = []string{"items.raw-material.inventory"}
+	ItemsGeneralInventory      = []string{"items.general.inventory"}
+	ItemsPayables              = []string{"accounting.accounts-payable"}
+	Pos                        = []string{"pos"}
+	PosOperations              = []string{"pos.operations", "pos.cashier.central"}
+	PosMemberBills             = []string{"pos.operations.member-bills"}
+	PosCatalog                 = []string{"pos.catalog"}
+	PosKitchen                 = []string{"pos.kitchen"}
+	PosLoyalty                 = []string{"pos.loyalty"}
+	PosReports                 = []string{"pos.reports"}
+	PosSupervisors             = []string{"pos.settings.supervisors"}
+	Hris                       = []string{"hris"}
+	HrisKepegawaian            = []string{"hris.kepegawaian"}
+	HrisWorkforce              = []string{"hris.workforce"}
+	HrisCompensation           = []string{"hris.compensation"}
+	HrisPerformance            = []string{"hris.performance"}
+	HrisRecruitment            = []string{"hris.recruitment"}
+	Accounting                 = []string{"accounting"}
+	Crm                        = []string{"crm"}
+	CrmSettings                = []string{"crm.settings"}
+	CrmMembers                 = []string{"crm.members"}
+	CrmInbox                   = []string{"crm.members.inbox"}
+	CrmReviews                 = []string{"crm.members.reviews"}
+	CrmLoyalty                 = []string{"crm.loyalty"}
+	CrmReports                 = []string{"crm.reports"}
+	CrmPromo                   = []string{"crm.promo", "promo"}
+	CrmEngagement              = []string{"crm.engagement"}
+	CrmMemberReviews           = []string{"crm.members.member-reviews"}
+	CrmPartners                = []string{"crm.loyalty.partners"}
+	Settings                   = []string{"settings"}
+	SettingsUsers              = []string{"settings.users"}
+	SettingsRoles              = []string{"settings.roles"}
+	SettingsMenus              = []string{"settings.menus"}
+	SettingsBusiness           = []string{"settings.business"}
+	SettingsIntegrations       = []string{"settings.integrations"}
+	SettingsAppearance         = []string{"settings.appearance"}
+	SettingsPaymentGateways    = []string{"settings.payment-gateways"}
+	SettingsWaGateway          = []string{"settings.wa_gateway"}
+	SettingsAudit              = []string{"settings.audit"}
+	Shop                       = []string{"shop"}
+	Ticketing                  = []string{"ticketing"}
+	TicketingAdmin             = []string{"ticketing.settings", "ticketing.tickets", "ticketing.channel-manager", "ticketing.mapping"}
+	TicketingOperator          = []string{"ticketing.loket", "ticketing.gate", "ticketing.booking", "ticketing.gate_pass", "ticketing.passes"}
+	TicketingReports           = []string{"ticketing.reports"}
+	SalesFunnel                = []string{"sales-funnel"}
+	Promo                      = []string{"promo", "crm.promo"}
+	Dataroom                   = []string{"dataroom"}
+	Resort                     = []string{"resort"}
+	PosWallet                  = []string{"pos.loyalty.wallet"}
+	GymExercises               = []string{"gym.exercises"}
+	GymRaces                   = []string{"gym.races"}
+	GymIncentives              = []string{"gym.incentives"}
+	GymPackages                = []string{"gym.packages"}
+	GymCredits                 = []string{"gym.credits"}
+	GymRules                   = []string{"gym.rules"}
+	GymScheduling              = []string{"gym.schedule", "gym.sessions", "gym.bookings", "gym.class-types", "gym.coaches"}
+	GymCheckin                 = []string{"gym.checkin", "gym.sessions"}
+	Gym                        = []string{"gym"}
+	GymSchedule                = []string{"gym.schedule"}
+	GymSessions                = []string{"gym.sessions"}
+	GymBookings                = []string{"gym.bookings"}
+	GymClassTypes              = []string{"gym.class-types"}
+	GymCoaches                 = []string{"gym.coaches"}
+	GymMembers                 = []string{"gym.members"}
+	GymReports                 = []string{"gym.reports"}
+	GymMyClasses               = []string{"gym.my-classes"}
+	GymCoachLeave              = []string{"gym.coach-leave"}
+	GymPt                      = []string{"gym.pt"}
+	GymAssessments             = []string{"gym.assessments"}
+	GymGateDevices             = []string{"gym.gate-devices"}
+	GymReferrals               = []string{"gym.referrals"}
+	Investor                   = []string{"investor"}
+	InvestorUpdates            = []string{"investor.updates"}
+	GymComplaints              = []string{"gym.complaints"}
+	Tasks                      = []string{"tasks"}
+	TasksTeam                  = []string{"tasks.team"}
+	TasksKpi                   = []string{"tasks.kpi"}
+	GymLoyalty                 = []string{"gym.loyalty"}
+	GymMemberFlags             = []string{"gym.member-flags"}
+	GymSop                     = []string{"gym.sop"}
+	GymAutomation              = []string{"gym.automation"}
+	GymNews                    = []string{"gym.news"}
+	HrisMaster                 = []string{"hris.master"}
+	HrisOrganization           = []string{"hris.organization"}
+	HrisInsights               = []string{"hris.insights"}
+	HrisFeedbackAdmin          = []string{"hris.performance.feedback-360", "hris.performance.kpi-scorecard", "hris.performance.kpi-config"}
+	PosCatalogProducts         = []string{"pos.catalog.products"}
+	PosLoyaltySettings         = []string{"pos.loyalty.settings"}
+	SettingsBilling            = []string{"settings.billing"}
+	ItemsCatalog               = []string{"items", "pos.catalog"}
+	ItemsPr                    = []string{"items.general.purchasing.pr", "items.product.purchasing.pr", "items.raw-material.purchasing.pr"}
+	Site                       = []string{"site"}
+	SiteContent                = []string{"site.content"}
+	SiteArticles               = []string{"site.articles"}
+	SiteEvents                 = []string{"site.events"}
+	EventsCalendar             = []string{"events.calendar"}
+	ItemsPrApproval            = []string{"items.general.purchasing.approval-pr", "items.product.approval.pr", "items.raw-material.approval.pr"}
 )
 
 // ByKey maps the TS key (e.g. "gymPackages") to its prefixes.
 var ByKey = map[string][]string{
-	"dashboard":               Dashboard,
-	"ess":                     Ess,
-	"items":                   Items,
-	"itemsPurchasing":         ItemsPurchasing,
-	"itemsInventory":          ItemsInventory,
-	"itemsApproval":           ItemsApproval,
-	"itemsReports":            ItemsReports,
-	"itemsProduction":         ItemsProduction,
-	"pos":                     Pos,
-	"posOperations":           PosOperations,
-	"posMemberBills":          PosMemberBills,
-	"posCatalog":              PosCatalog,
-	"posKitchen":              PosKitchen,
-	"posLoyalty":              PosLoyalty,
-	"posReports":              PosReports,
-	"posSupervisors":          PosSupervisors,
-	"hris":                    Hris,
-	"hrisKepegawaian":         HrisKepegawaian,
-	"hrisWorkforce":           HrisWorkforce,
-	"hrisCompensation":        HrisCompensation,
-	"hrisPerformance":         HrisPerformance,
-	"hrisRecruitment":         HrisRecruitment,
-	"accounting":              Accounting,
-	"crm":                     Crm,
-	"crmSettings":             CrmSettings,
-	"crmMembers":              CrmMembers,
-	"crmInbox":                CrmInbox,
-	"crmReviews":              CrmReviews,
-	"crmLoyalty":              CrmLoyalty,
-	"crmReports":              CrmReports,
-	"crmPromo":                CrmPromo,
-	"crmEngagement":           CrmEngagement,
-	"crmMemberReviews":        CrmMemberReviews,
-	"crmPartners":             CrmPartners,
-	"settings":                Settings,
-	"settingsUsers":           SettingsUsers,
-	"settingsRoles":           SettingsRoles,
-	"settingsMenus":           SettingsMenus,
-	"settingsBusiness":        SettingsBusiness,
-	"settingsIntegrations":    SettingsIntegrations,
-	"settingsAppearance":      SettingsAppearance,
-	"settingsPaymentGateways": SettingsPaymentGateways,
-	"settingsWaGateway":       SettingsWaGateway,
-	"settingsAudit":           SettingsAudit,
-	"shop":                    Shop,
-	"ticketing":               Ticketing,
-	"ticketingAdmin":          TicketingAdmin,
-	"ticketingOperator":       TicketingOperator,
-	"ticketingReports":        TicketingReports,
-	"salesFunnel":             SalesFunnel,
-	"promo":                   Promo,
-	"dataroom":                Dataroom,
-	"resort":                  Resort,
-	"posWallet":               PosWallet,
-	"gymExercises":            GymExercises,
-	"gymRaces":                GymRaces,
-	"gymIncentives":           GymIncentives,
-	"gymPackages":             GymPackages,
-	"gymCredits":              GymCredits,
-	"gymRules":                GymRules,
-	"gymScheduling":           GymScheduling,
-	"gymCheckin":              GymCheckin,
-	"gym":                     Gym,
-	"gymSchedule":             GymSchedule,
-	"gymSessions":             GymSessions,
-	"gymBookings":             GymBookings,
-	"gymClassTypes":           GymClassTypes,
-	"gymCoaches":              GymCoaches,
-	"gymMembers":              GymMembers,
-	"gymReports":              GymReports,
-	"gymMyClasses":            GymMyClasses,
-	"gymCoachLeave":           GymCoachLeave,
-	"gymPt":                   GymPt,
-	"gymAssessments":          GymAssessments,
-	"gymGateDevices":          GymGateDevices,
-	"gymReferrals":            GymReferrals,
-	"investor":                Investor,
-	"investorUpdates":         InvestorUpdates,
-	"gymComplaints":           GymComplaints,
-	"tasks":                   Tasks,
-	"tasksTeam":               TasksTeam,
-	"tasksKpi":                TasksKpi,
-	"gymLoyalty":              GymLoyalty,
-	"gymMemberFlags":          GymMemberFlags,
-	"gymSop":                  GymSop,
-	"gymAutomation":           GymAutomation,
-	"gymNews":                 GymNews,
-	"hrisMaster":              HrisMaster,
-	"hrisOrganization":        HrisOrganization,
-	"hrisInsights":            HrisInsights,
-	"hrisFeedbackAdmin":       HrisFeedbackAdmin,
-	"posCatalogProducts":      PosCatalogProducts,
-	"posLoyaltySettings":      PosLoyaltySettings,
-	"settingsBilling":         SettingsBilling,
-	"itemsCatalog":            ItemsCatalog,
-	"itemsPr":                 ItemsPr,
-	"site":                    Site,
-	"siteContent":             SiteContent,
-	"siteArticles":            SiteArticles,
-	"siteEvents":              SiteEvents,
-	"eventsCalendar":          EventsCalendar,
-	"itemsPrApproval":         ItemsPrApproval,
+	"dashboard":                  Dashboard,
+	"ess":                        Ess,
+	"items":                      Items,
+	"itemsPurchasing":            ItemsPurchasing,
+	"itemsInventory":             ItemsInventory,
+	"itemsApproval":              ItemsApproval,
+	"itemsReports":               ItemsReports,
+	"itemsProduction":            ItemsProduction,
+	"itemsProductMaster":         ItemsProductMaster,
+	"itemsRawMaterialMaster":     ItemsRawMaterialMaster,
+	"itemsGeneralMaster":         ItemsGeneralMaster,
+	"itemsProductPurchasing":     ItemsProductPurchasing,
+	"itemsRawMaterialPurchasing": ItemsRawMaterialPurchasing,
+	"itemsGeneralPurchasing":     ItemsGeneralPurchasing,
+	"itemsProductInventory":      ItemsProductInventory,
+	"itemsRawMaterialInventory":  ItemsRawMaterialInventory,
+	"itemsGeneralInventory":      ItemsGeneralInventory,
+	"itemsPayables":              ItemsPayables,
+	"pos":                        Pos,
+	"posOperations":              PosOperations,
+	"posMemberBills":             PosMemberBills,
+	"posCatalog":                 PosCatalog,
+	"posKitchen":                 PosKitchen,
+	"posLoyalty":                 PosLoyalty,
+	"posReports":                 PosReports,
+	"posSupervisors":             PosSupervisors,
+	"hris":                       Hris,
+	"hrisKepegawaian":            HrisKepegawaian,
+	"hrisWorkforce":              HrisWorkforce,
+	"hrisCompensation":           HrisCompensation,
+	"hrisPerformance":            HrisPerformance,
+	"hrisRecruitment":            HrisRecruitment,
+	"accounting":                 Accounting,
+	"crm":                        Crm,
+	"crmSettings":                CrmSettings,
+	"crmMembers":                 CrmMembers,
+	"crmInbox":                   CrmInbox,
+	"crmReviews":                 CrmReviews,
+	"crmLoyalty":                 CrmLoyalty,
+	"crmReports":                 CrmReports,
+	"crmPromo":                   CrmPromo,
+	"crmEngagement":              CrmEngagement,
+	"crmMemberReviews":           CrmMemberReviews,
+	"crmPartners":                CrmPartners,
+	"settings":                   Settings,
+	"settingsUsers":              SettingsUsers,
+	"settingsRoles":              SettingsRoles,
+	"settingsMenus":              SettingsMenus,
+	"settingsBusiness":           SettingsBusiness,
+	"settingsIntegrations":       SettingsIntegrations,
+	"settingsAppearance":         SettingsAppearance,
+	"settingsPaymentGateways":    SettingsPaymentGateways,
+	"settingsWaGateway":          SettingsWaGateway,
+	"settingsAudit":              SettingsAudit,
+	"shop":                       Shop,
+	"ticketing":                  Ticketing,
+	"ticketingAdmin":             TicketingAdmin,
+	"ticketingOperator":          TicketingOperator,
+	"ticketingReports":           TicketingReports,
+	"salesFunnel":                SalesFunnel,
+	"promo":                      Promo,
+	"dataroom":                   Dataroom,
+	"resort":                     Resort,
+	"posWallet":                  PosWallet,
+	"gymExercises":               GymExercises,
+	"gymRaces":                   GymRaces,
+	"gymIncentives":              GymIncentives,
+	"gymPackages":                GymPackages,
+	"gymCredits":                 GymCredits,
+	"gymRules":                   GymRules,
+	"gymScheduling":              GymScheduling,
+	"gymCheckin":                 GymCheckin,
+	"gym":                        Gym,
+	"gymSchedule":                GymSchedule,
+	"gymSessions":                GymSessions,
+	"gymBookings":                GymBookings,
+	"gymClassTypes":              GymClassTypes,
+	"gymCoaches":                 GymCoaches,
+	"gymMembers":                 GymMembers,
+	"gymReports":                 GymReports,
+	"gymMyClasses":               GymMyClasses,
+	"gymCoachLeave":              GymCoachLeave,
+	"gymPt":                      GymPt,
+	"gymAssessments":             GymAssessments,
+	"gymGateDevices":             GymGateDevices,
+	"gymReferrals":               GymReferrals,
+	"investor":                   Investor,
+	"investorUpdates":            InvestorUpdates,
+	"gymComplaints":              GymComplaints,
+	"tasks":                      Tasks,
+	"tasksTeam":                  TasksTeam,
+	"tasksKpi":                   TasksKpi,
+	"gymLoyalty":                 GymLoyalty,
+	"gymMemberFlags":             GymMemberFlags,
+	"gymSop":                     GymSop,
+	"gymAutomation":              GymAutomation,
+	"gymNews":                    GymNews,
+	"hrisMaster":                 HrisMaster,
+	"hrisOrganization":           HrisOrganization,
+	"hrisInsights":               HrisInsights,
+	"hrisFeedbackAdmin":          HrisFeedbackAdmin,
+	"posCatalogProducts":         PosCatalogProducts,
+	"posLoyaltySettings":         PosLoyaltySettings,
+	"settingsBilling":            SettingsBilling,
+	"itemsCatalog":               ItemsCatalog,
+	"itemsPr":                    ItemsPr,
+	"site":                       Site,
+	"siteContent":                SiteContent,
+	"siteArticles":               SiteArticles,
+	"siteEvents":                 SiteEvents,
+	"eventsCalendar":             EventsCalendar,
+	"itemsPrApproval":            ItemsPrApproval,
 }

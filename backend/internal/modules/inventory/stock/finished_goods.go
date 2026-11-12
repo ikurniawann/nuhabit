@@ -3,12 +3,13 @@ package stock
 import (
 	"encoding/json"
 	"net/http"
-	ps "nuhabit/backend/internal/platform/scope"
 	"strings"
 
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/modules/inventory/ledger"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
+	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -18,7 +19,7 @@ GET /api/inventory/finished-goods — v_finished_goods_stock with the
 	merchandise SKU variants of each product on the page.
 */
 func (h *handler) finishedGoods(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.inventoryStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsProductInventory))
 	if err != nil {
 		return err
 	}
@@ -92,7 +93,7 @@ POST /api/inventory/finished-goods/adjustment — set a product's stock to
 	the counted quantity.
 */
 func (h *handler) adjustFinishedGoods(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.inventoryStaff(r)
+	u, err := h.env.Staff(iam.ItemsProductInventory)(r)
 	if err != nil {
 		return err
 	}

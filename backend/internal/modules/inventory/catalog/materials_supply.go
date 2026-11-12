@@ -10,6 +10,7 @@ import (
 	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -18,7 +19,7 @@ import (
 
 /* GET /api/purchasing/materials */
 func (h *handler) listLegacyMaterials(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialMaster))
 	if err != nil {
 		return err
 	}
@@ -54,7 +55,7 @@ func (h *handler) listLegacyMaterials(w http.ResponseWriter, r *http.Request) er
 
 /* POST /api/purchasing/materials — the old unchecked body, read as is. */
 func (h *handler) createLegacyMaterial(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.itemsStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialMaster))
 	if err != nil {
 		return err
 	}
@@ -107,7 +108,7 @@ func jsonValue(v any) any {
 
 /* GET /api/purchasing/materials/{id} */
 func (h *handler) getLegacyMaterial(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(iam.ItemsRawMaterialMaster)(r); err != nil {
 		return err
 	}
 	row, err := h.activeMaterial(r.Context(), r.PathValue("id"))
@@ -119,7 +120,7 @@ func (h *handler) getLegacyMaterial(w http.ResponseWriter, r *http.Request) erro
 
 /* PUT /api/purchasing/materials/{id} */
 func (h *handler) updateLegacyMaterial(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsRawMaterialMaster)(r)
 	if err != nil {
 		return err
 	}
@@ -161,7 +162,7 @@ func (h *handler) updateLegacyMaterial(w http.ResponseWriter, r *http.Request) e
 
 /* DELETE /api/purchasing/materials/{id} — 204. */
 func (h *handler) deleteLegacyMaterial(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsRawMaterialMaster)(r)
 	if err != nil {
 		return err
 	}
@@ -179,7 +180,7 @@ func (h *handler) deleteLegacyMaterial(w http.ResponseWriter, r *http.Request) e
 
 /* GET /api/purchasing/supply-items */
 func (h *handler) listSupplyItems(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsGeneralMaster))
 	if err != nil {
 		return err
 	}
@@ -221,7 +222,7 @@ func optionalText(v *string) any {
 
 /* POST /api/purchasing/supply-items */
 func (h *handler) createSupplyItem(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.itemsStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsGeneralMaster))
 	if err != nil {
 		return err
 	}
@@ -303,7 +304,7 @@ func (h *handler) supplyItemInScope(ctx context.Context, scope *ps.Scope, id str
 
 /* GET /api/purchasing/supply-items/{id} */
 func (h *handler) getSupplyItem(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsGeneralMaster))
 	if err != nil {
 		return err
 	}
@@ -316,7 +317,7 @@ func (h *handler) getSupplyItem(w http.ResponseWriter, r *http.Request) error {
 
 /* PATCH /api/purchasing/supply-items/{id} — only the sent fields. */
 func (h *handler) updateSupplyItem(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.itemsStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsGeneralMaster))
 	if err != nil {
 		return err
 	}
@@ -360,7 +361,7 @@ func (h *handler) updateSupplyItem(w http.ResponseWriter, r *http.Request) error
 
 /* DELETE /api/purchasing/supply-items/{id} */
 func (h *handler) deleteSupplyItem(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.itemsStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsGeneralMaster))
 	if err != nil {
 		return err
 	}

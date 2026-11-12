@@ -160,7 +160,7 @@ var (
 )
 
 func (h *Handler) listSuppliers(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, supplierReaders...)
 	if err != nil {
 		return err
 	}
@@ -196,7 +196,7 @@ func (h *Handler) listSuppliers(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) createSupplier(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsRawMaterialPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -240,7 +240,7 @@ func (h *Handler) createSupplier(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) supplierDetail(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.ItemsRawMaterialPurchasing...); err != nil {
 		return err
 	}
 	data, err := h.svc.SupplierDetail(r.Context(), r.PathValue("id"))
@@ -251,7 +251,7 @@ func (h *Handler) supplierDetail(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) updateSupplier(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsRawMaterialPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -287,7 +287,7 @@ func (h *Handler) updateSupplier(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) deleteSupplier(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsRawMaterialPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -300,7 +300,7 @@ func (h *Handler) deleteSupplier(w http.ResponseWriter, r *http.Request) error {
 var errInvalidDate = errors.New("RangeError: Invalid time value")
 
 func (h *Handler) supplierPriceHistory(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.ItemsRawMaterialPurchasing...); err != nil {
 		return err
 	}
 	months, ok := queryInt(r, "months", 6)
@@ -333,7 +333,7 @@ var (
 )
 
 func (h *Handler) listVendors(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsProductPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -360,7 +360,7 @@ func (h *Handler) listVendors(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) createVendor(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsProductPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -394,7 +394,7 @@ func (h *Handler) createVendor(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) vendorDetail(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsProductPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -410,7 +410,7 @@ func (h *Handler) vendorDetail(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) updateVendor(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsProductPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -445,7 +445,7 @@ func (h *Handler) updateVendor(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) deactivateVendor(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsProductPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -462,7 +462,7 @@ func (h *Handler) deactivateVendor(w http.ResponseWriter, r *http.Request) error
 /* ── Vendor price lists ──────────────────────────────────────────────── */
 
 func (h *Handler) listPriceLists(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsProductPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -489,7 +489,7 @@ func (h *Handler) listPriceLists(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) createPriceList(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsProductPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -529,7 +529,7 @@ func (h *Handler) createPriceList(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (h *Handler) priceListDetail(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsProductPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -545,7 +545,7 @@ func (h *Handler) priceListDetail(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (h *Handler) updatePriceList(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsProductPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -580,7 +580,7 @@ func (h *Handler) updatePriceList(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (h *Handler) deactivatePriceList(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsProductPurchasing...)
 	if err != nil {
 		return err
 	}

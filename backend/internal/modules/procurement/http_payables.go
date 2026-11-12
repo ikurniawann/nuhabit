@@ -8,7 +8,6 @@ import (
 	"nuhabit/backend/internal/modules/procurement/domain"
 	"nuhabit/backend/internal/platform/audit"
 	"nuhabit/backend/internal/platform/httpx"
-	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -22,7 +21,7 @@ func (h *Handler) payableRoutes(add addRoute) {
 }
 
 func (h *Handler) vendorPayments(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, vendorPayers...)
 	if err != nil {
 		return err
 	}
@@ -55,7 +54,7 @@ func (h *Handler) outstanding(r *http.Request, poID string) (float64, error) {
 }
 
 func (h *Handler) creditsForPo(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, poPayables...); err != nil {
 		return err
 	}
 	poID := r.URL.Query().Get("purchase_order_id")
@@ -78,7 +77,7 @@ func (h *Handler) creditsForPo(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) applyCredits(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, poPayables...)
 	if err != nil {
 		return err
 	}
@@ -121,7 +120,7 @@ func (h *Handler) applyCredits(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) approveCredit(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, poPayables...)
 	if err != nil {
 		return err
 	}

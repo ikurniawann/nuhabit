@@ -5,13 +5,14 @@ import (
 	"net/http"
 
 	"nuhabit/backend/internal/modules/inventory/kit"
+	"nuhabit/backend/internal/platform/iam"
 )
 
 // lib/purchasing/production-recipes.ts and production-wip.ts.
 
 // recipeItems is listScopedItems over the products or raw materials.
 func (h *handler) recipeItems(r *http.Request, kind string) (kit.Rows, error) {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(recipeReaders)(r)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func (h *handler) rawMaterialRecipes(w http.ResponseWriter, r *http.Request) err
 
 /* GET /api/purchasing/production/wip — WIP materials with stock and latest batch. */
 func (h *handler) wip(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsProduction)(r)
 	if err != nil {
 		return err
 	}

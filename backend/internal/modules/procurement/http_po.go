@@ -35,7 +35,7 @@ func (h *Handler) poRoutes(add addRoute) {
 }
 
 func (h *Handler) listPos(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, poReaders...)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (h *Handler) listPos(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) createPo(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (h *Handler) createPo(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) poFormData(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (h *Handler) poFormData(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) poDetail(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, poPayables...); err != nil {
 		return err
 	}
 	data, err := h.svc.PurchaseOrderDetail(r.Context(), r.PathValue("id"))
@@ -117,7 +117,7 @@ func (h *Handler) poDetail(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) updatePo(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	f, err := bodyForm(r)
@@ -136,7 +136,7 @@ func (h *Handler) updatePo(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) voidPo(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	if err := h.svc.VoidPurchaseOrder(r.Context(), r.PathValue("id")); err != nil {
@@ -165,7 +165,7 @@ func (h *Handler) approvePo(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) cancelPo(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, poPayables...)
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func (h *Handler) cancelPo(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) closePo(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, poPayables...)
 	if err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func (h *Handler) closePo(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) sendPo(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, poPayables...); err != nil {
 		return err
 	}
 	f, err := bodyForm(r)
@@ -235,7 +235,7 @@ func (h *Handler) sendPo(w http.ResponseWriter, r *http.Request) error {
 const apPaymentsPath = "/dashboard/accounting/accounts-payable/payments"
 
 func (h *Handler) poPaymentsGone(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	return httpx.JSON(w, http.StatusGone, struct {
@@ -256,7 +256,7 @@ func (h *Handler) poReceiveGone(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) poItems(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	data, err := h.svc.ListPurchaseOrderItems(r.Context(), r.PathValue("id"), true)
@@ -267,7 +267,7 @@ func (h *Handler) poItems(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) poItemsByQuery(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	poID := r.URL.Query().Get("po_id")
@@ -282,7 +282,7 @@ func (h *Handler) poItemsByQuery(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) addPoItem(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	f, err := bodyForm(r)
@@ -301,7 +301,7 @@ func (h *Handler) addPoItem(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) updatePoItem(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	f, err := bodyForm(r)
@@ -320,7 +320,7 @@ func (h *Handler) updatePoItem(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) removePoItem(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	if err := h.svc.RemovePurchaseOrderItem(r.Context(), r.PathValue("item_id")); err != nil {
@@ -330,7 +330,7 @@ func (h *Handler) removePoItem(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) poPaymentTerms(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, poPayables...); err != nil {
 		return err
 	}
 	data, err := h.svc.PoPaymentTerms(r.Context(), r.PathValue("id"))
@@ -341,7 +341,7 @@ func (h *Handler) poPaymentTerms(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) createPoPaymentTerm(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, poPayables...); err != nil {
 		return err
 	}
 	f, err := bodyForm(r)
@@ -360,7 +360,7 @@ func (h *Handler) createPoPaymentTerm(w http.ResponseWriter, r *http.Request) er
 }
 
 func (h *Handler) cancelPoPaymentTerm(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, poPayables...); err != nil {
 		return err
 	}
 	if err := h.svc.CancelPoPaymentTerm(r.Context(), r.PathValue("id"), r.PathValue("termId")); err != nil {

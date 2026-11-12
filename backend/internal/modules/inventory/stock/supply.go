@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	ps "nuhabit/backend/internal/platform/scope"
 	"strings"
 
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/modules/inventory/ledger"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
+	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -41,7 +42,7 @@ const supplyStockSelect = `SELECT si.id, si.supply_item_id, si.warehouse_id, w.n
 
 /* GET /api/purchasing/inventory/supply?search=&warehouse_id=&low_stock=1 */
 func (h *handler) supplyStock(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsGeneralInventory))
 	if err != nil {
 		return err
 	}
@@ -68,7 +69,7 @@ func (h *handler) supplyStock(w http.ResponseWriter, r *http.Request) error {
 
 /* GET /api/purchasing/inventory/supply/{id} — balance plus the last 200 movements. */
 func (h *handler) supplyStockDetail(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsGeneralInventory))
 	if err != nil {
 		return err
 	}
@@ -97,7 +98,7 @@ GET /api/purchasing/inventory/supply/form-data — warehouses, stockable
 	supply items and units for the usage/adjustment forms.
 */
 func (h *handler) supplyFormData(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsGeneralInventory))
 	if err != nil {
 		return err
 	}
@@ -132,7 +133,7 @@ POST /api/purchasing/inventory/supply-adjustment — set a supply item's
 	stock at a warehouse to the counted quantity.
 */
 func (h *handler) adjustSupply(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.itemsStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsGeneralInventory))
 	if err != nil {
 		return err
 	}
@@ -159,13 +160,9 @@ func (h *handler) adjustSupply(w http.ResponseWriter, r *http.Request) error {
 	return kit.OK(w, kit.Obj("success", true, "data", res, "message", "Stok berhasil disesuaikan"))
 }
 
-/*
-GET /api/purchasing/inventory/supply-usage — the 100 latest usages (any
-
-	signed-in user, as in TS).
-*/
+/* GET /api/purchasing/inventory/supply-usage — the 100 latest usages. */
 func (h *handler) listSupplyUsages(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.env.Auth.RequireUser(r)
+	u, err := h.env.Staff(iam.ItemsGeneralInventory)(r)
 	if err != nil {
 		return err
 	}
@@ -198,7 +195,7 @@ POST /api/purchasing/inventory/supply-usage — issue supply items: every
 	balance is checked first, then the header, stock decrements and lines.
 */
 func (h *handler) createSupplyUsage(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.itemsStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsGeneralInventory))
 	if err != nil {
 		return err
 	}

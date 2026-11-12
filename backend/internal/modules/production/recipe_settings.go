@@ -99,12 +99,12 @@ func recipeOwner(productID, rawMaterialID string) (RecipeOwner, error) {
 	return RecipeOwner{RawMaterialID: &rawMaterialID}, nil
 }
 
-// recipeStaff guards the settings as the BOM lines are guarded: the item
-// catalog menus for a product, the items menus for a raw material.
+// recipeStaff guards the settings for the BOM editor that shows them: the
+// product master for a product, the raw material master for a raw material.
 func (h *Handler) recipeStaff(r *http.Request, owner RecipeOwner) (string, error) {
-	prefixes := iam.Items
+	prefixes := iam.ItemsRawMaterialMaster
 	if owner.ProductID != nil {
-		prefixes = iam.ItemsCatalog
+		prefixes = iam.ItemsProductMaster
 	}
 	u, err := h.auth.RequireMenuPrefix(r, prefixes...)
 	if err != nil {

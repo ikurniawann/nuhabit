@@ -58,7 +58,7 @@ func returnLines(items *validate.Form, i int, v any) ReturnLine {
 }
 
 func (h *Handler) listReturns(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (h *Handler) listReturns(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) createReturn(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (h *Handler) createReturn(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) returnGrnOptions(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func (h *Handler) returnGrnOptions(w http.ResponseWriter, r *http.Request) error
 }
 
 func (h *Handler) returnDetail(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (h *Handler) returnDetail(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) updateReturn(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -188,7 +188,7 @@ func (h *Handler) updateReturn(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) approveReturn(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func (h *Handler) approveReturn(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) rejectReturn(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func (h *Handler) rejectReturn(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) reviseReturn(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsPurchasing...)
 	if err != nil {
 		return err
 	}

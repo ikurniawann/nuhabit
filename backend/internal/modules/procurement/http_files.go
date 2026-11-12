@@ -42,7 +42,7 @@ var receiptExt = regexp.MustCompile(`(?i)\.(jpe?g|png|webp|pdf)$`)
 // receiptFile serves the vendor receipt archive (private storage); unlike
 // /api/files these finance documents need a session.
 func (h *Handler) receiptFile(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, poPayables...); err != nil {
 		return err
 	}
 	// The segments as Next hands them over: still percent-encoded, so an
@@ -70,7 +70,7 @@ func (h *Handler) receiptFile(w http.ResponseWriter, r *http.Request) error {
 // then maps its text (OCR for photos and scans) to the payment form. The
 // file stays archived when extraction fails; the user fills the form in.
 func (h *Handler) receiptScan(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, purchasingDocs...); err != nil {
 		return err
 	}
 	form, err := storage.ReadForm(r, storage.MaxRequestBytes)
@@ -114,7 +114,7 @@ func (h *Handler) receiptScan(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) importSuppliers(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsRawMaterialPurchasing...)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (h *Handler) importSuppliers(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (h *Handler) exportSuppliers(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, iam.ItemsRawMaterialPurchasing...)
 	if err != nil {
 		return err
 	}

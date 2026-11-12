@@ -48,7 +48,7 @@ type unitImportSummary struct {
 
 /* POST /api/purchasing/import/units: form-data `file` (CSV) */
 func (h *handler) importUnits(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(unitEditors))
 	if err != nil {
 		return err
 	}

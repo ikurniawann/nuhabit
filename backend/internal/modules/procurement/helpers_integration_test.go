@@ -132,11 +132,24 @@ func (e *env) fixtures() fixtures {
 	return f
 }
 
+// itemsAll grants every Items sub-module plus PR create and approval.
 var itemsAll = map[string][]string{
-	"items":                            {"read", "create", "update", "delete"},
+	"items.product.master":             {"read", "create", "update", "delete"},
+	"items.raw-material.master":        {"read", "create", "update", "delete"},
+	"items.general.master":             {"read", "create", "update", "delete"},
+	"items.product.purchasing":         {"read", "create", "update", "delete"},
+	"items.raw-material.purchasing":    {"read", "create", "update", "delete"},
+	"items.general.purchasing":         {"read", "create", "update", "delete"},
+	"items.product.inventory":          {"read", "create", "update", "delete"},
+	"items.raw-material.inventory":     {"read", "create", "update", "delete"},
+	"items.general.inventory":          {"read", "create", "update", "delete"},
+	"items.product.approval":           {"read", "create", "update", "delete"},
+	"items.product.production":         {"read", "create", "update", "delete"},
+	"items.raw-material.production":    {"read", "create", "update", "delete"},
+	"items.reports":                    {"read", "create", "update", "delete"},
+	"items.raw-material.approval":      {"read", "update"},
 	"items.raw-material.purchasing.pr": {"read", "create", "update"},
 	"items.raw-material.approval.pr":   {"read", "update"},
-	"items.raw-material.approval":      {"read", "update"},
 }
 
 func today() string { return time.Now().In(procurement.Location("")).Format("20060102") }

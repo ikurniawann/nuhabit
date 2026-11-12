@@ -8,14 +8,13 @@ package stock
 import (
 	"context"
 	"net/http"
-	ps "nuhabit/backend/internal/platform/scope"
 
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
-	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
+	ps "nuhabit/backend/internal/platform/scope"
 )
 
 // Ports are the other contexts stock reaches; internal/app wires them.
@@ -133,16 +132,6 @@ func movementsOnly(h httpx.HandlerFunc) httpx.HandlerFunc {
 		}
 		return h(w, r)
 	}
-}
-
-// inventoryStaff is requireIamMenuPrefix(IAM.itemsInventory).
-func (h *handler) inventoryStaff(r *http.Request) (*auth.User, error) {
-	return h.env.Auth.RequireMenuPrefix(r, iam.ItemsInventory...)
-}
-
-// itemsStaff is requireIamMenuPrefix(IAM.items).
-func (h *handler) itemsStaff(r *http.Request) (*auth.User, error) {
-	return h.env.Auth.RequireMenuPrefix(r, iam.Items...)
 }
 
 // staffScope guards with prefixes and loads the caller's business scope.

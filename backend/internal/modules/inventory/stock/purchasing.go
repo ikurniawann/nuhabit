@@ -6,16 +6,17 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"nuhabit/backend/internal/platform/audit"
-	ps "nuhabit/backend/internal/platform/scope"
 	"strings"
 	"time"
 
 	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/modules/inventory/ledger"
+	"nuhabit/backend/internal/platform/audit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
+	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -24,7 +25,7 @@ import (
 
 /* GET /api/purchasing/inventory — material stock at the active stall or in aggregate. */
 func (h *handler) purchasingStock(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.itemsStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialInventory))
 	if err != nil {
 		return err
 	}
@@ -60,7 +61,7 @@ func (h *handler) purchasingStock(w http.ResponseWriter, r *http.Request) error 
 
 /* GET /api/purchasing/inventory/{id} — one material's stock row (no scope check, as in TS). */
 func (h *handler) purchasingStockDetail(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsRawMaterialInventory)(r)
 	if err != nil {
 		return err
 	}
@@ -90,7 +91,7 @@ GET /api/purchasing/inventory/{id}/movements?limit= — latest movements of
 	one material with the material row embedded.
 */
 func (h *handler) purchasingMaterialMovements(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(materialMovementReaders)(r); err != nil {
 		return err
 	}
 	limit := kit.IntParam(r.URL.Query(), "limit", "50")
@@ -111,7 +112,7 @@ GET /api/purchasing/inventory/movements — the movement card of the caller's
 	creator embeds.
 */
 func (h *handler) purchasingMovements(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialInventory))
 	if err != nil {
 		return err
 	}
@@ -196,7 +197,7 @@ POST /api/purchasing/inventory/adjustment — set one material's stock at a
 	warehouse to the counted quantity.
 */
 func (h *handler) adjustRawMaterial(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsRawMaterialInventory)(r)
 	if err != nil {
 		return err
 	}
@@ -330,7 +331,7 @@ func (h *handler) auditAfterCommit(r *http.Request, a audit.Entry) {
 
 /* GET /api/purchasing/inventory/transfer?page=&limit= */
 func (h *handler) listTransfers(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialInventory))
 	if err != nil {
 		return err
 	}
@@ -386,7 +387,7 @@ func (h *handler) listTransfers(w http.ResponseWriter, r *http.Request) error {
 
 /* GET /api/purchasing/inventory/transfer/preview?warehouse_id= */
 func (h *handler) transferPreview(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialInventory))
 	if err != nil {
 		return err
 	}
@@ -549,7 +550,7 @@ POST /api/purchasing/inventory/transfer — move stock between stalls of a
 	branch, audit it, then post the transfer journal.
 */
 func (h *handler) transfer(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsRawMaterialInventory)(r)
 	if err != nil {
 		return err
 	}

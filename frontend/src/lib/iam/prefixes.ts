@@ -12,6 +12,19 @@ export const IAM = {
   itemsReports: ["items.reports"],
   /** Items → Produksi: langkah produksi, WIP dan biaya batch (/api/production). */
   itemsProduction: ["items.product.production", "items.raw-material.production"],
+  /** Items → sub-modul per jenis item; API Items memadukan grup ini per rute. */
+  itemsProductMaster: ["items.product.master"],
+  itemsRawMaterialMaster: ["items.raw-material.master"],
+  itemsGeneralMaster: ["items.general.master"],
+  itemsProductPurchasing: ["items.product.purchasing"],
+  itemsRawMaterialPurchasing: ["items.raw-material.purchasing"],
+  /** Items General → Pembelian (PR, PO, penerimaan, invoice, persetujuan PR/PO). */
+  itemsGeneralPurchasing: ["items.general.purchasing"],
+  itemsProductInventory: ["items.product.inventory"],
+  itemsRawMaterialInventory: ["items.raw-material.inventory"],
+  itemsGeneralInventory: ["items.general.inventory"],
+  /** Accounting → Hutang Usaha: membuka detail PO, termin dan pembayaran vendor. */
+  itemsPayables: ["accounting.accounts-payable"],
   pos: ["pos"],
   posOperations: ["pos.operations", "pos.cashier.central"],
   /** POS → Operasional → Tagihan (tagihan member, 2026-10-01). */

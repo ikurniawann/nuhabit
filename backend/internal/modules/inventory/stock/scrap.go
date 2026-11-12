@@ -12,12 +12,13 @@ import (
 	"nuhabit/backend/internal/platform/audit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/validate"
 )
 
 /* GET /api/inventory/scrap — latest scrap / write-off movements. */
 func (h *handler) scrapHistory(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.inventoryStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialInventory))
 	if err != nil {
 		return err
 	}
@@ -79,7 +80,7 @@ POST /api/inventory/scrap — write off stock at one warehouse (optionally a
 	chosen batch, which the batch trigger consumes first).
 */
 func (h *handler) scrap(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.inventoryStaff(r)
+	u, err := h.env.Staff(iam.ItemsRawMaterialInventory)(r)
 	if err != nil {
 		return err
 	}

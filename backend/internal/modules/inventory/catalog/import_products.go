@@ -10,6 +10,7 @@ import (
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/xlsx"
 )
@@ -187,7 +188,7 @@ func (p *productImport) nextCode(ctx context.Context, wh *kit.ProductWarehouse) 
 
 /* POST /api/purchasing/import/products: form-data `file` (CSV/XLSX) */
 func (h *handler) importProducts(w http.ResponseWriter, r *http.Request) error {
-	user, scope, err := h.staffScope(r, h.itemsStaff)
+	user, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsProductMaster))
 	if err != nil {
 		return err
 	}
@@ -260,7 +261,7 @@ func (h *handler) importProducts(w http.ResponseWriter, r *http.Request) error {
 
 /* GET /api/purchasing/export/products: .xlsx with the product import columns */
 func (h *handler) exportProducts(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsProductMaster))
 	if err != nil {
 		return err
 	}

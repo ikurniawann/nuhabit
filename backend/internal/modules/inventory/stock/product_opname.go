@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	ps "nuhabit/backend/internal/platform/scope"
 	"sort"
 
 	"nuhabit/backend/internal/modules/inventory/domain"
@@ -12,6 +11,8 @@ import (
 	"nuhabit/backend/internal/modules/inventory/ledger"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
+	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -204,7 +205,7 @@ func (h *handler) productOpnameInScope(ctx context.Context, id string, scope *ps
 
 /* GET /api/inventory/product-stock-opnames */
 func (h *handler) listProductOpnames(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.inventoryStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsProductInventory))
 	if err != nil {
 		return err
 	}
@@ -265,7 +266,7 @@ func (h *handler) listProductOpnames(w http.ResponseWriter, r *http.Request) err
 
 /* GET /api/inventory/product-stock-opnames/preview?warehouse_id= */
 func (h *handler) productOpnamePreview(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.inventoryStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsProductInventory))
 	if err != nil {
 		return err
 	}
@@ -296,7 +297,7 @@ func (h *handler) productOpnamePreview(w http.ResponseWriter, r *http.Request) e
 
 /* POST /api/inventory/product-stock-opnames */
 func (h *handler) createProductOpname(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.inventoryStaff(r)
+	u, err := h.env.Staff(iam.ItemsProductInventory)(r)
 	if err != nil {
 		return err
 	}
@@ -366,7 +367,7 @@ func (h *handler) createProductOpname(w http.ResponseWriter, r *http.Request) er
 
 /* GET /api/inventory/product-stock-opnames/{id} */
 func (h *handler) getProductOpname(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.inventoryStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsProductInventory))
 	if err != nil {
 		return err
 	}
@@ -379,7 +380,7 @@ func (h *handler) getProductOpname(w http.ResponseWriter, r *http.Request) error
 
 /* PATCH /api/inventory/product-stock-opnames/{id} */
 func (h *handler) patchProductOpname(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.inventoryStaff(r)
+	u, err := h.env.Staff(iam.ItemsProductInventory)(r)
 	if err != nil {
 		return err
 	}
@@ -469,7 +470,7 @@ POST /api/inventory/product-stock-opnames/{id}/complete — set SKU stock
 	per variant line, product stock by Σ variant delta or per plain line.
 */
 func (h *handler) completeProductOpname(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.inventoryStaff(r)
+	u, err := h.env.Staff(iam.ItemsProductInventory)(r)
 	if err != nil {
 		return err
 	}

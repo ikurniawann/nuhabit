@@ -3,12 +3,13 @@ package stock
 import (
 	"math"
 	"net/http"
-	ps "nuhabit/backend/internal/platform/scope"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"nuhabit/backend/internal/modules/inventory/kit"
+	"nuhabit/backend/internal/platform/iam"
+	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -113,7 +114,7 @@ var movementReferenceLabels = map[string]string{
 
 /* GET /api/inventory/movements — every material's movements; format=csv downloads. */
 func (h *handler) movements(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.inventoryStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialInventory))
 	if err != nil {
 		return err
 	}

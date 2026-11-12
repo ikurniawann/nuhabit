@@ -36,7 +36,7 @@ func pageParams(r *http.Request) (page, limit int, err error) {
 }
 
 func (h *Handler) listPrs(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, approvalQueues...)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (h *Handler) createPr(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) prsForPo(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (h *Handler) prFormData(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) prDetail(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (h *Handler) prDetail(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) updatePr(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func (h *Handler) updatePr(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) submitPr(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func (h *Handler) approvePr(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) revisePr(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func (h *Handler) revisePr(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) convertPr(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, purchasingDocs...)
 	if err != nil {
 		return err
 	}

@@ -18,9 +18,13 @@ import (
 // Catalog and stock run through the real inventory adapters of
 // internal/app; the POS port is a fake that records SKU stock and syncs.
 
+// menus grants production plus the master data menus that own the recipe
+// settings.
 var menus = map[string][]string{
 	"items.product.production":      {"read", "update"},
 	"items.raw-material.production": {"read", "update"},
+	"items.product.master":          {"read", "update"},
+	"items.raw-material.master":     {"read", "update"},
 }
 
 type fakePos struct {

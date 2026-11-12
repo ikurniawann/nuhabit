@@ -13,6 +13,7 @@ import (
 	"nuhabit/backend/internal/modules/inventory/ledger"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -30,7 +31,7 @@ var conversionSelect = `SELECT *, ` + kit.EmbedSQL("satuan", `"item"."units"`, "
 
 /* GET /api/purchasing/raw-materials — list + KPI summary (summary ignores below_minimum). */
 func (h *handler) listRawMaterials(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.catalogStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(rawMaterialReaders))
 	if err != nil {
 		return err
 	}
@@ -127,7 +128,7 @@ func (h *handler) activeConversions(ctx context.Context, id string) (kit.Rows, e
 
 /* GET /api/purchasing/raw-materials/{id} — detail, last 10 movements, BOM users, packs. */
 func (h *handler) getRawMaterial(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.itemsStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialMaster))
 	if err != nil {
 		return err
 	}
@@ -333,7 +334,7 @@ func coaStr(row *kit.Row, key string) string {
 
 /* POST /api/purchasing/raw-materials */
 func (h *handler) createRawMaterial(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialMaster))
 	if err != nil {
 		return err
 	}
@@ -421,7 +422,7 @@ PUT|PATCH /api/purchasing/raw-materials/{id} — master fields, and when
 	unit_conversions is sent the active pack set (missing packs deactivated).
 */
 func (h *handler) updateRawMaterial(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(iam.ItemsRawMaterialMaster)(r); err != nil {
 		return err
 	}
 	set, packs, packsSent, err := parseMaterial(r, false)
@@ -545,7 +546,7 @@ DELETE /api/purchasing/raw-materials/{id} — refused while stock is on hand
 	(summed over its active inventory rows) or a product BOM uses it.
 */
 func (h *handler) deleteRawMaterial(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsRawMaterialMaster)(r)
 	if err != nil {
 		return err
 	}
@@ -590,7 +591,7 @@ func monthsAgo(now time.Time, months int) time.Time { return now.UTC().AddDate(0
 
 /* GET /api/purchasing/raw-materials/{id}/price-history?months=&limit= */
 func (h *handler) priceHistory(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(rawMaterialPricing))
 	if err != nil {
 		return err
 	}
@@ -636,7 +637,7 @@ func (h *handler) priceHistory(w http.ResponseWriter, r *http.Request) error {
 
 /* GET /api/purchasing/raw-materials/{id}/purchase-price?supplier_id=&satuan_id=&months= */
 func (h *handler) purchasePrice(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.itemsStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(rawMaterialPricing))
 	if err != nil {
 		return err
 	}

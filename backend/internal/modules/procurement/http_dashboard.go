@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"nuhabit/backend/internal/platform/httpx"
-	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/stall"
 )
 
@@ -16,7 +15,7 @@ func (h *Handler) dashboardRoutes(add addRoute) {
 }
 
 func (h *Handler) dashboard(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	user, err := h.auth.RequireMenuPrefix(r, approvalQueues...)
 	if err != nil {
 		return err
 	}

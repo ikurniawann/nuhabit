@@ -19,7 +19,7 @@ func (h *Handler) reportRoutes(add addRoute) {
 }
 
 func (h *Handler) productionInHouseReport(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.ItemsReports...); err != nil {
 		return err
 	}
 	f := queryForm(r)
@@ -81,7 +81,7 @@ func (h *Handler) csvResponse(w http.ResponseWriter, content, prefix string) err
 }
 
 func (h *Handler) poSummaryReport(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.ItemsReports...); err != nil {
 		return err
 	}
 	p, err := reportQuery(r, "vendor_id")
@@ -99,7 +99,7 @@ func (h *Handler) poSummaryReport(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (h *Handler) poDetailReport(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.ItemsReports...); err != nil {
 		return err
 	}
 	p, err := reportQuery(r, "vendor_id")
@@ -118,7 +118,7 @@ func (h *Handler) poDetailReport(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) supplierPerformanceReport(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.ItemsReports...); err != nil {
 		return err
 	}
 	p, err := reportQuery(r, "supplier_id")

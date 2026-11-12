@@ -3,7 +3,7 @@ package kit
 import (
 	"context"
 	"log/slog"
-	ps "nuhabit/backend/internal/platform/scope"
+	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -12,6 +12,7 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
+	ps "nuhabit/backend/internal/platform/scope"
 )
 
 // Env is what every inventory handler needs. DB is the pool in production
@@ -39,6 +40,13 @@ func NewEnv(deps module.Deps, db database.DB) Env {
 // Scope is getApiUserScope for u.
 func (e Env) Scope(ctx context.Context, u *auth.User) (*ps.Scope, error) {
 	return ps.Load(ctx, e.DB, u.ID)
+}
+
+// Staff is a guard passing callers granted a menu under one of the prefixes.
+func (e Env) Staff(prefixes []string) func(*http.Request) (*auth.User, error) {
+	return func(r *http.Request) (*auth.User, error) {
+		return e.Auth.RequireMenuPrefix(r, prefixes...)
+	}
 }
 
 // Tx runs fn in a transaction (a savepoint under a test transaction).

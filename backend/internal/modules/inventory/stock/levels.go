@@ -2,13 +2,14 @@ package stock
 
 import (
 	"net/http"
-	ps "nuhabit/backend/internal/platform/scope"
 	"regexp"
 	"strings"
 
 	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
+	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -38,7 +39,7 @@ func (h *handler) countAndList(r *http.Request, from, where string, args *kit.Ar
 
 /* GET /api/inventory — v_inventory, paged. */
 func (h *handler) listInventory(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.inventoryStaff(r); err != nil {
+	if _, err := h.env.Staff(iam.ItemsInventory)(r); err != nil {
 		return err
 	}
 	sp := r.URL.Query()
@@ -61,7 +62,7 @@ func (h *handler) listInventory(w http.ResponseWriter, r *http.Request) error {
 
 /* GET /api/inventory/{id}/movements */
 func (h *handler) inventoryMovements(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.inventoryStaff(r); err != nil {
+	if _, err := h.env.Staff(iam.ItemsInventory)(r); err != nil {
 		return err
 	}
 	sp := r.URL.Query()
@@ -79,7 +80,7 @@ var looseUUID = regexp.MustCompile(`(?i)^[0-9a-f-]{36}$`)
 
 /* GET /api/inventory/batches?raw_material_id=&warehouse_id= — open batches, FEFO. */
 func (h *handler) batches(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.inventoryStaff(r); err != nil {
+	if _, err := h.env.Staff(iam.ItemsRawMaterialInventory)(r); err != nil {
 		return err
 	}
 	f := kit.FromRequest(r, "")
@@ -117,7 +118,7 @@ func scopeClause(s *ps.Scope, branchColumn string, a *kit.Args) string {
 
 /* GET /api/inventory/expiry */
 func (h *handler) expiry(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.inventoryStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialInventory))
 	if err != nil {
 		return err
 	}
@@ -200,7 +201,7 @@ func (h *handler) expiry(w http.ResponseWriter, r *http.Request) error {
 
 /* GET /api/inventory/materials — active materials in the caller's company/branch. */
 func (h *handler) materials(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.staffScope(r, h.inventoryStaff)
+	_, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialInventory))
 	if err != nil {
 		return err
 	}
@@ -230,7 +231,7 @@ func (h *handler) materials(w http.ResponseWriter, r *http.Request) error {
 
 /* GET /api/inventory/low-stock — below minimum, with a reorder suggestion. */
 func (h *handler) lowStock(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.inventoryStaff(r); err != nil {
+	if _, err := h.env.Staff(iam.ItemsInventory)(r); err != nil {
 		return err
 	}
 	sp := r.URL.Query()
@@ -481,7 +482,7 @@ GET /api/inventory/raw-materials — material stock at the active stall,
 	the caller's branch, or (neither) the legacy aggregate view.
 */
 func (h *handler) rawMaterialStock(w http.ResponseWriter, r *http.Request) error {
-	u, scope, err := h.staffScope(r, h.inventoryStaff)
+	u, scope, err := h.staffScope(r, h.env.Staff(iam.ItemsRawMaterialInventory))
 	if err != nil {
 		return err
 	}

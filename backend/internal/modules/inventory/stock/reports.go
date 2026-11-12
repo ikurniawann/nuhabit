@@ -11,6 +11,7 @@ import (
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -46,7 +47,7 @@ const movementColumns = `"id", "warehouse_id", "tipe", "jumlah", "qty_before", "
 
 /* GET /api/purchasing/reports/stock-card */
 func (h *handler) stockCard(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsReports)(r)
 	if err != nil {
 		return err
 	}
@@ -404,7 +405,7 @@ var valuationCategoryLabels = map[string]string{
 
 /* GET /api/purchasing/reports/inventory-valuation */
 func (h *handler) inventoryValuation(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsReports)(r)
 	if err != nil {
 		return err
 	}

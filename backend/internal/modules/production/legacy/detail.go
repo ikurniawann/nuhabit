@@ -9,6 +9,7 @@ import (
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -132,7 +133,7 @@ func (h *handler) checkStock(ctx context.Context, orderID, mode string, override
 
 /* GET /api/purchasing/production/orders/{id} */
 func (h *handler) getOrder(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	if _, err := h.env.Staff(iam.ItemsProduction)(r); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -397,7 +398,7 @@ func (h *handler) loadOrder(ctx context.Context, q database.Querier, id string) 
 
 /* PATCH /api/purchasing/production/orders/{id} — recheck_stock, release, start, cancel, complete. */
 func (h *handler) updateOrder(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.itemsStaff(r)
+	u, err := h.env.Staff(iam.ItemsProduction)(r)
 	if err != nil {
 		return err
 	}
