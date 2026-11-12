@@ -28,6 +28,7 @@ import { CLASS_COLOR, GYM_KEYS, schedulingApi, type ClassColor, type ClassType }
 import { SELECT } from "@/features/gym/shared";
 import { ImportButton } from "@/features/data-import/import-dialog";
 import { formatNumber } from "@/lib/format";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Gym → Jenis Kelas: template durasi, kapasitas, dan biaya kredit untuk sesi baru. */
 export function ClassTypesPage() {
@@ -130,9 +131,9 @@ export function ClassTypesPage() {
         )}
       </Card>
 
-      {editing && (
-        <ClassTypeDialog classType={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={refresh} />
-      )}
+      <DialogPresence value={editing}>
+        {(editing) => <ClassTypeDialog classType={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={refresh} />}
+      </DialogPresence>
       <ConfirmDialog
         open={archiving !== null}
         onOpenChange={(open) => !open && setArchiving(null)}

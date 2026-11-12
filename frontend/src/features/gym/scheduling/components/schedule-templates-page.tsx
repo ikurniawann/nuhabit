@@ -41,6 +41,7 @@ import {
   type GenerateResult,
   type SessionTemplate,
 } from "../api";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Gym → Template Jadwal: pola mingguan yang membuat sesi otomatis. */
 export function ScheduleTemplatesPage() {
@@ -238,14 +239,16 @@ export function ScheduleTemplatesPage() {
         )}
       </Card>
 
-      {editing && (
-        <TemplateDialog
-          template={editing === "new" ? null : editing}
-          branches={data.data?.branches ?? []}
-          onClose={() => setEditing(null)}
-          onSaved={refresh}
-        />
-      )}
+      <DialogPresence value={editing}>
+        {(editing) => (
+          <TemplateDialog
+            template={editing === "new" ? null : editing}
+            branches={data.data?.branches ?? []}
+            onClose={() => setEditing(null)}
+            onSaved={refresh}
+          />
+        )}
+      </DialogPresence>
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}

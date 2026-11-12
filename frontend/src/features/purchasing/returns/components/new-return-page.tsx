@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Label } from "@/components/ui/label";
@@ -385,7 +386,7 @@ export function NewReturnPage({
                     </p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto p-4">
+                  <ScrollRegion label="Tabel item retur" className="overflow-x-auto p-4">
                     <ReturnItemsTable
                       variant="create"
                       items={returnableItems}
@@ -396,7 +397,7 @@ export function NewReturnPage({
                       onQtyChange={updateQtyReturn}
                       onNotesChange={updateConditionNotes}
                     />
-                  </div>
+                  </ScrollRegion>
                 )}
               </CardContent>
             </Card>

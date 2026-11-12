@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
@@ -31,7 +32,7 @@ export function JournalLinesTable({
   removeLine: (key: string) => void;
 }) {
   return (
-    <div className="mt-4 overflow-x-auto">
+    <ScrollRegion label="Tabel baris jurnal" className="mt-4 overflow-x-auto">
       <table className="w-full min-w-225 text-sm">
         <thead>
           <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -109,6 +110,6 @@ export function JournalLinesTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }

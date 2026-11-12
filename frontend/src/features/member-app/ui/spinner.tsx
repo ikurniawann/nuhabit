@@ -10,6 +10,7 @@ export function Spinner({ label }: { label?: string }) {
         color: 'inherit',
       }}
       role="status"
+      className="nh-spinner"
     >
       <span className="hx-spinner" />
       {label ? <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>{label}</span> : null}

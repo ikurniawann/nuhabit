@@ -22,5 +22,7 @@ export async function fetchApi<T>(url: string, options?: RequestInit): Promise<T
     throw new Error(fieldErrors || error.message || error.error || `HTTP ${response.status}`);
   }
 
+  // DELETE answers 204 with no body; parsing it would report a failed delete.
+  if (response.status === 204) return undefined as T;
   return response.json();
 }

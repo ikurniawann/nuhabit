@@ -40,15 +40,16 @@ export function EssClockPanel() {
   const todayQuery = useTodayAttendance();
   const today = todayQuery.data ?? null;
   const clock = useSubmitClock();
-  const [locating, setLocating] = useState(false);
+  const [locating, setLocating] = useState<ClockAction | null>(null);
   const [cameraFor, setCameraFor] = useState<ClockAction | null>(null);
-  const submitting = locating || clock.isPending;
+  const pendingAction = locating ?? (clock.isPending ? clock.variables?.action : null);
+  const submitting = pendingAction != null;
 
   async function submit(action: ClockAction, photo: string) {
     setCameraFor(null);
-    setLocating(true);
+    setLocating(action);
     const location = await getLocation();
-    setLocating(false);
+    setLocating(null);
 
     const payload: EssClockPayload = { action, photo };
     if (action === "clock-in") {
@@ -76,32 +77,29 @@ export function EssClockPanel() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <Button
-          className="h-12 bg-green-600 px-6 hover:bg-green-700"
+          size="lg"
           disabled={todayQuery.isLoading || submitting || clockedIn}
           onClick={() => setCameraFor("clock-in")}
         >
-          {submitting && cameraFor !== "clock-out" ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Clock className="mr-2 h-4 w-4" />
-          )}
+          {pendingAction === "clock-in" ? <Loader2 className="animate-spin" aria-hidden /> : <Clock aria-hidden />}
           Clock In
         </Button>
         <Button
+          size="lg"
           variant="outline"
-          className="h-12 px-6"
           disabled={todayQuery.isLoading || submitting || !clockedIn || clockedOut}
           onClick={() => setCameraFor("clock-out")}
         >
-          <Clock className="mr-2 h-4 w-4" /> Clock Out
+          {pendingAction === "clock-out" ? <Loader2 className="animate-spin" aria-hidden /> : <Clock aria-hidden />}
+          Clock Out
         </Button>
-        <p className="flex items-center gap-1 text-xs text-gray-500">
-          <MapPin className="h-3.5 w-3.5" /> Foto selfie & lokasi GPS wajib disertakan
+        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+          <MapPin className="size-3.5" aria-hidden /> Foto selfie & lokasi GPS wajib disertakan
         </p>
       </div>
 
       {today && clockedIn && (
-        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <span>
             Masuk <b>{formatTime(today.clock_in)}</b>
             {clockedOut ? (
@@ -111,14 +109,14 @@ export function EssClockPanel() {
             ) : null}
           </span>
           {today.is_late ? (
-            <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+            <Badge variant="destructive">
               Terlambat {today.late_minutes} mnt
             </Badge>
           ) : (
-            <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Tepat waktu</Badge>
+            <Badge variant="success">Tepat waktu</Badge>
           )}
           {clockedOut && (
-            <Badge variant="outline" className="text-green-700">
+            <Badge variant="outline" className="text-success">
               Absensi hari ini selesai
             </Badge>
           )}

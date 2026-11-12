@@ -4,6 +4,7 @@
 // true) yang nantinya dipetakan ke controller gate fisik (gateway koneksi).
 // Koneksi controller riil menyusul; halaman ini menyiapkan daftar & slot map.
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useMemo, useState } from "react";
 import { TicketIcon } from "@heroicons/react/24/outline";
 import { Cable, Loader2 } from "lucide-react";
@@ -74,7 +75,7 @@ export function GateMappingPage() {
             Master Ticket.
           </p>
         ) : (
-          <div className="overflow-x-auto px-4 pb-4">
+          <ScrollRegion label="Tabel tiket ber-gate" className="overflow-x-auto px-4 pb-4">
             <table className="w-full text-sm">
               <thead>
                 <TableRow className="border-b border-gray-200/70 bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500 hover:bg-gray-50/80">
@@ -124,7 +125,7 @@ export function GateMappingPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
     </div>

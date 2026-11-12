@@ -30,6 +30,7 @@ import {
 import type { PromoCampaign, PromoCode } from "../types";
 import { PROMO_SCOPE_PREFIX } from "../types";
 import { EditCodeDialog } from "./edit-code-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const STATUS_BADGES: Record<string, string> = {
   held: "bg-amber-100 text-amber-700",
@@ -272,9 +273,9 @@ export function CampaignDetailDialog({
         </DialogPanel>
       </Dialog>
 
-      {editingCode && (
-        <EditCodeDialog key={editingCode.id} code={editingCode} onClose={() => setEditingCode(null)} />
-      )}
+      <DialogPresence value={editingCode}>
+        {(editingCode) => <EditCodeDialog key={editingCode.id} code={editingCode} onClose={() => setEditingCode(null)} />}
+      </DialogPresence>
     </>
   );
 }

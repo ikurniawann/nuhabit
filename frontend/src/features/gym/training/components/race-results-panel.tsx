@@ -22,6 +22,7 @@ import { formatDuration } from "@/lib/gym/hyrox";
 import { HYROX_STATIONS, RESULT_DIVISION_LABELS, TOTAL_TOLERANCE_SEC, formatSplit } from "@/lib/gym/hyrox-results";
 import { formatDateTime } from "@/lib/format";
 import { trainingApi, type RaceEventRow, type RaceResultRow } from "../api";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const STATUS_FILTERS = { all: undefined, pending: false, verified: true } as const;
 type StatusFilter = keyof typeof STATUS_FILTERS;
@@ -146,7 +147,9 @@ export function RaceResultsPanel({ races }: { races: RaceEventRow[] }) {
         )}
       </Card>
 
-      {open && <SplitsDialog result={open} onClose={() => setOpen(null)} />}
+      <DialogPresence value={open}>
+        {(open) => <SplitsDialog result={open} onClose={() => setOpen(null)} />}
+      </DialogPresence>
     </div>
   );
 }

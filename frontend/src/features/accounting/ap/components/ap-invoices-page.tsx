@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useMemo, useState } from "react";
 import { DocumentTextIcon } from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
@@ -117,7 +118,7 @@ function InvoiceTable({ rows }: { rows: ApInvoiceRow[] }) {
   }
 
   return (
-    <div className="overflow-x-auto px-4">
+    <ScrollRegion label="Tabel invoice hutang" className="overflow-x-auto px-4">
       <table className="w-full min-w-[880px] text-sm">
         <thead>
           <tr className="border-b border-gray-200/70 text-left text-muted-foreground">
@@ -165,6 +166,6 @@ function InvoiceTable({ rows }: { rows: ApInvoiceRow[] }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }

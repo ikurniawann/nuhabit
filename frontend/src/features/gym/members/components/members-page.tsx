@@ -28,6 +28,7 @@ import {
 } from "../list-params";
 import { MemberLink } from "../member-link";
 import { RegisterMemberDialog } from "./register-member-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Gym → Member: cari dan saring member, filter dan halaman tersimpan di URL. */
 export function MembersPage() {
@@ -211,7 +212,9 @@ export function MembersPage() {
         </nav>
       )}
 
-      {registering && <RegisterMemberDialog onClose={() => setRegistering(false)} />}
+      <DialogPresence value={registering}>
+        {() => <RegisterMemberDialog onClose={() => setRegistering(false)} />}
+      </DialogPresence>
     </div>
   );
 }

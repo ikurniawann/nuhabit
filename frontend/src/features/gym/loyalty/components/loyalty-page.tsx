@@ -37,6 +37,7 @@ import {
   type TiersView,
 } from "../api";
 import { StatusBadge, StatusDialog } from "./member-loyalty";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const MENU = "gym.loyalty";
 
@@ -178,16 +179,18 @@ function TierSection() {
           </Table>
         )}
       </Card>
-      {editing && (
-        <TierDialog
-          tier={editing === "new" ? null : editing}
-          onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            recompute.mutate();
-          }}
-        />
-      )}
+      <DialogPresence value={editing}>
+        {(editing) => (
+          <TierDialog
+            tier={editing === "new" ? null : editing}
+            onClose={() => setEditing(null)}
+            onSaved={() => {
+              setEditing(null);
+              recompute.mutate();
+            }}
+          />
+        )}
+      </DialogPresence>
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}
@@ -475,14 +478,16 @@ function StatusSection() {
           </Table>
         )}
       </Card>
-      {target && (
-        <StatusDialog
-          customerId={target.customer_id}
-          name={target.name}
-          current={{ status: target.status, reason: target.reason, suspended_until: target.suspended_until }}
-          onClose={() => setTarget(null)}
-        />
-      )}
+      <DialogPresence value={target}>
+        {(target) => (
+          <StatusDialog
+            customerId={target.customer_id}
+            name={target.name}
+            current={{ status: target.status, reason: target.reason, suspended_until: target.suspended_until }}
+            onClose={() => setTarget(null)}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useEffect, useState } from "react";
 import type { ComponentType, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -201,7 +202,7 @@ export function ItemsLookupPage({
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <ScrollRegion label="Tabel barang" className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                   <tr>
@@ -259,7 +260,7 @@ export function ItemsLookupPage({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
           )}
         </div>
       </PurchasingListSection>

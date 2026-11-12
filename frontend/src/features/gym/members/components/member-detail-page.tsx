@@ -29,6 +29,7 @@ import { CoachNoteHistory } from "@/features/gym/care/components/coach-notes";
 import { MemberFlagsPanel } from "@/features/gym/care/components/member-flags-panel";
 import { MemberNotes } from "./member-notes";
 import { ProfileDialog } from "./profile-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const TABS = [
   { value: "profil", label: "Profil" },
@@ -180,7 +181,9 @@ export function MemberDetailPage({ customerId }: { customerId: string }) {
         </TabsContent>
       </Tabs>
 
-      {editing && <ProfileDialog profile={p} onClose={() => setEditing(false)} />}
+      <DialogPresence value={editing}>
+        {() => <ProfileDialog profile={p} onClose={() => setEditing(false)} />}
+      </DialogPresence>
     </div>
   );
 }

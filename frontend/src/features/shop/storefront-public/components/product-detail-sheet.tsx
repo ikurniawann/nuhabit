@@ -10,7 +10,7 @@ import { PriceTag, SaleBadge } from './price-tag';
 import { ProductPhoto } from './product-photo';
 import { ProductRow } from './product-row';
 import { RatingStars, StarRow } from './rating-stars';
-import { useEscapeKey } from './use-escape-key';
+import { exitMotion, useStoreDialog } from './use-store-dialog';
 
 const sellable = (stock: number, preorder: boolean) => stock > 0 || preorder;
 
@@ -56,15 +56,16 @@ export function ProductDetailSheet({
   const preorder = chosen ? chosen.preorder : product.preorder && product.stock <= 0;
   const sale = saleEndsText(product, formatDateEn);
   const related = relatedProducts(product, products);
-  useEscapeKey(onClose);
+  const { panelRef, closing, requestClose } = useStoreDialog(onClose);
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
+    <div className={`motion-fade-in fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center ${exitMotion.backdrop(closing)}`} onClick={requestClose}>
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={product.name}
-        className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl bg-white p-5 sm:rounded-3xl sm:p-7"
+        className={`motion-rise-in sm:motion-pop-in max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl bg-white p-5 sm:rounded-3xl sm:p-7 ${exitMotion.sheet(closing)}`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-5 flex items-start justify-between gap-3">
@@ -83,7 +84,7 @@ export function ProductDetailSheet({
             >
               <Heart className={`h-5 w-5 ${saved ? 'fill-forest' : ''}`} />
             </button>
-            <button type="button" onClick={onClose} aria-label="Close" className="p-2">
+            <button type="button" onClick={requestClose} aria-label="Close" className="p-2" data-autofocus>
               <X className="h-5 w-5 text-gray-400" />
             </button>
           </div>

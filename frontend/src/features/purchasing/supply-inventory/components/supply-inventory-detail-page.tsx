@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { use } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -89,7 +90,7 @@ export function SupplyInventoryDetailPage({ params }: { params: Promise<{ id: st
           {data.movements.length === 0 ? (
             <div className="py-12 text-center text-sm text-gray-500">Belum ada pergerakan stok.</div>
           ) : (
-            <div className="overflow-x-auto">
+            <ScrollRegion label="Tabel kartu stok" className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                   <tr>
@@ -123,7 +124,7 @@ export function SupplyInventoryDetailPage({ params }: { params: Promise<{ id: st
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
           )}
         </CardContent>
       </Card>

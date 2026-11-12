@@ -6,7 +6,7 @@ import type { AppliedPromo, CatalogProduct, CatalogSku } from '@/lib/shop/types'
 import { PreorderBadge } from './preorder-note';
 import { PriceTag } from './price-tag';
 import { ProductPhoto } from './product-photo';
-import { useEscapeKey } from './use-escape-key';
+import { exitMotion, useStoreDialog } from './use-store-dialog';
 
 /**
  * Cart drawer: change the size in place, quantity stepper, remove a line,
@@ -38,24 +38,25 @@ export function CartDrawer({
   onCheckout: () => void;
   onClose: () => void;
 }) {
-  useEscapeKey(onClose);
+  const { panelRef, closing, requestClose } = useStoreDialog(onClose);
   const productOf = (line: CartLine) => products.find((product) => product.id === line.productId);
   const hasIssue = cart.some((line) => cartLineIssue(line, products));
   const totals = checkoutTotals({ lines: cart, promo, method: 'ship', rateCost: null, freeShippingThreshold });
   const progress = freeShippingProgress(totals.subtotal, freeShippingThreshold);
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/40" onClick={onClose}>
+    <div className={`motion-fade-in fixed inset-0 z-40 flex justify-end bg-black/40 ${exitMotion.backdrop(closing)}`} onClick={requestClose}>
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label="Cart"
-        className="flex h-full w-full max-w-md flex-col bg-white"
+        className={`motion-slide-in-end flex h-full w-full max-w-md flex-col bg-white ${exitMotion.drawer(closing)}`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <h2 className="text-base font-semibold text-gray-900">Cart</h2>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={requestClose} aria-label="Close" data-autofocus>
             <X className="h-5 w-5 text-gray-400" />
           </button>
         </div>

@@ -12,6 +12,9 @@
    `neutral-*` ditimpa tangga netral menuju ink; tingkat 400 dipakai sebagai teks,
    jadi #76726a (4.8:1 di putih). */
 @theme {
+  /* Every bare transition-* utility runs on the motion tokens in :root. */
+  --default-transition-duration: var(--motion-fast);
+  --default-transition-timing-function: var(--ease-standard);
   --color-pink-50: #ffffff;
   --color-pink-100: #ffffff;
   --color-pink-200: #e3ff8a;
@@ -286,13 +289,18 @@
   --font-sans-stack: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-size-base: 16px;
 
-  /* Shape + motion. */
+  /* Shape + motion. The only motion vocabulary: fast for hover, press and
+     popovers; base for dialogs, fades and exits; slow for sheets and page
+     entrances. Standard ease for most things, emphasized for big surfaces.
+     In classes: duration-(--motion-base) ease-(--ease-standard). */
   --radius: 1rem;
-  --dur-fast: 120ms;
-  --dur-base: 220ms;
-  --dur-slow: 360ms;
-  --ease-glass: cubic-bezier(0.32, 0.72, 0, 1);
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
+  --motion-slow: 300ms;
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Tailwind's ease-out utility, kept on the standard curve. */
+  --ease-out: var(--ease-standard);
 
   /* Kanvas halaman: White Beige polos. */
   --page-mesh: var(--wit-surface);
@@ -417,6 +425,66 @@ body {
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* Enter animations for hand-rolled overlays and freshly loaded content.
+   Transform and opacity only. `backwards` never leaves a transform behind,
+   which would turn the element into the containing block of fixed children.
+   The prefers-reduced-motion rule below cuts every duration to zero. */
+@keyframes motion-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes motion-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+}
+@keyframes motion-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes motion-slide-in-end {
+  from {
+    opacity: 0;
+    transform: translateX(2rem);
+  }
+}
+@utility motion-fade-in {
+  animation: motion-fade-in var(--motion-base) var(--ease-standard) backwards;
+}
+@utility motion-rise-in {
+  animation: motion-rise-in var(--motion-slow) var(--ease-emphasized) backwards;
+}
+@utility motion-pop-in {
+  animation: motion-pop-in var(--motion-base) var(--ease-emphasized) backwards;
+}
+@utility motion-slide-in-end {
+  animation: motion-slide-in-end var(--motion-slow) var(--ease-emphasized) backwards;
+}
+
+/* <details> sections open and close with a height transition where the
+   browser supports ::details-content. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports selector(::details-content) {
+    details {
+      interpolate-size: allow-keywords;
+    }
+    details::details-content {
+      block-size: 0;
+      overflow: clip;
+      transition:
+        block-size var(--motion-base) var(--ease-standard),
+        content-visibility var(--motion-base) allow-discrete;
+    }
+    details[open]::details-content {
+      block-size: auto;
+    }
   }
 }
 

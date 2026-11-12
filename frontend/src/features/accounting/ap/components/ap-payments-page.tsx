@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
@@ -149,7 +150,7 @@ export function ApPaymentsPage() {
             Belum ada pembayaran AP.
           </p>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel pembayaran hutang" className="overflow-x-auto px-4">
             <table className="w-full min-w-[760px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-left text-muted-foreground">
@@ -185,7 +186,7 @@ export function ApPaymentsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
 

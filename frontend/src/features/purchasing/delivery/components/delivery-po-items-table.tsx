@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { formatNumber, formatRupiah } from "@/lib/format";
 import { deliveryItemRemaining } from "@/lib/purchasing/receiving-ui-delivery";
 import type { PurchaseOrderItem } from "@/types/purchasing";
@@ -5,7 +6,7 @@ import type { PurchaseOrderItem } from "@/types/purchasing";
 /** Item PO bahan baku; pada kirim ulang baris tanpa sisa diredupkan. */
 export function DeliveryPoItemsTable({ items, isReship }: { items: PurchaseOrderItem[]; isReship: boolean }) {
   return (
-    <div className="overflow-x-auto px-4 pb-4">
+    <ScrollRegion label="Tabel item purchase order" className="overflow-x-auto px-4 pb-4">
       <table className="min-w-full text-sm">
         <thead>
           <tr className="border-b border-gray-200/70 text-xs uppercase tracking-wide text-gray-500">
@@ -48,6 +49,6 @@ export function DeliveryPoItemsTable({ items, isReship }: { items: PurchaseOrder
           })}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }

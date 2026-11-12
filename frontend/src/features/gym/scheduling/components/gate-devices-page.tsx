@@ -25,6 +25,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { defaultBranchId, useGymBranches } from "@/features/gym/branches";
 import { SELECT } from "@/features/gym/shared";
 import { GYM_KEYS, schedulingApi, waktu, type GateDevice, type IssuedDeviceKey } from "../api";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Perangkat dianggap online bila heartbeat atau scan terakhir dalam 10 menit. */
 const ONLINE_MS = 10 * 60 * 1000;
@@ -128,16 +129,18 @@ export function GateDevicesPage() {
         )}
       </Card>
 
-      {creating && (
-        <CreateDeviceDialog
-          onClose={() => setCreating(false)}
-          onCreated={(name, key) => {
-            setCreating(false);
-            setIssued({ name, key });
-            refresh();
-          }}
-        />
-      )}
+      <DialogPresence value={creating}>
+        {() => (
+          <CreateDeviceDialog
+            onClose={() => setCreating(false)}
+            onCreated={(name, key) => {
+              setCreating(false);
+              setIssued({ name, key });
+              refresh();
+            }}
+          />
+        )}
+      </DialogPresence>
       <IssuedKeyDialog issued={issued} onClose={() => setIssued(null)} />
       <ConfirmDialog
         open={confirming !== null}

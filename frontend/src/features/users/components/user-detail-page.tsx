@@ -27,6 +27,7 @@ import { EmployeeDocumentsTab } from "./employee-documents-tab";
 import { EmployeeLifecycleTab } from "./employee-lifecycle-tab";
 import { EmployeeShiftsTab } from "./employee-shifts-tab";
 import { ResetPasswordDialog } from "./reset-password-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const TABS = [
   { key: "info", label: "Personal Info", icon: UserCircleIcon },
@@ -139,16 +140,18 @@ export function UserDetailPage({ params }: { params: Promise<{ id: string }> }) 
         onOpenChange={setResetDialogOpen}
       />
 
-      {createAccountOpen && (
-        <CreateAccountDialog
-          employee={{
-            id,
-            full_name: employee.full_name,
-            email: employee.email,
-          }}
-          onClose={() => setCreateAccountOpen(false)}
-        />
-      )}
+      <DialogPresence value={createAccountOpen}>
+        {() => (
+          <CreateAccountDialog
+            employee={{
+              id,
+              full_name: employee.full_name,
+              email: employee.email,
+            }}
+            onClose={() => setCreateAccountOpen(false)}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

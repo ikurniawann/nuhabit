@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Loader2, RotateCcw, Save, Search } from "lucide-react";
@@ -322,7 +323,7 @@ function ChannelEditor({ channel, products }: { channel: ChannelRule; products: 
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Tabel harga kanal" className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -415,7 +416,7 @@ function ChannelEditor({ channel, products }: { channel: ChannelRule; products: 
               ) : null}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
 
         <div className="sticky bottom-0 flex flex-col gap-2 border-t border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground">

@@ -6,6 +6,7 @@ import { CalendarIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import "flatpickr/dist/themes/light.css";
+import "@/components/design-system/ds-flatpickr.css";
 import { Indonesian } from "flatpickr/dist/l10n/id.js";
 
 interface DatePickerProps {
@@ -60,6 +61,9 @@ export function DatePicker({
         minDate: minDate,
         maxDate: maxDate,
         defaultDate: value || jakartaTime, // Force Jakarta timezone
+        onReady: (_dates, _dateStr, fp) => {
+          fp.calendarContainer.classList.add("ds-flatpickr");
+        },
         onChange: (selectedDates, dateStr) => {
           setDisplayDate(dateStr);
           onChangeRef.current?.(dateStr);
@@ -126,7 +130,7 @@ export function DatePicker({
         className={cn(
           "w-full justify-start text-left font-normal h-9 text-sm cursor-pointer",
           variant === "neutral" &&
-            "border border-gray-300 bg-white text-gray-900 shadow-xs hover:!border-gray-300 hover:!bg-white hover:!text-gray-900 focus-visible:!border-gray-400 focus-visible:!ring-gray-100 aria-expanded:!border-gray-300 aria-expanded:!bg-white aria-expanded:!text-gray-900 [&_svg]:text-gray-400",
+            "border border-border bg-card text-foreground hover:!bg-card hover:!text-foreground focus-visible:!border-forest focus-visible:!ring-forest/20 aria-expanded:!bg-card aria-expanded:!text-foreground [&_svg]:text-muted-foreground",
           !displayDate && "text-muted-foreground",
           className
         )}

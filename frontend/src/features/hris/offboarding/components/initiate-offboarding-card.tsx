@@ -73,7 +73,7 @@ export function InitiateOffboardingCard({ employeeId, employeeName }: InitiateOf
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Button className="bg-red-600 hover:bg-red-700" onClick={() => setOpen(true)}>
+        <Button className="bg-red-600 text-white hover:bg-red-700" onClick={() => setOpen(true)}>
           <AlertCircle className="w-4 h-4 mr-2" />
           Mulai Proses Offboarding
         </Button>
@@ -141,7 +141,7 @@ export function InitiateOffboardingCard({ employeeId, employeeName }: InitiateOf
               <Button
                 onClick={handleSubmit}
                 disabled={initiate.isPending || !form.resignationDate || !form.lastWorkingDay}
-                className="bg-red-600 hover:bg-red-700"
+                className="bg-red-600 text-white hover:bg-red-700"
               >
                 {initiate.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertCircle className="w-4 h-4 mr-2" />}
                 Mulai Proses

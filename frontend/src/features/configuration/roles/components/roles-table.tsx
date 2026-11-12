@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import {
   EyeIcon,
   KeyIcon,
@@ -29,7 +30,7 @@ export function RolesTable({
   onManagePermissions,
 }: RolesTableProps) {
   return (
-    <div className="overflow-x-auto">
+    <ScrollRegion label="Tabel peran" className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <TableRow className="border-b border-gray-200/70 bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500 hover:bg-gray-50/80">
@@ -136,6 +137,6 @@ export function RolesTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }

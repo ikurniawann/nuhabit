@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -368,7 +369,7 @@ function SupplierDetailInner() {
                   Belum ada purchase order.
                 </div>
               ) : (
-                <div className="overflow-x-auto p-4">
+                <ScrollRegion label="Tabel riwayat purchase order" className="overflow-x-auto p-4">
                   <table className="min-w-full text-sm">
                     <thead className="border-b border-gray-100 bg-gray-50 text-xs tracking-wide text-gray-500 uppercase">
                       <tr>
@@ -410,7 +411,7 @@ function SupplierDetailInner() {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </ScrollRegion>
               )}
             </CardContent>
           </Card>

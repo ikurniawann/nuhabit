@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -350,7 +351,7 @@ export function ProductDetailPage() {
                   Belum ada komponen resep (BOM).
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <ScrollRegion label="Tabel resep produk" className="overflow-x-auto">
                   <table className="min-w-full text-sm">
                     <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                       <tr>
@@ -390,7 +391,7 @@ export function ProductDetailPage() {
                       </tr>
                     </tbody>
                   </table>
-                </div>
+                </ScrollRegion>
               )}
             </CardContent>
           </Card>

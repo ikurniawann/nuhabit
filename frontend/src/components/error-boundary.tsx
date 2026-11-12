@@ -76,7 +76,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   {this.state.error.name}: {this.state.error.message}
                 </p>
                 {process.env.NODE_ENV === "development" && this.state.error.stack ? (
-                  <pre className="mt-2 text-xs text-gray-600 overflow-x-auto">
+                  <pre tabIndex={0} role="region" aria-label="Jejak error" className="mt-2 text-xs text-gray-600 overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest/40">
                     {this.state.error.stack}
                   </pre>
                 ) : null}

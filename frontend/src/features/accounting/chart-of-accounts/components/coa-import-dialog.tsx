@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -94,7 +95,7 @@ function CoaImportPanel({ onClose }: { onClose: () => void }) {
                 error {importResult.summary.error}
               </Badge>
             </div>
-            <div className="max-h-64 overflow-auto rounded-lg border border-gray-200/70">
+            <ScrollRegion label="Pratinjau impor akun" axis="y" className="max-h-64 overflow-auto rounded-lg border border-gray-200/70">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-gray-200/70 bg-muted/40 text-left">
@@ -122,7 +123,7 @@ function CoaImportPanel({ onClose }: { onClose: () => void }) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
             {importResult.issues.length > 0 ? (
               <p className="text-xs text-red-600">
                 {importResult.issues.length} issue parse — lihat console /

@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HPPTrend } from "@/features/purchasing/dashboard/queries";
 import { formatRupiah } from "@/lib/format";
@@ -17,7 +18,7 @@ export function HPPTrendPanel({ trends }: HPPTrendPanelProps) {
         <p className="text-xs text-gray-500">HPP produk utama vs bulan lalu</p>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Tabel tren HPP" className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100">
@@ -53,7 +54,7 @@ export function HPPTrendPanel({ trends }: HPPTrendPanelProps) {
               })}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       </CardContent>
     </Card>
   );

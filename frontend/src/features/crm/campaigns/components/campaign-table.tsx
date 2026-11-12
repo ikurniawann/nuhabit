@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { MegaphoneIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +41,7 @@ export function CampaignTable({ onCreate, onReport }: { onCreate: () => void; on
       ) : campaigns.length === 0 ? (
         <p className="px-5 py-10 text-center text-sm text-gray-500">Belum ada kampanye.</p>
       ) : (
-        <div className="overflow-x-auto px-4 pb-4">
+        <ScrollRegion label="Tabel kampanye" className="overflow-x-auto px-4 pb-4">
           <table className="w-full text-sm">
             <thead>
               <TableRow className="border-b border-gray-200/70 bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500 hover:bg-gray-50/80">
@@ -133,7 +134,7 @@ export function CampaignTable({ onCreate, onReport }: { onCreate: () => void; on
               })}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       )}
     </PurchasingListSection>
   );

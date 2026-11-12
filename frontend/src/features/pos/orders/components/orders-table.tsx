@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Ban, ExternalLink, Eye, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDateTime, formatRupiah } from "@/lib/format";
@@ -26,7 +27,7 @@ export function OrdersTable({
   onVoid: (order: Order) => void;
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200/70">
+    <ScrollRegion label="Tabel pesanan" className="overflow-x-auto rounded-xl border border-gray-200/70">
       <table className="w-full min-w-[780px] text-sm">
         <thead>
           <tr className="border-b border-gray-200/70 bg-muted/30 text-left text-muted-foreground">
@@ -52,7 +53,7 @@ export function OrdersTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }
 

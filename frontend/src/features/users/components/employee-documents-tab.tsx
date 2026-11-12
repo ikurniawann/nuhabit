@@ -26,6 +26,7 @@ import {
 import { DocumentRow } from "./documents/document-row";
 import { DOC_TYPE_LABELS, DocumentUploadDialog } from "./documents/document-upload-dialog";
 import { RecruitmentDocumentsSection } from "./documents/recruitment-documents-section";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /**
  * Tab "Dokumen" di detail karyawan (HRD/super admin): SEMUA lampiran milik
@@ -221,9 +222,9 @@ export function EmployeeDocumentsTab({ employeeId }: { employeeId: string }) {
         )}
       </div>
 
-      {uploadOpen && (
-        <DocumentUploadDialog employeeId={employeeId} onClose={() => setUploadOpen(false)} />
-      )}
+      <DialogPresence value={uploadOpen}>
+        {() => <DocumentUploadDialog employeeId={employeeId} onClose={() => setUploadOpen(false)} />}
+      </DialogPresence>
       <ConfirmDialog
         open={deleteDocId !== null}
         onOpenChange={(open) => !open && setDeleteDocId(null)}

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Pagination,
@@ -171,7 +172,7 @@ export function DsDataTable<T>({
       ) : null}
 
       <DsCardContent className="px-0 py-0">
-        <div className="overflow-x-auto px-4">
+        <ScrollRegion label={title || "Tabel"} className="overflow-x-auto px-4">
           <table className={cn("w-full min-w-full text-sm", tableClassName)}>
             <thead className={cn(dsTableHead, stickyHeader && "sticky top-0 z-10")}>
               <tr>
@@ -233,7 +234,7 @@ export function DsDataTable<T>({
                   ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       </DsCardContent>
 
       {pagination ? (

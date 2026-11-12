@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DocumentMagnifyingGlassIcon } from "@heroicons/react/24/outline";
@@ -209,7 +210,7 @@ export function JournalHistoryPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel riwayat jurnal" className="overflow-x-auto px-4">
             <table className="w-full min-w-[960px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -239,7 +240,7 @@ export function JournalHistoryPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
     </div>

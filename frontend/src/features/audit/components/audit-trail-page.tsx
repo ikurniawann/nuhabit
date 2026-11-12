@@ -28,6 +28,7 @@ import type { AuditLogFilters, AuditRow } from "../api";
 import { useAuditLog } from "../queries";
 import { AuditDetailDialog } from "./audit-detail-dialog";
 import { ACTION_LABELS, DESTRUCTIVE_ACTIONS, ENTITY_LABELS } from "./audit-labels";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const ALL = "all";
 
@@ -210,7 +211,9 @@ export function AuditTrailPage() {
         </Button>
       </div>
 
-      {detail && <AuditDetailDialog row={detail} onClose={() => setDetail(null)} />}
+      <DialogPresence value={detail}>
+        {(detail) => <AuditDetailDialog row={detail} onClose={() => setDetail(null)} />}
+      </DialogPresence>
     </div>
   );
 }

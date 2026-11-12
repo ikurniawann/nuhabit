@@ -43,7 +43,7 @@ export function PlanCard({ plan, branchSlug, onSelect }: PlanCardProps) {
           Choose
         </Link>
       </Button>
-      {frontDeskSignup ? <Link href="/contact" className="text-center text-sm font-semibold text-forest underline">Contact the team</Link> : null}
+      {frontDeskSignup ? <Link href="/contact" className="text-center text-sm font-semibold text-forest underline dark:text-accent">Contact the team</Link> : null}
     </article>
   );
 }

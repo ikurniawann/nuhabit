@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { ChartBarIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
 import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
@@ -37,7 +38,7 @@ export function ArAgingPage() {
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
           </div>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel umur piutang" className="overflow-x-auto px-4">
             <table className="w-full min-w-[480px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-left text-muted-foreground">
@@ -61,7 +62,7 @@ export function ArAgingPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
     </div>

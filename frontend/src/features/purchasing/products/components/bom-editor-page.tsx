@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useProductBomEditorData } from "../queries";
@@ -306,7 +307,7 @@ function BomEditor({ productId, data, reloading, onReload }: BomEditorProps) {
               <p className="mt-1 text-lg font-semibold text-sky-800">{wipCount}</p>
             </div>
           </div>
-          <div className="overflow-x-auto rounded-lg border border-gray-200/70">
+          <ScrollRegion label="Tabel komponen resep" className="overflow-x-auto rounded-lg border border-gray-200/70">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
@@ -430,7 +431,7 @@ function BomEditor({ productId, data, reloading, onReload }: BomEditorProps) {
                 </tr>
               </tfoot>
             </table>
-          </div>
+          </ScrollRegion>
         </CardContent>
       </Card>
 

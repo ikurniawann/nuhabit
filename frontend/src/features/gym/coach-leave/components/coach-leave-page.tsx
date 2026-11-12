@@ -29,6 +29,7 @@ import { CoverList, SubstituteDialog } from "./cover-list";
 import { BlackoutsPanel, SettingsPanel } from "./coach-leave-admin";
 import { DisciplinePanel } from "./coach-discipline";
 import { ChangeReport } from "./change-report";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const TABS = [
   { value: "queue", label: "Antrean cuti" },
@@ -210,19 +211,25 @@ function QueueCard({ leave: l }: { leave: QueueLeave }) {
           </div>
         )}
       </div>
-      {picking && (
-        <SubstituteDialog
-          cover={picking}
-          title="Tunjuk pengganti"
-          confirmLabel="Tunjuk"
-          load={coachLeaveApi.candidates}
-          pick={coachLeaveApi.assign}
-          onClose={() => setPicking(null)}
-          onDone={refresh}
-        />
-      )}
-      {cancelling && <CancelSessionDialog cover={cancelling} onClose={() => setCancelling(null)} onDone={refresh} />}
-      {deciding && <DecideDialog leave={l} action={deciding} onClose={() => setDeciding(null)} onDone={refresh} />}
+      <DialogPresence value={picking}>
+        {(picking) => (
+          <SubstituteDialog
+            cover={picking}
+            title="Tunjuk pengganti"
+            confirmLabel="Tunjuk"
+            load={coachLeaveApi.candidates}
+            pick={coachLeaveApi.assign}
+            onClose={() => setPicking(null)}
+            onDone={refresh}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={cancelling}>
+        {(cancelling) => <CancelSessionDialog cover={cancelling} onClose={() => setCancelling(null)} onDone={refresh} />}
+      </DialogPresence>
+      <DialogPresence value={deciding}>
+        {(deciding) => <DecideDialog leave={l} action={deciding} onClose={() => setDeciding(null)} onDone={refresh} />}
+      </DialogPresence>
     </Card>
   );
 }

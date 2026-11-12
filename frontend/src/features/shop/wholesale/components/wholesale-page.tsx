@@ -4,6 +4,7 @@
 // pakai), pesanan mitra, dan pengaturan produk (harga wholesale, minimal
 // qty, pre-order).
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState } from "react";
 import { Briefcase, Copy, KeyRound, Loader2, Package, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -31,6 +32,7 @@ import {
 } from "../queries";
 import { AccountFormModal } from "./account-form-modal";
 import { ProductSettingsModal } from "./product-settings-modal";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const TERMS = { invoice: "Invoice Xendit", pay_later: "Bayar nanti" } as const;
 
@@ -95,7 +97,7 @@ function AccountsTab() {
         ) : rows.length === 0 ? (
           <p className="px-4 py-16 text-center text-sm text-muted-foreground">Belum ada akun mitra</p>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel akun mitra" className="overflow-x-auto px-4">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
@@ -138,20 +140,24 @@ function AccountsTab() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
 
-      {editing !== null ? (
-        <AccountFormModal
-          key={editing === "new" ? "new" : editing.id}
-          account={editing === "new" ? null : editing}
-          onClose={() => setEditing(null)}
-          onSaved={onSaved}
-        />
-      ) : null}
+      <DialogPresence value={editing}>
+        {(editing) => (
+          <AccountFormModal
+            key={editing === "new" ? "new" : editing.id}
+            account={editing === "new" ? null : editing}
+            onClose={() => setEditing(null)}
+            onSaved={onSaved}
+          />
+        )}
+      </DialogPresence>
 
-      {issued ? <PasswordDialog account={issued} onClose={() => setIssued(null)} /> : null}
+      <DialogPresence value={issued}>
+        {(issued) => <PasswordDialog account={issued} onClose={() => setIssued(null)} />}
+      </DialogPresence>
     </>
   );
 }
@@ -220,7 +226,7 @@ function ProductsTab() {
             Belum ada produk merchandise yang didistribusikan ke kanal web
           </p>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel produk toko online" className="overflow-x-auto px-4">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
@@ -266,10 +272,12 @@ function ProductsTab() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
-      {editing ? <ProductSettingsModal key={editing.id} product={editing} onClose={() => setEditing(null)} /> : null}
+      <DialogPresence value={editing}>
+        {(editing) => <ProductSettingsModal key={editing.id} product={editing} onClose={() => setEditing(null)} />}
+      </DialogPresence>
     </>
   );
 }

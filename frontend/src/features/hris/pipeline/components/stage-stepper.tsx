@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import type { PipelineStage } from "@/types";
 import {
   PIPELINE_STAGES,
@@ -30,7 +31,7 @@ export function StageStepper({
   const connector = size === "lg" ? "w-6" : "w-4";
 
   return (
-    <div className="flex items-center gap-1 overflow-x-auto pb-1">
+    <ScrollRegion label="Tahapan rekrutmen" className="flex items-center gap-1 overflow-x-auto pb-1">
       {FUNNEL_ORDER.map((stageId, idx) => {
         const stage = PIPELINE_STAGES.find((s) => s.id === stageId)!;
         const isDone = !isParked && idx < currentIdx;
@@ -58,6 +59,6 @@ export function StageStepper({
           </div>
         );
       })}
-    </div>
+    </ScrollRegion>
   );
 }

@@ -25,6 +25,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Field, TableNote, TEXTAREA } from "@/features/crm/engagement/components/shared";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import { ENTRY_LABELS, entryDelta, signedRupiah, walletApi, type WalletEntry } from "../api";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const memberKey = (id: string) => ["wallet", "member", id];
 const NOT_REVERSIBLE = new Set(["reversal", "topup_refund"]);
@@ -183,14 +184,16 @@ export function WalletPage() {
         </>
       ) : null}
 
-      {correction && data && (
-        <CorrectionDialog
-          memberId={data.member.id}
-          balance={data.member.balance}
-          correction={correction}
-          onClose={() => setCorrection(null)}
-        />
-      )}
+      <DialogPresence value={correction && data ? { correction, data } : null}>
+        {({ correction, data }) => (
+          <CorrectionDialog
+            memberId={data.member.id}
+            balance={data.member.balance}
+            correction={correction}
+            onClose={() => setCorrection(null)}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

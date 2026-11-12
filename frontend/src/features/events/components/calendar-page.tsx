@@ -42,6 +42,7 @@ import {
 import { EventChecklistDialog } from "./event-checklist-dialog";
 import { SELECT_CLASS, useCalendarOptions } from "./event-place-fields";
 import { FeedDialog } from "./feed-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const KINDS: EntryKind[] = ["crm_event", "site_event", "class", "pt"];
 const VIEWS: { value: CalendarView; label: string }[] = [
@@ -206,25 +207,31 @@ export function CalendarPage() {
         </div>
       )}
 
-      {selected && (
-        <EntryDialog
-          entry={selected}
-          onClose={() => setSelected(null)}
-          onChecklist={() => {
-            setChecklist(selected);
-            setSelected(null);
-          }}
-        />
-      )}
-      {checklist && (
-        <EventChecklistDialog
-          source={checklist.kind === "site_event" ? "site" : "crm"}
-          eventId={checklist.id}
-          title={checklist.title}
-          onClose={() => setChecklist(null)}
-        />
-      )}
-      {feeds && <FeedDialog branches={options.data?.branches ?? []} onClose={() => setFeeds(false)} />}
+      <DialogPresence value={selected}>
+        {(selected) => (
+          <EntryDialog
+            entry={selected}
+            onClose={() => setSelected(null)}
+            onChecklist={() => {
+              setChecklist(selected);
+              setSelected(null);
+            }}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={checklist}>
+        {(checklist) => (
+          <EventChecklistDialog
+            source={checklist.kind === "site_event" ? "site" : "crm"}
+            eventId={checklist.id}
+            title={checklist.title}
+            onClose={() => setChecklist(null)}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={feeds}>
+        {() => <FeedDialog branches={options.data?.branches ?? []} onClose={() => setFeeds(false)} />}
+      </DialogPresence>
     </div>
   );
 }

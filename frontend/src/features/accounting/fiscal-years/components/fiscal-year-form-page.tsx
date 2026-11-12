@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -351,7 +352,7 @@ function FiscalYearForm({
                 Belum ada period. Klik Generate 12 period.
               </p>
             ) : (
-              <div className="mt-4 overflow-x-auto">
+              <ScrollRegion label="Tabel periode tahun fiskal" className="mt-4 overflow-x-auto">
                 <table className="w-full min-w-[700px] text-sm">
                   <thead>
                     <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -434,7 +435,7 @@ function FiscalYearForm({
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollRegion>
             )}
           </section>
         </FormPageBody>

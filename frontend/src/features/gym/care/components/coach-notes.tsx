@@ -20,6 +20,7 @@ import { formatDate } from "@/lib/format";
 import { CARE_KEYS, careApi, memberIds, type MemberNotes, type SessionNote } from "../api";
 import { SESSION_NOTE_MAX } from "../display";
 import { useRefreshCare } from "./flag-dialogs";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /**
  * Catatan coach untuk member roster: yang dibawa ke sesi berikutnya dan
@@ -105,9 +106,11 @@ export function CoachNotes({
           <NotebookPen /> Catatan coach
         </Button>
       )}
-      {writing && target && (
-        <NoteDialog customerId={customerId} memberName={memberName} target={target} onClose={() => setWriting(false)} />
-      )}
+      <DialogPresence value={writing && target}>
+        {(target) => (
+          <NoteDialog customerId={customerId} memberName={memberName} target={target} onClose={() => setWriting(false)} />
+        )}
+      </DialogPresence>
     </div>
   );
 }

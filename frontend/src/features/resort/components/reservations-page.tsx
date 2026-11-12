@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BedDouble, Loader2, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatDate, formatRupiah } from "@/lib/format";
@@ -16,6 +17,7 @@ import { CreateReservationDialog } from "@/features/resort/components/create-res
 import { ReservationDetailDialog } from "@/features/resort/components/reservation-detail-dialog";
 import { useReservations } from "@/features/resort/queries";
 import { STATUS_CLASS } from "@/features/resort/types";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 function summarize(rows: readonly ReservationListRow[]) {
   return {
@@ -106,7 +108,7 @@ export function ResortReservationsPage() {
       ) : rows.length === 0 ? (
         <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">Belum ada reservasi pada rentang ini.</CardContent></Card>
       ) : (
-        <Card><CardContent className="overflow-x-auto p-0">
+        <Card><CardContent className="p-0"><ScrollRegion label="Tabel reservasi" className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs text-muted-foreground">
               <tr>
@@ -140,12 +142,16 @@ export function ResortReservationsPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></ScrollRegion>
         </CardContent></Card>
       )}
 
-      {openCreate && <CreateReservationDialog onClose={() => setOpenCreate(false)} />}
-      {detailId && <ReservationDetailDialog id={detailId} onClose={() => setDetailId(null)} />}
+      <DialogPresence value={openCreate}>
+        {() => <CreateReservationDialog onClose={() => setOpenCreate(false)} />}
+      </DialogPresence>
+      <DialogPresence value={detailId}>
+        {(detailId) => <ReservationDetailDialog id={detailId} onClose={() => setDetailId(null)} />}
+      </DialogPresence>
     </div>
   );
 }

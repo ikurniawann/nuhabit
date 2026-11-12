@@ -138,7 +138,7 @@ export function ApiTokensPage() {
             Token dibuat. Salin SEKARANG — tidak akan tampil lagi setelah halaman ini ditinggalkan.
           </p>
           <div className="flex items-center gap-2">
-            <code className="block flex-1 overflow-x-auto rounded bg-white px-2 py-1 text-xs">
+            <code tabIndex={0} role="region" aria-label="Token baru" className="block flex-1 overflow-x-auto rounded bg-white px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest/40">
               {newToken}
             </code>
             <Button

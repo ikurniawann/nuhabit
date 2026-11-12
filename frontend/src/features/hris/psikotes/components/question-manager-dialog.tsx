@@ -18,6 +18,7 @@ import { usePsikotesQuestions } from "../queries";
 import { useDeleteQuestion, useUpdateQuestion } from "../mutations";
 import type { McqOption, PapiStatement, PsikotesInstrument, PsikotesQuestion } from "../types";
 import { QuestionFormDialog, toQuestionPayload } from "./question-form-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 interface QuestionManagerDialogProps {
   instrument: PsikotesInstrument;
@@ -187,15 +188,17 @@ export function QuestionManagerDialog({
         </DialogPanel>
       </Dialog>
 
-      {formOpen && (
-        <QuestionFormDialog
-          key={editTarget?.id ?? "new"}
-          instrument={instrument}
-          question={editTarget}
-          open={formOpen}
-          onOpenChange={setFormOpen}
-        />
-      )}
+      <DialogPresence value={formOpen}>
+        {(formOpen) => (
+          <QuestionFormDialog
+            key={editTarget?.id ?? "new"}
+            instrument={instrument}
+            question={editTarget}
+            open={formOpen}
+            onOpenChange={setFormOpen}
+          />
+        )}
+      </DialogPresence>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

@@ -2,6 +2,7 @@
 
 // EPIC-034 Fase A — riwayat pergerakan saldo satu gift card (isi/pakai/koreksi).
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -55,7 +56,7 @@ export function GiftCardLedgerDialog({
             Belum ada pergerakan saldo.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel riwayat saldo gift card" className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <TableRow className="border-b border-gray-200/70 bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500 hover:bg-gray-50/80">
@@ -94,7 +95,7 @@ export function GiftCardLedgerDialog({
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </DialogContent>
     </Dialog>

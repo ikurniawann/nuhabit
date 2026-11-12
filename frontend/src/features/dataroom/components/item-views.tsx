@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import type { DragEvent, KeyboardEvent, MouseEvent } from "react";
 import { ArrowDown, ArrowUp, Lock, MoreVertical, Star } from "lucide-react";
 import { formatBytes } from "@/lib/dataroom/config";
@@ -123,7 +124,7 @@ export function ItemTable({ items, ui, sort, onSort, showPath }: {
 }) {
   const Arrow = sort.dir === "asc" ? ArrowUp : ArrowDown;
   return (
-    <div className="overflow-x-auto rounded-xl border">
+    <ScrollRegion label="Tabel daftar item" className="overflow-x-auto rounded-xl border">
       <table className="w-full text-sm">
         <thead className="bg-muted/50 text-xs text-muted-foreground">
           <tr>
@@ -168,6 +169,6 @@ export function ItemTable({ items, ui, sort, onSort, showPath }: {
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Gift, Package, Percent, Tag } from "lucide-react";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { cn } from "@/lib/utils";
 import {
   OFFER_BANNER_STYLE,
@@ -37,7 +38,7 @@ export function PosOfferBanners({ offers, className, onApplyOffer }: Props) {
           </span>
         )}
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <ScrollRegion label="Promo aktif" className="flex gap-2 overflow-x-auto pb-1">
         {offers.map((offer) => {
           const style = OFFER_BANNER_STYLE[offer.offer_type];
           const Icon = ICONS[offer.offer_type] || Tag;
@@ -75,7 +76,7 @@ export function PosOfferBanners({ offers, className, onApplyOffer }: Props) {
             </Comp>
           );
         })}
-      </div>
+      </ScrollRegion>
     </div>
   );
 }

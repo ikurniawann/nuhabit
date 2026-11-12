@@ -38,6 +38,7 @@ import { SELECT } from "@/features/gym/shared";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { RaceLeaderboardPanel } from "./race-leaderboard-panel";
 import { RaceResultsPanel } from "./race-results-panel";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const RACES_KEY = ["gym", "races"];
 
@@ -177,8 +178,12 @@ export function RacesPage() {
         </TabsContent>
       </Tabs>
 
-      {editing && <RaceDialog race={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={refresh} />}
-      {roster && <EntrantsDialog race={roster} onClose={() => setRoster(null)} />}
+      <DialogPresence value={editing}>
+        {(editing) => <RaceDialog race={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={refresh} />}
+      </DialogPresence>
+      <DialogPresence value={roster}>
+        {(roster) => <EntrantsDialog race={roster} onClose={() => setRoster(null)} />}
+      </DialogPresence>
       <ConfirmDialog
         open={removing !== null}
         onOpenChange={(open) => !open && setRemoving(null)}

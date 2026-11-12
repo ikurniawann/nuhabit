@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { CheckCircleIcon as CheckCircleSolid } from "@heroicons/react/24/solid";
@@ -338,7 +339,7 @@ export function OpnameCountList({
           </ul>
 
           {/* ── Desktop: tabel ── */}
-          <div className="hidden overflow-x-auto md:block">
+          <ScrollRegion label="Tabel hitung stok opname" className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[820px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
@@ -411,7 +412,7 @@ export function OpnameCountList({
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </>
       )}
     </div>

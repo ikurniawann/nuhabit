@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { formatNumber, formatRupiah, formatTime } from '@/lib/format';
 import type { PosShift } from '@/lib/pos-api';
+import { DialogPresence } from '@/components/ui/dialog-presence';
 
 interface ShiftSummary {
   total_orders?: number;
@@ -67,8 +68,11 @@ function hasCashInput(value: string) {
 
 /** Isi modal di-mount ulang tiap dibuka atau saat shift berganti → form selalu bersih. */
 export function ShiftModal(props: ShiftModalProps) {
-  if (!props.open) return null;
-  return <ShiftModalBody key={props.shift?.id ?? 'no-shift'} {...props} />;
+  return (
+    <DialogPresence value={props.open && props}>
+      {(p) => <ShiftModalBody key={p.shift?.id ?? 'no-shift'} {...p} />}
+    </DialogPresence>
+  );
 }
 
 function ShiftModalBody({ shift, onClose, onOpenShift, onCloseShift, sendReport = true }: ShiftModalProps) {

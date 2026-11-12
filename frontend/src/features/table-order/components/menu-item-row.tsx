@@ -45,7 +45,7 @@ export function MenuItemRow({
 
         <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-gray-600">
           {product.xp > 0 && (
-            <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
+            <span className="inline-flex items-center gap-1 font-semibold text-amber-800">
               <Sparkles className="size-3.5 fill-amber-500 text-amber-500" />
               +{product.xp} XP
             </span>

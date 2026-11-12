@@ -2,6 +2,8 @@
    globals.css, then run `node scripts/brand-css.mjs`. */
 
 :root:root {
+  --default-transition-duration: var(--motion-fast);
+  --default-transition-timing-function: var(--ease-standard);
   --color-pink-50: #ffffff;
   --color-pink-100: #ffffff;
   --color-pink-200: #e3ff8a;
@@ -183,11 +185,12 @@
   --font-sans-stack: var(--font-manrope), "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-size-base: 16px;
   --radius: 1rem;
-  --dur-fast: 120ms;
-  --dur-base: 220ms;
-  --dur-slow: 360ms;
-  --ease-glass: cubic-bezier(0.32, 0.72, 0, 1);
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
+  --motion-slow: 300ms;
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: var(--ease-standard);
   --page-mesh: var(--wit-surface);
 }
 

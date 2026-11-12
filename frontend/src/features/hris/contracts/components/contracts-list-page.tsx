@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronUpDownIcon, ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
@@ -254,7 +255,7 @@ export function ContractsListPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200/70 bg-white shadow-sm">
+      <ScrollRegion label="Tabel kontrak karyawan" className="overflow-x-auto rounded-xl border border-gray-200/70 bg-white shadow-sm">
         {isLoading ? (
           <div className="flex justify-center py-14">
             <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -330,7 +331,7 @@ export function ContractsListPage() {
             </tbody>
           </table>
         )}
-      </div>
+      </ScrollRegion>
 
       {/* Pagination */}
       {totalPages > 1 && (

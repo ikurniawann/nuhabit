@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import Link from "next/link";
 import { AlertCircle, Eye, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +49,7 @@ export function RawMaterialsTable({
   onDelete,
 }: RawMaterialsTableProps) {
   return (
-  <div className="overflow-x-auto px-4">
+  <ScrollRegion label="Tabel bahan baku" className="overflow-x-auto px-4">
     <table className="min-w-full text-sm">
       <thead>
         <tr className="border-b border-gray-200/70 text-xs uppercase tracking-wide text-gray-500">
@@ -182,6 +183,6 @@ export function RawMaterialsTable({
         })}
       </tbody>
     </table>
-  </div>
+  </ScrollRegion>
   );
 }

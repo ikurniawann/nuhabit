@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useCallback, useRef, useState } from "react";
 import { Download, FileSpreadsheet, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -198,7 +199,7 @@ function ImportBody({
               <span className="text-muted-foreground">Baris yang gagal dilewati saat diterapkan; perbaiki lalu impor ulang.</span>
             )}
           </div>
-          <div className="max-h-[48vh] overflow-auto rounded-xl border border-border">
+          <ScrollRegion label="Pratinjau data impor" axis="y" className="max-h-[48vh] overflow-auto rounded-xl border border-border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -223,7 +224,7 @@ function ImportBody({
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </ScrollRegion>
         </div>
       )}
 

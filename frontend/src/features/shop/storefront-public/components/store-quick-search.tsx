@@ -114,7 +114,7 @@ export function StoreQuickSearch({
           id={listId}
           role="listbox"
           aria-label="Quick search results"
-          className="absolute inset-x-0 top-full z-30 mt-2 max-h-[60dvh] overflow-y-auto rounded-2xl border border-border bg-white p-1 shadow-lg"
+          className="absolute inset-x-0 top-full z-30 mt-2 max-h-[60dvh] overflow-y-auto rounded-2xl border border-border bg-white p-1 shadow-lg animate-in fade-in-0 slide-in-from-top-1 duration-(--motion-fast) ease-(--ease-standard)"
         >
           {hits.length === 0 ? (
             <p className="px-3 py-6 text-center text-sm text-gray-500">No products match &ldquo;{trimmed}&rdquo;</p>

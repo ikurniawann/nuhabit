@@ -45,7 +45,7 @@
   padding: 0.875rem 1.25rem;
   font-weight: 800;
   text-align: center;
-  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), opacity 220ms;
+  transition: transform var(--motion-fast) var(--ease-standard), opacity var(--motion-fast) var(--ease-standard);
 }
 .nh-btn-brand {
   background: var(--color-nh-lime);
@@ -127,24 +127,59 @@ input.nh-input.nh-input::placeholder {
     opacity: 0;
   }
 }
+@keyframes nh-fade-out {
+  to {
+    opacity: 0;
+  }
+}
 @keyframes nh-sheet-up {
   from {
     opacity: 0;
     transform: translateY(48px);
   }
 }
+@keyframes nh-sheet-down {
+  to {
+    opacity: 0;
+    transform: translateY(48px);
+  }
+}
+/* Durasi dan kurva dari token gerak di globals.css (--motion-*, --ease-*). */
 @media (prefers-reduced-motion: no-preference) {
   /* Tanpa forwards: transform yang tertinggal membuat elemen fixed di halaman
      (sheet, dialog) menempel ke konten, bukan ke layar. */
   .nh-page-enter {
-    animation: nh-page-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    animation: nh-page-in var(--motion-slow) var(--ease-emphasized) backwards;
+  }
+  /* Konten yang menggantikan spinner ikut memudar, tidak muncul tiba-tiba. */
+  .nh-page-enter > * {
+    animation: nh-fade-in var(--motion-base) var(--ease-standard) backwards;
+  }
+  /* Muat cepat tidak sempat memunculkan spinner. */
+  .nh-spinner {
+    animation: nh-fade-in var(--motion-base) var(--ease-standard) var(--motion-fast) backwards;
   }
   .nh-sheet-backdrop {
-    animation: nh-fade-in 0.22s ease-out both;
+    animation: nh-fade-in var(--motion-base) var(--ease-standard) backwards;
   }
   .nh-sheet-panel {
-    animation: nh-sheet-up 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: nh-sheet-up var(--motion-slow) var(--ease-emphasized) backwards;
   }
+  /* Keluar: forwards aman di sini karena elemen dilepas begitu animasi usai. */
+  .nh-sheet-backdrop[data-closing] {
+    animation: nh-fade-out var(--motion-base) var(--ease-standard) forwards;
+  }
+  .nh-sheet-backdrop[data-closing] .nh-sheet-panel {
+    animation: nh-sheet-down var(--motion-base) var(--ease-standard) forwards;
+  }
+}
+
+/* Kartu yang bisa diketuk memberi umpan balik tekan. */
+:is(a, button).nh-card {
+  transition: scale var(--motion-fast) var(--ease-standard);
+}
+:is(a, button).nh-card:active {
+  scale: 0.98;
 }
 
 /* Aksi sekunder: Deep Forest Green dengan teks lime. */
@@ -160,7 +195,7 @@ input.nh-input.nh-input::placeholder {
   font-weight: 800;
   text-align: center;
   box-shadow: 0 10px 24px rgb(0 40 26 / 0.18);
-  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform var(--motion-fast) var(--ease-standard);
 }
 .nh-btn-forest:active {
   transform: scale(0.97);
@@ -170,22 +205,24 @@ input.nh-input.nh-input::placeholder {
   pointer-events: none;
 }
 
-/* Textarea & select dengan gaya input terisi. */
-textarea.nh-input,
-select.nh-input {
+/* Textarea & select dengan gaya input terisi. Kelas ganda + !important seperti
+   input di atas: aturan global di globals.css memaksa latar var(--card), yang
+   gelap di tema gelap sementara teks tetap --color-nh-ink. */
+textarea.nh-input.nh-input,
+select.nh-input.nh-input {
   width: 100%;
   border-radius: 1rem;
-  border: 2px solid transparent;
-  background: var(--color-nh-raised);
+  border: 2px solid transparent !important;
+  background: var(--color-nh-raised) !important;
   padding: 0.75rem 1rem;
   font-size: 16px;
   color: var(--color-nh-ink);
   outline: none;
 }
-textarea.nh-input:focus,
-select.nh-input:focus {
-  border-color: var(--color-nh-forest);
-  background: var(--color-nh-cream);
+textarea.nh-input.nh-input:focus,
+select.nh-input.nh-input:focus {
+  border-color: var(--color-nh-forest) !important;
+  background: var(--color-nh-cream) !important;
 }
 
 /* Logo merek dicat Pale Lime: PNG putih dipakai sebagai mask. */

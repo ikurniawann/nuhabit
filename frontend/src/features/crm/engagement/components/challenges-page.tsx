@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { engagementApi, fromLocalInput, toLocalInput, waktu, type Challenge } from "../api";
 import { formatNumber, formatRupiah } from "@/lib/format";
 import { Field, TableNote, TEXTAREA } from "./shared";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const CHALLENGES_KEY = ["crm-engagement", "challenges"];
 
@@ -141,14 +142,18 @@ export function ChallengesPage() {
         )}
       </Card>
 
-      {editing && (
-        <ChallengeDialog
-          challenge={editing === "new" ? null : editing}
-          onClose={() => setEditing(null)}
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: CHALLENGES_KEY })}
-        />
-      )}
-      {viewing && <ParticipantsDialog challenge={viewing} onClose={() => setViewing(null)} />}
+      <DialogPresence value={editing}>
+        {(editing) => (
+          <ChallengeDialog
+            challenge={editing === "new" ? null : editing}
+            onClose={() => setEditing(null)}
+            onSaved={() => void queryClient.invalidateQueries({ queryKey: CHALLENGES_KEY })}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={viewing}>
+        {(viewing) => <ParticipantsDialog challenge={viewing} onClose={() => setViewing(null)} />}
+      </DialogPresence>
     </div>
   );
 }

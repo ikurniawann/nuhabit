@@ -20,6 +20,7 @@ import {
   isValidDiscountInput,
   type DiscountType,
 } from "@/lib/pos/manual-discount";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 type ManualDiscountDialogProps = {
   open: boolean;
@@ -45,8 +46,11 @@ function displayValue(
 
 /** Dirender hanya saat terbuka; key dari nilai awal → draf selalu mulai dari diskon yang berlaku. */
 export function ManualDiscountDialog(props: ManualDiscountDialogProps) {
-  if (!props.open) return null;
-  return <ManualDiscountBody key={`${props.initialType ?? ""}:${props.initialValue ?? ""}`} {...props} />;
+  return (
+    <DialogPresence value={props.open && props}>
+      {(p) => <ManualDiscountBody key={`${p.initialType ?? ""}:${p.initialValue ?? ""}`} {...p} />}
+    </DialogPresence>
+  );
 }
 
 function ManualDiscountBody({

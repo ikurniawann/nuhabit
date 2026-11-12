@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState } from "react";
 import { ClockIcon } from "@heroicons/react/24/outline";
 import { Badge } from "@/components/ui/badge";
@@ -55,7 +56,7 @@ export function EmployeeAttendanceTab({ employeeId }: { employeeId: string }) {
           </div>
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              <ScrollRegion label="Tabel absensi bulan ini" className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50">
@@ -99,7 +100,7 @@ export function EmployeeAttendanceTab({ employeeId }: { employeeId: string }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollRegion>
             </CardContent>
           </Card>
         </>

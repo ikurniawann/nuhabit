@@ -17,6 +17,7 @@ import { formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import { incentivesApi } from "../api";
 import { useRefreshMonth } from "../queries";
 import { monthLabel, PAYOUT_VARIANT } from "./shared";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Statement berjalan per coach; payout draf dibuat dari sini. */
 export function StatementsTab({ month, query }: { month: string; query: UseQueryResult<CoachStatementView[], Error> }) {
@@ -93,7 +94,9 @@ export function StatementsTab({ month, query }: { month: string; query: UseQuery
           </TableBody>
         </Table>
       )}
-      {detail && <StatementDialog title={`Rincian ${detail.coachName}`} statement={detail} onClose={() => setDetail(null)} />}
+      <DialogPresence value={detail}>
+        {(detail) => <StatementDialog title={`Rincian ${detail.coachName}`} statement={detail} onClose={() => setDetail(null)} />}
+      </DialogPresence>
     </Card>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useRouter } from "next/navigation";
 import { Loader2, Package } from "lucide-react";
 import { toast } from "sonner";
@@ -93,7 +94,7 @@ export function NewProductDeliveryPage() {
                   ) : poItems.length === 0 ? (
                     <div className="py-10 text-center text-sm text-gray-500">Tidak ada item untuk purchase order ini</div>
                   ) : (
-                    <div className="overflow-x-auto px-4">
+                    <ScrollRegion label="Tabel item pengiriman" className="overflow-x-auto px-4">
                       <table className="min-w-full text-sm">
                         <thead>
                           <tr className="border-b border-gray-200/70 text-xs uppercase tracking-wide text-gray-500">
@@ -121,7 +122,7 @@ export function NewProductDeliveryPage() {
                           ))}
                         </tbody>
                       </table>
-                    </div>
+                    </ScrollRegion>
                   )}
                 </CardContent>
               </Card>

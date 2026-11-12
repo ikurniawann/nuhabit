@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Boxes, PackageCheck, Receipt } from "lucide-react";
@@ -108,7 +109,7 @@ function GeneralReceiveForm({ po, warehouses }: { po: GeneralPODetail; warehouse
             />
           </div>
 
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel item diterima" className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
@@ -158,7 +159,7 @@ function GeneralReceiveForm({ po, warehouses }: { po: GeneralPODetail; warehouse
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
 
           <div className="max-w-md">
             <label htmlFor="general-receive-notes" className="mb-1 block text-sm font-medium text-gray-700">Catatan</label>

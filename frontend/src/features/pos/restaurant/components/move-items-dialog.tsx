@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 export type MoveItemsLine = {
   id: string;
@@ -37,7 +38,7 @@ interface MoveItemsDialogProps {
 
 /** Dirender hanya saat terbuka → qty pilihan selalu mulai dari nol. */
 export function MoveItemsDialog(props: MoveItemsDialogProps) {
-  return props.open ? <MoveItemsBody {...props} /> : null;
+  return <DialogPresence value={props.open && props}>{(p) => <MoveItemsBody {...p} />}</DialogPresence>;
 }
 
 function MoveItemsBody({

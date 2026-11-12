@@ -222,7 +222,7 @@ export function CartSheet({
               </div>
             ))}
             {xpEnabled && summary.totalXp > 0 && (
-              <div className="mt-1.5 flex justify-between text-amber-600">
+              <div className="mt-1.5 flex justify-between text-amber-800">
                 <span>XP didapat</span>
                 <span className="font-semibold">+{summary.totalXp} XP</span>
               </div>

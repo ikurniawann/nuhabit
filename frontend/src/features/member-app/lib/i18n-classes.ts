@@ -84,6 +84,7 @@ export const CLASSES_ID: Record<string, string> = {
     "Isi ulang dengan paket kredit dan kelas yang tercakup muncul di sini.",
   "Browse packages": "Lihat paket",
   "All classes": "Semua kelas",
+  "Active packages": "Paket aktif",
   until: "sampai",
   "Next session": "Sesi berikutnya",
   "No upcoming sessions scheduled.": "Belum ada sesi terjadwal.",

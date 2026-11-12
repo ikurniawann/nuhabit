@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState } from "react";
 import { Gift, Loader2, Package, Percent, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +13,7 @@ import { OFFER_PAGE_META, formatOfferWindow, offerLimitBadges, summarizeOffer } 
 import { useDeleteOfferRule, useOfferRules } from "../queries";
 import type { OfferRule, OfferType } from "../types";
 import { OfferRuleDialog } from "./offer-rule-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const TYPE_ICONS = { bundle: Package, bxgy: Gift, volume: Percent } as const;
 
@@ -63,7 +65,7 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
             Belum ada aturan. Klik Tambah untuk membuat.
           </p>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel aturan promo" className="overflow-x-auto px-4">
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-left text-muted-foreground">
@@ -111,18 +113,20 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
 
-      {dialog && (
-        <OfferRuleDialog
-          key={dialog.rule?.id ?? "new"}
-          offerType={offerType}
-          rule={dialog.rule}
-          onClose={() => setDialog(null)}
-        />
-      )}
+      <DialogPresence value={dialog}>
+        {(dialog) => (
+          <OfferRuleDialog
+            key={dialog.rule?.id ?? "new"}
+            offerType={offerType}
+            rule={dialog.rule}
+            onClose={() => setDialog(null)}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

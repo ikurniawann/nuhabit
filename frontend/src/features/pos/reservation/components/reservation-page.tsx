@@ -29,6 +29,7 @@ import { chipClass, NewReservationDialog } from "./new-reservation-dialog";
 import { QueueSummaryCards } from "./queue-summary-cards";
 import { ReservationCard } from "./reservation-card";
 import { WhatsAppDialog } from "./whatsapp-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof Error ? err.message : fallback);
 
@@ -167,16 +168,18 @@ export function ReservationPage() {
         </CardContent>
       </Card>
 
-      {showNewForm ? (
-        <NewReservationDialog
-          initialDate={selectedDate}
-          customers={customers}
-          tables={tables}
-          submitting={createReservation.isPending}
-          onSubmit={(form) => void submitReservation(form)}
-          onClose={() => setShowNewForm(false)}
-        />
-      ) : null}
+      <DialogPresence value={showNewForm}>
+        {() => (
+          <NewReservationDialog
+            initialDate={selectedDate}
+            customers={customers}
+            tables={tables}
+            submitting={createReservation.isPending}
+            onSubmit={(form) => void submitReservation(form)}
+            onClose={() => setShowNewForm(false)}
+          />
+        )}
+      </DialogPresence>
 
       <WhatsAppDialog target={whatsApp} onClose={() => setWhatsApp(null)} />
     </div>

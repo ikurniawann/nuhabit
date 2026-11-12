@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -170,7 +171,7 @@ export function QCDetailPage() {
             {items.length > 0 && (
               <div className="border-t border-gray-200/70 pt-4">
                 <h3 className="mb-3 font-semibold text-gray-900">Item Inspeksi</h3>
-                <div className="overflow-x-auto">
+                <ScrollRegion label="Tabel item inspeksi" className="overflow-x-auto">
                   <table className="min-w-full text-sm">
                     <thead className="border-b border-gray-200/70 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                       <tr>
@@ -200,7 +201,7 @@ export function QCDetailPage() {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </ScrollRegion>
               </div>
             )}
 

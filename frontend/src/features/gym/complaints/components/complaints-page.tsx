@@ -37,6 +37,7 @@ import { ComplaintReport } from "./complaint-report";
 import { ComplaintSettings } from "./complaint-settings";
 import { NewTicketDialog } from "./new-ticket-dialog";
 import { DeadlineText, PriorityBadge, StatusBadge } from "./ticket-bits";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const MENU = "gym.complaints";
 
@@ -245,7 +246,9 @@ function TicketList() {
           </Button>
         </div>
       )}
-      {creating && <NewTicketDialog onClose={() => setCreating(false)} />}
+      <DialogPresence value={creating}>
+        {() => <NewTicketDialog onClose={() => setCreating(false)} />}
+      </DialogPresence>
     </div>
   );
 }

@@ -30,6 +30,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { formatNumber } from "@/lib/format";
 import { CoachAvatar } from "./coach-avatar";
 import { CoachScheduleDialog } from "./coach-schedule-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Gym → Coach: profil yang tampil di portal member dan jadwal kelas. */
 export function CoachesPage() {
@@ -125,14 +126,18 @@ export function CoachesPage() {
         )}
       </Card>
 
-      {editing && (
-        <CoachDialog
-          coach={editing === "new" ? null : editing}
-          onClose={() => setEditing(null)}
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: GYM_KEYS.coaches })}
-        />
-      )}
-      {viewing && <CoachScheduleDialog coach={viewing} onClose={() => setViewing(null)} />}
+      <DialogPresence value={editing}>
+        {(editing) => (
+          <CoachDialog
+            coach={editing === "new" ? null : editing}
+            onClose={() => setEditing(null)}
+            onSaved={() => void queryClient.invalidateQueries({ queryKey: GYM_KEYS.coaches })}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={viewing}>
+        {(viewing) => <CoachScheduleDialog coach={viewing} onClose={() => setViewing(null)} />}
+      </DialogPresence>
     </div>
   );
 }

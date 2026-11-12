@@ -19,6 +19,7 @@ import { fetchJson } from "../../shared/inventory-lookups";
 import type { MovementRow } from "../../movements/types";
 import { ScrapDialog } from "./scrap-dialog";
 import { formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const PAGE_SIZE = 30;
 
@@ -156,7 +157,9 @@ export function InventoryScrapPage() {
         </div>
       )}
 
-      {creating && <ScrapDialog onClose={() => setCreating(false)} />}
+      <DialogPresence value={creating}>
+        {() => <ScrapDialog onClose={() => setCreating(false)} />}
+      </DialogPresence>
     </div>
   );
 }

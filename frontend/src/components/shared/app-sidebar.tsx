@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useState, useSyncExternalStore } from "react";
+import { Suspense, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   Check,
   ChevronsUpDown,
@@ -26,6 +26,7 @@ import { ActivityLogBell } from "@/components/layout/ActivityLogBell";
 import { NotificationBell } from "@/components/hris/NotificationBell";
 import { useThemeOrNull } from "@/components/providers/theme-provider";
 import { Button } from "@/components/ui/button";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import {
   Dialog,
   DialogFooter,
@@ -134,6 +135,41 @@ function useRailPreference() {
   return [expanded, toggle] as const;
 }
 
+/** CSS time ("200ms" or ".2s", as minifiers write it) in milliseconds. */
+function toMs(time: string): number {
+  const value = parseFloat(time);
+  return time.trim().endsWith("ms") ? value : value * 1000;
+}
+
+/**
+ * The rail snaps to its new width in one layout pass, so the page beside it
+ * reflows once instead of on every frame. Its content then fades and slides
+ * in on the compositor, timed by the motion tokens.
+ */
+function useRailContentFade(expanded: boolean) {
+  const ref = useRef<HTMLDivElement>(null);
+  const previous = useRef(expanded);
+  const reducedMotion = useReducedMotion();
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (previous.current === expanded) return;
+    previous.current = expanded;
+    if (!el || reducedMotion || typeof el.animate !== "function") return;
+    const style = getComputedStyle(el);
+    el.animate(
+      [
+        { opacity: 0, transform: `translateX(${expanded ? -8 : 8}px)` },
+        { opacity: 1, transform: "none" },
+      ],
+      {
+        duration: toMs(style.getPropertyValue("--motion-base")) || 200,
+        easing: style.getPropertyValue("--ease-standard").trim() || "ease-out",
+      }
+    );
+  }, [expanded, reducedMotion]);
+  return ref;
+}
+
 function AppSidebarContent({
   user,
   navItems,
@@ -148,6 +184,7 @@ function AppSidebarContent({
   const isDesktop = useMediaQuery("(min-width: 1280px)");
   const [railPref, toggleRail] = useRailPreference();
   const railExpanded = railPref && isDesktop;
+  const railContentRef = useRailContentFade(railExpanded);
   const [accountOpen, setAccountOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const leaves = useMemo(() => flattenNavLeaves(navItems), [navItems]);
@@ -185,10 +222,11 @@ function AppSidebarContent({
       </div>
 
       <aside
-        className={`relative hidden shrink-0 flex-col rounded-hero bg-ink text-on-ink shadow-float transition-[width] duration-200 md:flex print:hidden ${
+        className={`relative hidden shrink-0 rounded-hero bg-ink text-on-ink shadow-float md:flex print:hidden ${
           railExpanded ? "w-60" : "w-[76px]"
         }`}
       >
+        <div ref={railContentRef} className="flex min-h-0 min-w-0 flex-1 flex-col">
         <RailHeader expanded={railExpanded} />
         <AppSidebarNav navItems={navItems} collapsed={!railExpanded} />
         <RailWorkspace
@@ -219,6 +257,7 @@ function AppSidebarContent({
             )}
           </button>
         )}
+        </div>
       </aside>
 
       <div className="relative flex min-w-0 flex-1 flex-col gap-4 print:block">

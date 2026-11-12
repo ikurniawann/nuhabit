@@ -32,6 +32,7 @@ import {
   dataroomKeys, nodeFileUrl, startDownload, useDataroomListing, useDataroomNode, useDataroomSearch, useDataroomTags,
 } from "@/features/dataroom/queries";
 import type { DataroomItem, DriveView } from "@/features/dataroom/types";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /**
  * Dataroom: pengganti Google Drive perusahaan. Folder bersarang, unggah
@@ -651,39 +652,41 @@ export function DataroomPage() {
 
       {menu && <ContextMenu x={menu.x} y={menu.y} entries={menu.entries} onClose={() => setMenu(null)} />}
 
-      {dialog?.kind === "new-folder" && (
-        <NameDialog open title="Folder baru" initial="Folder baru" submitLabel="Buat" busy={busy} onClose={() => setDialog(null)} onSubmit={createFolder} />
-      )}
-      {dialog?.kind === "rename" && (
-        <NameDialog open title="Ganti nama" initial={dialog.item.name} submitLabel="Simpan" busy={busy} onClose={() => setDialog(null)} onSubmit={(name) => rename(dialog.item, name)} />
-      )}
-      {dialog?.kind === "move" && (
-        <MoveDialog open mode="move" items={dialog.items} busy={busy} onClose={() => setDialog(null)} onSubmit={(target) => moveItems(dialog.items, target)} />
-      )}
-      {dialog?.kind === "copy" && (
-        <MoveDialog open mode="copy" items={dialog.items} busy={busy} onClose={() => setDialog(null)} onSubmit={(target) => copyItems(dialog.items, target)} />
-      )}
-      {dialog?.kind === "delete" && (
-        <DeleteDialog open items={dialog.items} permanent={dialog.permanent} busy={busy} onClose={() => setDialog(null)} onConfirm={() => (dialog.permanent ? purgeItems(dialog.items) : trashItems(dialog.items))} />
-      )}
-      {dialog?.kind === "access" && (
-        <AccessDialog open node={dialog.item} onClose={() => setDialog(null)} onSaved={() => void reload()} />
-      )}
-      {dialog?.kind === "permissions" && (
-        <PermissionsDialog open node={dialog.item} onClose={() => setDialog(null)} />
-      )}
-      {dialog?.kind === "share" && (
-        <ShareDialog open node={dialog.item} canManage={perms.create} onClose={() => setDialog(null)} />
-      )}
-      {dialog?.kind === "preview" && (
-        <PreviewDialog
-          open name={dialog.item.name} mime={dialog.item.mime} size={dialog.item.size_bytes}
-          inlineUrl={nodeFileUrl(dialog.item.id, true)}
-          downloadUrl={nodeFileUrl(dialog.item.id)}
-          textUrl={`/api/dataroom/nodes/${dialog.item.id}/text`}
-          onClose={() => setDialog(null)}
-        />
-      )}
+      <DialogPresence value={dialog?.kind === "new-folder" ? dialog : null}>
+        {() => <NameDialog open title="Folder baru" initial="Folder baru" submitLabel="Buat" busy={busy} onClose={() => setDialog(null)} onSubmit={createFolder} />}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "rename" ? dialog : null}>
+        {(dialog) => <NameDialog open title="Ganti nama" initial={dialog.item.name} submitLabel="Simpan" busy={busy} onClose={() => setDialog(null)} onSubmit={(name) => rename(dialog.item, name)} />}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "move" ? dialog : null}>
+        {(dialog) => <MoveDialog open mode="move" items={dialog.items} busy={busy} onClose={() => setDialog(null)} onSubmit={(target) => moveItems(dialog.items, target)} />}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "copy" ? dialog : null}>
+        {(dialog) => <MoveDialog open mode="copy" items={dialog.items} busy={busy} onClose={() => setDialog(null)} onSubmit={(target) => copyItems(dialog.items, target)} />}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "delete" ? dialog : null}>
+        {(dialog) => <DeleteDialog open items={dialog.items} permanent={dialog.permanent} busy={busy} onClose={() => setDialog(null)} onConfirm={() => (dialog.permanent ? purgeItems(dialog.items) : trashItems(dialog.items))} />}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "access" ? dialog : null}>
+        {(dialog) => <AccessDialog open node={dialog.item} onClose={() => setDialog(null)} onSaved={() => void reload()} />}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "permissions" ? dialog : null}>
+        {(dialog) => <PermissionsDialog open node={dialog.item} onClose={() => setDialog(null)} />}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "share" ? dialog : null}>
+        {(dialog) => <ShareDialog open node={dialog.item} canManage={perms.create} onClose={() => setDialog(null)} />}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "preview" ? dialog : null}>
+        {(dialog) => (
+          <PreviewDialog
+            open name={dialog.item.name} mime={dialog.item.mime} size={dialog.item.size_bytes}
+            inlineUrl={nodeFileUrl(dialog.item.id, true)}
+            downloadUrl={nodeFileUrl(dialog.item.id)}
+            textUrl={`/api/dataroom/nodes/${dialog.item.id}/text`}
+            onClose={() => setDialog(null)}
+          />
+        )}
+      </DialogPresence>
 
       <UploadPanel tasks={tasks} onClear={clearFinished} />
     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useEffect, useState } from "react";
 import { CheckCircle, FileText, Filter, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -222,7 +223,7 @@ export function PurchaseOrdersPage() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Tabel purchase order" className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
               <tr>
@@ -279,7 +280,7 @@ export function PurchaseOrdersPage() {
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
 
         <PurchasingTablePagination
           page={page}

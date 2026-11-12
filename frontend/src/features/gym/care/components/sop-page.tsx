@@ -27,6 +27,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
 import { SOP_KEYS, sopApi, type SopDetail, type SopDocument } from "../api";
 import { MySopList, SopBody } from "./sop-reader";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Gym → SOP Coach. Manajer mengelola dokumen; coach membaca dan mengonfirmasi miliknya. */
 export function SopPage() {
@@ -105,8 +106,12 @@ function SopManager() {
           </Table>
         )}
       </Card>
-      {creating && <VersionDialog onClose={() => setCreating(false)} />}
-      {openId && <SopDetailDialog id={openId} onClose={() => setOpenId(null)} />}
+      <DialogPresence value={creating}>
+        {() => <VersionDialog onClose={() => setCreating(false)} />}
+      </DialogPresence>
+      <DialogPresence value={openId}>
+        {(openId) => <SopDetailDialog id={openId} onClose={() => setOpenId(null)} />}
+      </DialogPresence>
     </div>
   );
 }
@@ -218,7 +223,9 @@ function SopDetailDialog({ id, onClose }: { id: string; onClose: () => void }) {
           </Button>
         </DialogFooter>
       </DialogPanel>
-      {publishing && d && <VersionDialog doc={d} onClose={() => setPublishing(false)} />}
+      <DialogPresence value={publishing && d}>
+        {(d) => <VersionDialog doc={d} onClose={() => setPublishing(false)} />}
+      </DialogPresence>
     </Dialog>
   );
 }

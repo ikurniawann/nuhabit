@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { NumericInput } from "@/components/ui/numeric-input";
 import type { BalanceRow, ViewMode } from "../balance-rows";
 
@@ -19,7 +20,7 @@ export function BeginningBalanceTable({
   ) => void;
 }) {
   return (
-    <div className="mt-4 overflow-x-auto">
+    <ScrollRegion label="Tabel saldo awal" className="mt-4 overflow-x-auto">
       <table className="w-full min-w-[860px] text-sm">
         <thead>
           <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -90,6 +91,6 @@ export function BeginningBalanceTable({
           )}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }

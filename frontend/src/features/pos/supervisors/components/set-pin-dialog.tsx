@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { POS_PIN_PATTERN } from '@/lib/pos/supervisor-pin';
 import type { SupervisorRow } from '../api';
+import { DialogPresence } from '@/components/ui/dialog-presence';
 
 type SetPinDialogProps = {
   target: SupervisorRow | null;
@@ -25,7 +26,11 @@ type SetPinDialogProps = {
 
 /** Dirender ulang per supervisor (key) → isian PIN selalu kosong saat dibuka. */
 export function SetPinDialog(props: SetPinDialogProps) {
-  return props.target ? <SetPinForm key={props.target.id} {...props} /> : null;
+  return (
+    <DialogPresence value={props.target ? props : null}>
+      {(p) => <SetPinForm key={p.target?.id} {...p} />}
+    </DialogPresence>
+  );
 }
 
 function SetPinForm({ target, onClose, onSubmit }: SetPinDialogProps) {

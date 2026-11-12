@@ -36,6 +36,7 @@ import {
   type CreditPackage,
   type PackageKind,
 } from "../api";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const PACKAGES_KEY = ["gym-credits", "packages"];
 
@@ -200,15 +201,17 @@ export function PackagesPage() {
         )}
       </Card>
 
-      {editing && (
-        <PackageDialog
-          pkg={editing === "new" ? null : editing}
-          classTypes={classTypes}
-          branches={branches}
-          onClose={() => setEditing(null)}
-          onSaved={refresh}
-        />
-      )}
+      <DialogPresence value={editing}>
+        {(editing) => (
+          <PackageDialog
+            pkg={editing === "new" ? null : editing}
+            classTypes={classTypes}
+            branches={branches}
+            onClose={() => setEditing(null)}
+            onSaved={refresh}
+          />
+        )}
+      </DialogPresence>
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}

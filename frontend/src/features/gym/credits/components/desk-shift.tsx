@@ -10,6 +10,7 @@ import type { PosShift } from "@/lib/pos-api";
 import { formatRupiah, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { gymCreditsApi, type DeskShift } from "../api";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 export const deskShiftKey = (branchId: string | null) => ["gym-credits", "shift", branchId ?? "any"];
 
@@ -106,16 +107,18 @@ export function ShiftRequired({
       <Button type="button" size="sm" onClick={() => setOpen(true)}>
         Buka shift
       </Button>
-      {open && (
-        <DeskShiftDialog
-          branchId={branchId}
-          shift={null}
-          onClose={() => {
-            setOpen(false);
-            onOpened?.();
-          }}
-        />
-      )}
+      <DialogPresence value={open}>
+        {() => (
+          <DeskShiftDialog
+            branchId={branchId}
+            shift={null}
+            onClose={() => {
+              setOpen(false);
+              onOpened?.();
+            }}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }
@@ -156,7 +159,9 @@ export function DeskShiftBar({ branchId }: { branchId: string | null }) {
           {s ? "Tutup shift" : "Buka shift"}
         </Button>
       )}
-      {open && <DeskShiftDialog branchId={branchId} shift={s ?? null} onClose={() => setOpen(false)} />}
+      <DialogPresence value={open}>
+        {() => <DeskShiftDialog branchId={branchId} shift={s ?? null} onClose={() => setOpen(false)} />}
+      </DialogPresence>
     </Card>
   );
 }

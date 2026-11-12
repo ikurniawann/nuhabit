@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import type { CreateGrnLine, CreateGrnLineEdit } from "@/lib/purchasing/grn-ui-lines";
@@ -14,7 +15,7 @@ type Props = {
 export function CreateGrnItemsTable({ lines, isProduct, onEdit }: Props) {
   return (
     <div className="px-4 pb-4 pt-3">
-      <div className="overflow-x-auto rounded-xl border border-gray-200/70">
+      <ScrollRegion label="Tabel item penerimaan" className="overflow-x-auto rounded-xl border border-gray-200/70">
         <table className={`${isProduct ? "min-w-[720px]" : "min-w-[1040px]"} w-full border-collapse text-sm`}>
           <thead>
             <tr className="bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500">
@@ -99,7 +100,7 @@ export function CreateGrnItemsTable({ lines, isProduct, onEdit }: Props) {
             })}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
     </div>
   );
 }

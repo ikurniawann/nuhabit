@@ -22,6 +22,7 @@ import type { RecipeItem } from "../types";
 import { BomExplodeDialog } from "./bom-explode-dialog";
 import { PurchaseAdditionalCostsSection } from "./purchase-additional-costs-section";
 import { ScrollRegion } from "@/components/ui/scroll-region";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 type BomFilter = "all" | "ready" | "incomplete";
 
@@ -341,15 +342,17 @@ export function ProductionRecipesPage({
 
       <PurchaseAdditionalCostsSection />
 
-      {exploding && (
-        <BomExplodeDialog
-          key={exploding.id}
-          open
-          onOpenChange={(open) => !open && setExploding(null)}
-          owner={isProduct ? { productId: exploding.id } : { rawMaterialId: exploding.id }}
-          itemName={displayName(exploding.nama)}
-        />
-      )}
+      <DialogPresence value={exploding}>
+        {(exploding) => (
+          <BomExplodeDialog
+            key={exploding.id}
+            open
+            onOpenChange={(open) => !open && setExploding(null)}
+            owner={isProduct ? { productId: exploding.id } : { rawMaterialId: exploding.id }}
+            itemName={displayName(exploding.nama)}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

@@ -24,6 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { TableNote } from "@/features/crm/engagement/components/shared";
 import { formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import { ENTRY_LABELS, STATUS_LABELS, entryDelta, signedRupiah, walletApi, type OnlinePayment, type PaymentFilters } from "../api";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const PAYMENTS_KEY = ["wallet", "payments"];
 const ALL = "all";
@@ -134,7 +135,9 @@ export function PaymentsPage() {
         )}
       </Card>
 
-      {openId && <PaymentDialog id={openId} onClose={() => setOpenId(null)} />}
+      <DialogPresence value={openId}>
+        {(openId) => <PaymentDialog id={openId} onClose={() => setOpenId(null)} />}
+      </DialogPresence>
     </div>
   );
 }

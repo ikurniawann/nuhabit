@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import Link from "next/link";
 import { Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,7 @@ export function RawMaterialConversionsTab({ material, satuanBesarName, satuanKec
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto px-0">
+          <ScrollRegion label="Tabel konversi satuan" className="overflow-x-auto px-0">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-xs uppercase tracking-wide text-gray-500">
@@ -108,7 +109,7 @@ export function RawMaterialConversionsTab({ material, satuanBesarName, satuanKec
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </CardContent>
     </Card>

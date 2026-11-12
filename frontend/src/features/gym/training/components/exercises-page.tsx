@@ -26,6 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { EXERCISE_CATEGORIES, RACE_COMPARABLE_SIMILARITY } from "@/lib/gym/hyrox";
 import { trainingApi, type ExerciseRow, type SubstitutionRow } from "../api";
 import { SELECT } from "@/features/gym/shared";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const LIBRARY_KEY = ["gym", "exercises"];
 
@@ -197,18 +198,20 @@ export function ExercisesPage() {
         )}
       </Card>
 
-      {editing && (
-        <ExerciseDialog exercise={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={refresh} />
-      )}
-      {subsFor && (
-        <SubstitutionsDialog
-          exercise={subsFor}
-          exercises={exercises}
-          rules={subsOf(subsFor.id)}
-          onClose={() => setSubsFor(null)}
-          onChanged={refresh}
-        />
-      )}
+      <DialogPresence value={editing}>
+        {(editing) => <ExerciseDialog exercise={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={refresh} />}
+      </DialogPresence>
+      <DialogPresence value={subsFor}>
+        {(subsFor) => (
+          <SubstitutionsDialog
+            exercise={subsFor}
+            exercises={exercises}
+            rules={subsOf(subsFor.id)}
+            onClose={() => setSubsFor(null)}
+            onChanged={refresh}
+          />
+        )}
+      </DialogPresence>
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}

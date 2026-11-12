@@ -33,6 +33,7 @@ import {
 import { useCreateAdditionalCost, useDeleteAdditionalCost } from "../mutations";
 import { useAdditionalCosts } from "../queries";
 import { ScrollRegion } from "@/components/ui/scroll-region";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 type ReferenceFilter = AdditionalCostReferenceType | "all";
 
@@ -177,7 +178,9 @@ export function PurchaseAdditionalCostsSection() {
         </table>
       </ScrollRegion>
 
-      {formOpen && <AdditionalCostFormModal onClose={() => setFormOpen(false)} />}
+      <DialogPresence value={formOpen}>
+        {() => <AdditionalCostFormModal onClose={() => setFormOpen(false)} />}
+      </DialogPresence>
 
       <ConfirmDialog
         open={pendingDelete !== null}

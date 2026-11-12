@@ -16,6 +16,7 @@ import { ContractFormDialog } from "./contracts/contract-form-dialog";
 import { errorMessage } from "./contracts/contract-labels";
 import { ContractRenewDialog } from "./contracts/contract-renew-dialog";
 import { ContractTerminateDialog } from "./contracts/contract-terminate-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /**
  * Tab "Kontrak" di detail karyawan: daftar kontrak PKWTT/PKWT + aksi siklus
@@ -107,27 +108,31 @@ export function EmployeeContractsTab({ employeeId }: { employeeId: string }) {
         </div>
       )}
 
-      {dialog?.kind === "form" && (
-        <ContractFormDialog
-          key={dialog.contract?.id ?? "new"}
-          employeeId={employeeId}
-          contract={dialog.contract}
-          onClose={close}
-        />
-      )}
-      {dialog?.kind === "renew" && (
-        <ContractRenewDialog employeeId={employeeId} contract={dialog.contract} onClose={close} />
-      )}
-      {dialog?.kind === "terminate" && (
-        <ContractTerminateDialog
-          employeeId={employeeId}
-          contract={dialog.contract}
-          onClose={close}
-        />
-      )}
-      {adminContract && (
-        <ContractAdminDialog employeeId={employeeId} contract={adminContract} onClose={close} />
-      )}
+      <DialogPresence value={dialog?.kind === "form" ? dialog : null}>
+        {(dialog) => (
+          <ContractFormDialog
+            key={dialog.contract?.id ?? "new"}
+            employeeId={employeeId}
+            contract={dialog.contract}
+            onClose={close}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "renew" ? dialog : null}>
+        {(dialog) => <ContractRenewDialog employeeId={employeeId} contract={dialog.contract} onClose={close} />}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "terminate" ? dialog : null}>
+        {(dialog) => (
+          <ContractTerminateDialog
+            employeeId={employeeId}
+            contract={dialog.contract}
+            onClose={close}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={adminContract}>
+        {(adminContract) => <ContractAdminDialog employeeId={employeeId} contract={adminContract} onClose={close} />}
+      </DialogPresence>
       <ConfirmDialog
         open={dialog?.kind === "delete"}
         onOpenChange={(open) => !open && close()}

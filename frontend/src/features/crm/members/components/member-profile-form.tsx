@@ -101,6 +101,11 @@ export function MemberProfileForm({
         )}
       </div>
 
+      {!form.name.trim() && (
+        <p role="alert" className="mt-3 text-sm text-red-700">
+          Nama wajib diisi sebelum menyimpan.
+        </p>
+      )}
       <FeedbackNote feedback={feedback} className="mt-3" />
     </section>
   );

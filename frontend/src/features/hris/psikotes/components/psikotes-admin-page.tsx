@@ -13,6 +13,7 @@ import { useUpdateInstrument } from "../mutations";
 import type { PsikotesInstrument } from "../types";
 import { InstrumentConfigDialog } from "./instrument-config-dialog";
 import { QuestionManagerDialog } from "./question-manager-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /**
  * Halaman manajemen Psikotes (/dashboard/hris/psikotes):
@@ -140,26 +141,30 @@ export function PsikotesAdminPage() {
         })}
       </div>
 
-      {configTarget && (
-        <InstrumentConfigDialog
-          key={configTarget.id}
-          instrument={configTarget}
-          open
-          onOpenChange={(open) => {
-            if (!open) setConfigTarget(null);
-          }}
-        />
-      )}
-      {questionsTarget && (
-        <QuestionManagerDialog
-          key={questionsTarget.id}
-          instrument={questionsTarget}
-          open
-          onOpenChange={(open) => {
-            if (!open) setQuestionsTarget(null);
-          }}
-        />
-      )}
+      <DialogPresence value={configTarget}>
+        {(configTarget) => (
+          <InstrumentConfigDialog
+            key={configTarget.id}
+            instrument={configTarget}
+            open
+            onOpenChange={(open) => {
+              if (!open) setConfigTarget(null);
+            }}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={questionsTarget}>
+        {(questionsTarget) => (
+          <QuestionManagerDialog
+            key={questionsTarget.id}
+            instrument={questionsTarget}
+            open
+            onOpenChange={(open) => {
+              if (!open) setQuestionsTarget(null);
+            }}
+          />
+        )}
+      </DialogPresence>
     </FadeIn>
   );
 }

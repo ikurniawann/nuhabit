@@ -5,7 +5,9 @@ import * as React from "react";
 import { motion } from "framer-motion";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
+// Mirrors the motion tokens in globals.css (--motion-*, --ease-emphasized).
 const EASE_GLASS = [0.32, 0.72, 0, 1] as const;
+const MOTION = { fast: 0.15, base: 0.2, slow: 0.3 } as const;
 
 export function FadeIn({
   children,
@@ -23,7 +25,7 @@ export function FadeIn({
       className={className}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22, ease: EASE_GLASS, delay }}
+      transition={{ duration: MOTION.base, ease: EASE_GLASS, delay }}
     >
       {children}
     </motion.div>
@@ -44,7 +46,7 @@ export function Pressable({
       className={className}
       whileTap={{ scale: 0.97 }}
       whileHover={{ scale: 1.01 }}
-      transition={{ duration: 0.12, ease: EASE_GLASS }}
+      transition={{ duration: MOTION.fast, ease: EASE_GLASS }}
     >
       {children}
     </motion.div>
@@ -65,7 +67,7 @@ export function PageTransition({
       className={className}
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, ease: EASE_GLASS }}
+      transition={{ duration: MOTION.slow, ease: EASE_GLASS }}
     >
       {children}
     </motion.div>

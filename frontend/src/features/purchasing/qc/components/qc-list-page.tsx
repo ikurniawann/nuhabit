@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useQCList } from "../queries";
@@ -118,7 +119,7 @@ export function QCListPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto px-4">
+              <ScrollRegion label="Tabel inspeksi QC" className="overflow-x-auto px-4">
                 <table className="min-w-full text-sm">
                   <thead className="border-b border-gray-200/70 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                     <tr>
@@ -185,7 +186,7 @@ export function QCListPage() {
                     })}
                   </tbody>
                 </table>
-              </div>
+              </ScrollRegion>
 
               <PurchasingTablePagination
                 page={page}

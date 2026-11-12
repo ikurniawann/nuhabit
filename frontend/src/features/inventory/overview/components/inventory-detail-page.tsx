@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -150,7 +151,7 @@ export function InventoryDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel pergerakan stok" className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-y">
                 <tr>
@@ -239,7 +240,7 @@ export function InventoryDetailPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
           {totalPages > 1 && (
             <div className="flex justify-center gap-2 p-4 border-t">
               <Button

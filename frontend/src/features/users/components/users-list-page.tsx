@@ -31,6 +31,7 @@ import {
 } from "./users-list-filters";
 import { UsersTable } from "./users-table";
 import type { UserEmployeeItem } from "@/lib/users/user-mapper";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 interface UsersListPageProps {
   /**
@@ -315,16 +316,18 @@ export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
         }}
       />
 
-      {createAccountTarget && (
-        <CreateAccountDialog
-          employee={{
-            id: createAccountTarget.id,
-            full_name: createAccountTarget.fullName,
-            email: createAccountTarget.email ?? "",
-          }}
-          onClose={() => setCreateAccountTarget(null)}
-        />
-      )}
+      <DialogPresence value={createAccountTarget}>
+        {(createAccountTarget) => (
+          <CreateAccountDialog
+            employee={{
+              id: createAccountTarget.id,
+              full_name: createAccountTarget.fullName,
+              email: createAccountTarget.email ?? "",
+            }}
+            onClose={() => setCreateAccountTarget(null)}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { memberHref } from "@/features/gym/members/member-link";
 import { useDebounced } from "@/features/gym/use-debounced";
 import { COACHING_KEYS, coachingApi } from "../api";
 import { AssessmentDialog } from "./assessment-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Metrik yang muat di tabel ringkas; riwayat lengkap ada di profil member. */
 const SUMMARY = METRICS.filter((m) => ["weight_kg", "body_fat_pct", "run_1km_sec", "wall_balls_max_reps"].includes(m.key));
@@ -89,12 +90,14 @@ export function AssessmentsPage() {
           </Table>
         )}
       </Card>
-      {creating && (
-        <AssessmentDialog
-          onClose={() => setCreating(false)}
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: COACHING_KEYS.assessments })}
-        />
-      )}
+      <DialogPresence value={creating}>
+        {() => (
+          <AssessmentDialog
+            onClose={() => setCreating(false)}
+            onSaved={() => void queryClient.invalidateQueries({ queryKey: COACHING_KEYS.assessments })}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

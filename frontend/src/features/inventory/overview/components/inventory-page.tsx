@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState, type ComponentType } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -195,7 +196,7 @@ export function InventoryPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel inventori" className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-y">
                 <tr>
@@ -300,7 +301,7 @@ export function InventoryPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
           {totalPages > 1 && (
             <div className="flex justify-center gap-2 p-4 border-t">
               <Button

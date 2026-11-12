@@ -329,14 +329,15 @@ function Field({
   fromEnv: (key: string) => boolean;
   children: React.ReactNode;
 }) {
+  // A <label> names the control inside it for screen readers and clicks.
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-2">
+    <label className="block space-y-1.5">
+      <span className="flex items-center gap-2">
         <span className="text-sm font-medium text-foreground">{label}</span>
         {fromEnv(envKey) ? <Badge variant="muted">dari env</Badge> : null}
-      </div>
+      </span>
       {children}
-    </div>
+    </label>
   );
 }
 
@@ -449,7 +450,7 @@ function LogCard() {
         </div>
       ) : null}
 
-      <div className="mt-4 overflow-x-auto">
+      <div className="mt-4 overflow-x-auto" tabIndex={0} role="region" aria-label="Riwayat email terkirim">
         <table className="w-full text-sm">
           <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
             <tr>

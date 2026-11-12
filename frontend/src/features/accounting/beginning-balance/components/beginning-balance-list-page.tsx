@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
@@ -63,7 +64,7 @@ export function BeginningBalanceListPage() {
             </Button>
           </div>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel tahun fiskal" className="overflow-x-auto px-4">
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -117,7 +118,7 @@ export function BeginningBalanceListPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
     </div>

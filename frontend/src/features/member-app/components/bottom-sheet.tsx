@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { useT } from "../lib/i18n";
+
+/** Exit length: --motion-base from globals.css, or nothing when motion is reduced. */
+function exitMs(): number {
+  if (typeof window.matchMedia !== "function" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return 0;
+  // The CSS build may rewrite 200ms as .2s.
+  const value = getComputedStyle(document.documentElement).getPropertyValue("--motion-base").trim();
+  const ms = parseFloat(value) * (value.endsWith("ms") ? 1 : 1000);
+  return Number.isFinite(ms) ? ms : 0;
+}
 
 /** Lembar bawah: tutup lewat backdrop, tombol ×, atau Escape. */
 export function BottomSheet({
@@ -22,14 +31,30 @@ export function BottomSheet({
   useEffect(() => () => {
     if (opener instanceof HTMLElement) opener.focus();
   }, [opener]);
+  // Plays the exit animation (data-closing) before the parent unmounts the sheet.
+  const [closing, setClosing] = useState(false);
+  const close = useCallback(() => {
+    const ms = exitMs();
+    if (ms === 0) onClose();
+    else setClosing(true);
+  }, [onClose]);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    if (!closing) return;
+    const id = window.setTimeout(onClose, exitMs());
+    return () => window.clearTimeout(id);
+  }, [closing, onClose]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [close]);
 
   return (
-    <div className="nh-sheet-backdrop fixed inset-0 z-40 flex items-end justify-center bg-black/50" onClick={onClose}>
+    <div
+      className="nh-sheet-backdrop fixed inset-0 z-40 flex items-end justify-center bg-black/50"
+      data-closing={closing || undefined}
+      onClick={close}
+    >
       <div
         role="dialog"
         aria-modal="true"
@@ -48,7 +73,7 @@ export function BottomSheet({
           <button
             type="button"
             autoFocus
-            onClick={onClose}
+            onClick={close}
             aria-label={t("Close")}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-nh-raised text-nh-ink active:scale-95"
           >

@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -225,7 +226,7 @@ export function NewProductPage() {
                 </CardContent>
               ) : (
                 <CardContent className="p-0">
-                  <div className="overflow-x-auto px-4">
+                  <ScrollRegion label="Tabel resep produk" className="overflow-x-auto px-4">
                     <table className="w-full min-w-180 text-sm">
                       <thead>
                         <tr className="border-b border-gray-200/70 text-left text-xs text-muted-foreground">
@@ -321,7 +322,7 @@ export function NewProductPage() {
                         })}
                       </tbody>
                     </table>
-                  </div>
+                  </ScrollRegion>
                   <div className="flex justify-end border-t border-gray-200/70 px-4 py-3">
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Total Estimasi HPP</p>

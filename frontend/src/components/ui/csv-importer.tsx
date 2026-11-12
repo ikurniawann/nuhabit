@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import {
   forwardRef,
   useCallback,
@@ -498,7 +499,7 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
                       </span>
                     </div>
                   </div>
-                  <div className={expanded ? errorPanelClass : `${errorPanelClass} space-y-1 px-4 pb-4 text-sm text-red-800`}>
+                  <ScrollRegion label="Daftar error impor" axis="y" className={expanded ? errorPanelClass : `${errorPanelClass} space-y-1 px-4 pb-4 text-sm text-red-800`}>
                     {expanded ? (
                       <table className="min-w-full text-sm">
                         <thead className="sticky top-0 bg-red-50">
@@ -523,7 +524,7 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
                         </div>
                       ))
                     )}
-                  </div>
+                  </ScrollRegion>
                   {!expanded && importResult.errors.length > 10 && (
                     <p className="px-4 pb-4 text-xs text-red-600">
                       ...dan {importResult.errors.length - 10} kesalahan lainnya
@@ -556,7 +557,7 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
                       Pratinjau {expanded ? `(${previewData.length} baris)` : ""}
                     </p>
                   </div>
-                  <div className={scrollPanelClass}>
+                  <ScrollRegion label="Pratinjau data CSV" axis="y" className={scrollPanelClass}>
                     <table className="min-w-full text-sm">
                       <thead className="sticky top-0 z-10 bg-gray-50">
                         <tr className="border-b border-gray-200/70 text-xs uppercase tracking-wide text-gray-500">
@@ -600,7 +601,7 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
                         ...dan {previewData.length - 10} baris lainnya
                       </div>
                     )}
-                  </div>
+                  </ScrollRegion>
                 </div>
               )}
 

@@ -78,6 +78,7 @@ import { GuestCountDialog } from './guest-count-dialog';
 import { ReceiptResultDialog } from './receipt-result-dialog';
 import { SeasonPassDialog } from './season-pass-dialog';
 import { PosOfflineRegistrar } from './pos-offline-registrar';
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 function CashierPageContent({ variant }: { variant: CashierPageVariant }) {
   const router = useRouter();
@@ -307,7 +308,11 @@ function CashierPageContent({ variant }: { variant: CashierPageVariant }) {
     return withCustomerDiscount(response.data);
   };
 
-  const shellHeight = isTabletMode ? 'h-[calc(100dvh-7rem)] min-h-[520px]' : 'h-[calc(100dvh-14rem)] min-h-[480px]';
+  // Below 800px the catalog and cart stack, so the page grows instead: a fixed
+  // height there pushed the Pay button past the page padding, under the phone nav.
+  const shellHeight = isTabletMode
+    ? 'h-[calc(100dvh-7rem)] min-h-[520px]'
+    : 'min-[800px]:h-[calc(100dvh-14rem)] min-[800px]:min-h-[480px]';
   const dialog = catalog.dialog;
 
   return (
@@ -511,24 +516,28 @@ function CashierPageContent({ variant }: { variant: CashierPageVariant }) {
               onCheckNfcTab={(uid) => checkNfcTab(uid, bill.total)}
             />
 
-            {dialog?.kind === 'merch_sku' && (
-              <MerchSkuPickerDialog
-                product={dialog.product}
-                onSelect={catalog.selectMerchSku}
-                onClose={catalog.closeDialog}
-                formatCurrency={formatCurrency}
-              />
-            )}
+            <DialogPresence value={dialog?.kind === 'merch_sku' ? dialog : null}>
+              {(dialog) => (
+                <MerchSkuPickerDialog
+                  product={dialog.product}
+                  onSelect={catalog.selectMerchSku}
+                  onClose={catalog.closeDialog}
+                  formatCurrency={formatCurrency}
+                />
+              )}
+            </DialogPresence>
 
-            {dialog?.kind === 'gift_card' && (
-              <GiftCardSaleDialog
-                open
-                productName={dialog.product.name}
-                onClose={catalog.closeDialog}
-                onConfirm={catalog.confirmGiftCard}
-                formatCurrency={formatCurrency}
-              />
-            )}
+            <DialogPresence value={dialog?.kind === 'gift_card' ? dialog : null}>
+              {(dialog) => (
+                <GiftCardSaleDialog
+                  open
+                  productName={dialog.product.name}
+                  onClose={catalog.closeDialog}
+                  onConfirm={catalog.confirmGiftCard}
+                  formatCurrency={formatCurrency}
+                />
+              )}
+            </DialogPresence>
 
             <NFCModal
               open={nfc.nfc.open}

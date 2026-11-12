@@ -55,6 +55,7 @@ export const TRAIN_ID: Record<string, string> = {
   "+ Add set": "+ Tambah set",
   Lap: "Lap",
   "Tap to mark a lap.": "Ketuk untuk menandai lap.",
+  "Recorded laps": "Lap tercatat",
   "Could not read that image.": "Gambar itu tidak bisa dibaca.",
   "Save failed.": "Gagal menyimpan.",
   "How did it go?": "Bagaimana latihannya?",

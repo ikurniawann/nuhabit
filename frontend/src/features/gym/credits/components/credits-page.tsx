@@ -46,6 +46,7 @@ import { ReceiptButton } from "./receipt-button";
 import { SellDialog } from "./sell-dialog";
 import { TransferDialog } from "./transfer-dialog";
 import { useDebounced } from "@/features/gym/use-debounced";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const memberKey = (id: string) => ["gym-credits", "member", id];
 
@@ -385,38 +386,50 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
         )}
       </Card>
 
-      {dialog === "adjust" && <AdjustDialog credits={d} onClose={() => setDialog(null)} onDone={refresh} />}
-      {dialog === "sell" && <SellDialog credits={d} onClose={() => setDialog(null)} onDone={refresh} />}
-      {dialog === "transfer" && (
-        <TransferDialog
-          credits={d}
-          onClose={() => setDialog(null)}
-          // The receiver's balance changes too.
-          onDone={() => void queryClient.invalidateQueries({ queryKey: ["gym-credits"] })}
-        />
-      )}
-      {reversing && (
-        <ReasonDialog
-          title={`Batalkan ${entryLabel(reversing).toLowerCase()} ${reversing.amount > 0 ? "+" : ""}${formatNumber(reversing.amount)}?`}
-          description="Entri asli tetap ada. Sistem menulis entri pembatalan dengan jumlah berlawanan."
-          confirmLabel="Batalkan entri"
-          action={(reason) => gymCreditsApi.reverse(reversing.id, reason)}
-          onClose={() => setReversing(null)}
-          onDone={refresh}
-        />
-      )}
-      {reclaiming && (
-        <ReasonDialog
-          title={`Tarik kembali ${formatNumber(reclaiming.reclaimable_credits)} kredit dari ${reclaiming.counterparty.name ?? reclaiming.counterparty.phone}?`}
-          description="Kredit yang belum dipakai penerima kembali ke lot asal pengirim. Kedua member mendapat notifikasi."
-          confirmLabel="Tarik kembali transfer"
-          action={(reason) => gymCreditsApi.reclaimTransfer(reclaiming.id, reason)}
-          onClose={() => setReclaiming(null)}
-          // The receiver's balance changes too.
-          onDone={() => void queryClient.invalidateQueries({ queryKey: ["gym-credits"] })}
-        />
-      )}
-      {refunding && <RefundDialog purchase={refunding} onClose={() => setRefunding(null)} onDone={refresh} />}
+      <DialogPresence value={dialog === "adjust"}>
+        {() => <AdjustDialog credits={d} onClose={() => setDialog(null)} onDone={refresh} />}
+      </DialogPresence>
+      <DialogPresence value={dialog === "sell"}>
+        {() => <SellDialog credits={d} onClose={() => setDialog(null)} onDone={refresh} />}
+      </DialogPresence>
+      <DialogPresence value={dialog === "transfer"}>
+        {() => (
+          <TransferDialog
+            credits={d}
+            onClose={() => setDialog(null)}
+            // The receiver's balance changes too.
+            onDone={() => void queryClient.invalidateQueries({ queryKey: ["gym-credits"] })}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={reversing}>
+        {(reversing) => (
+          <ReasonDialog
+            title={`Batalkan ${entryLabel(reversing).toLowerCase()} ${reversing.amount > 0 ? "+" : ""}${formatNumber(reversing.amount)}?`}
+            description="Entri asli tetap ada. Sistem menulis entri pembatalan dengan jumlah berlawanan."
+            confirmLabel="Batalkan entri"
+            action={(reason) => gymCreditsApi.reverse(reversing.id, reason)}
+            onClose={() => setReversing(null)}
+            onDone={refresh}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={reclaiming}>
+        {(reclaiming) => (
+          <ReasonDialog
+            title={`Tarik kembali ${formatNumber(reclaiming.reclaimable_credits)} kredit dari ${reclaiming.counterparty.name ?? reclaiming.counterparty.phone}?`}
+            description="Kredit yang belum dipakai penerima kembali ke lot asal pengirim. Kedua member mendapat notifikasi."
+            confirmLabel="Tarik kembali transfer"
+            action={(reason) => gymCreditsApi.reclaimTransfer(reclaiming.id, reason)}
+            onClose={() => setReclaiming(null)}
+            // The receiver's balance changes too.
+            onDone={() => void queryClient.invalidateQueries({ queryKey: ["gym-credits"] })}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={refunding}>
+        {(refunding) => <RefundDialog purchase={refunding} onClose={() => setRefunding(null)} onDone={refresh} />}
+      </DialogPresence>
     </div>
   );
 }

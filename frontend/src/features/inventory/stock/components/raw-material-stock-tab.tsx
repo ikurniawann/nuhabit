@@ -252,7 +252,7 @@ export function RawMaterialStockTab() {
           </p>
         )}
 
-        <div className="overflow-x-auto px-4">
+        <div className="overflow-x-auto px-4" tabIndex={0} role="region" aria-label="Tabel stok bahan baku">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200/70 text-xs uppercase tracking-wide text-gray-500">

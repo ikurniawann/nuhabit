@@ -217,7 +217,7 @@ export function ProductStockTab() {
           </div>
         }
       >
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tabel stok produk">
           <table className="min-w-full text-sm">
             <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
               <tr>

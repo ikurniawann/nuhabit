@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { use } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -212,7 +213,7 @@ export function ProductPRDetailPage({ params }: ProductPRDetailPageProps) {
               {!pr.items?.length ? (
                 <div className="py-12 text-center text-sm text-gray-500">No line items found.</div>
               ) : (
-                <div className="overflow-x-auto p-4">
+                <ScrollRegion label="Tabel item diminta" className="overflow-x-auto p-4">
                   <table className="min-w-full text-sm">
                     <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                       <tr>
@@ -250,7 +251,7 @@ export function ProductPRDetailPage({ params }: ProductPRDetailPageProps) {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </ScrollRegion>
               )}
             </CardContent>
           </Card>

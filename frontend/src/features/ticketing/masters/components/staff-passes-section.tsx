@@ -4,6 +4,7 @@
 // akses gate GRATIS. Pengaturan sengaja di modul Ticketing (bukan profil
 // karyawan): gelang = aset venue, wewenang pairing di ops venue.
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState } from "react";
 import { UserGroupIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
@@ -77,7 +78,7 @@ export function StaffPassesSection() {
           <p className="mt-2 text-sm text-gray-500">Memuat gelang karyawan...</p>
         </div>
       ) : (
-        <div className="overflow-x-auto px-4 pb-4">
+        <ScrollRegion label="Tabel gelang karyawan" className="overflow-x-auto px-4 pb-4">
           <table className="w-full text-sm">
             <thead>
               <TableRow className="border-b border-gray-200/70 bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500 hover:bg-gray-50/80">
@@ -139,7 +140,7 @@ export function StaffPassesSection() {
               ) : null}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       )}
 
       <Dialog open={pairOpen} onOpenChange={setPairOpen}>

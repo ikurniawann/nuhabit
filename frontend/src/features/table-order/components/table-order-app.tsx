@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight,
@@ -495,7 +496,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
                   {xpEnabled && (
                     <>
                       <span className="text-gray-300">·</span>
-                      <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
+                      <span className="inline-flex items-center gap-1 font-semibold text-amber-800">
                         <Sparkles className="size-3.5 fill-amber-500 text-amber-500" /> Dapat XP
                       </span>
                     </>
@@ -594,10 +595,10 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
         {/* Kartu info horizontal */}
         {/* "Bayar QRIS" & "Ke dapur otomatis" dihapus atas permintaan owner (2026-09-28). */}
         {(xpEnabled || arkEnabled) && (
-          <div className="mt-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+          <ScrollRegion label="Keuntungan member" className="mt-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
             {xpEnabled && <InfoCard icon={Sparkles} title="Kumpulkan XP" subtitle="Tiap pesanan member" />}
             {arkEnabled && <InfoCard icon={Coins} title="ARK Coin" subtitle="Saldo member, langsung lunas" />}
-          </div>
+          </ScrollRegion>
         )}
 
         {/* Sticky: pencarian + kategori */}

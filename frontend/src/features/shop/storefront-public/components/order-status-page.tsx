@@ -64,7 +64,7 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
 
   return (
     <div className="min-h-screen bg-white px-4 py-8">
-      <div className="mx-auto max-w-lg space-y-4">
+      <div className="mx-auto max-w-lg space-y-4 motion-fade-in">
         <div className="rounded-2xl border border-forest/10 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <div>
@@ -114,7 +114,7 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
               label={pickup ? 'Pickup' : `Shipping${order.courier ? ` (${order.courier})` : ''}`}
               value={pickup ? 'Free' : formatRupiah(order.shipping_cost)}
             />
-            <div className="flex items-center justify-between text-base font-semibold">
+            <div className="flex items-center justify-between text-base font-semibold text-gray-900">
               <span>Total</span>
               <span className="text-forest">{formatRupiah(order.total)}</span>
             </div>

@@ -26,6 +26,7 @@ import { Field, TableNote } from "@/features/crm/engagement/components/shared";
 import { memberEngagementApi, type MemberActivity, type MemberBadgeRow } from "../engagement-api";
 import { membersQueryKeys } from "../query-keys";
 import { formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const key = (customerId: string, part: string) => ["crm", "members", "engagement", customerId, part];
 
@@ -145,9 +146,9 @@ export function MemberEngagementPanel({ customerId, memberKey }: { customerId: s
           <ConsentTab customerId={customerId} />
         </TabsContent>
       </Tabs>
-      {adjusting && (
-        <XpAdjustDialog customerId={customerId} memberKey={memberKey} onClose={() => setAdjusting(false)} />
-      )}
+      <DialogPresence value={adjusting}>
+        {() => <XpAdjustDialog customerId={customerId} memberKey={memberKey} onClose={() => setAdjusting(false)} />}
+      </DialogPresence>
     </Card>
   );
 }

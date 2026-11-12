@@ -40,6 +40,7 @@ import {
   type SchemeForm,
 } from "../commission";
 import { commissionKeys } from "./commission-tab";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Skema bagi hasil (default dan per cabang) dan peran tiap coach. */
 export function CommissionSettingsTab() {
@@ -147,15 +148,17 @@ export function CommissionSettingsTab() {
 
       <CoachRoles coaches={view.coaches} onSaved={refresh} />
 
-      {editing && (
-        <SchemeDialog
-          scheme={editing === "new" ? null : editing}
-          view={view}
-          taken={taken}
-          onClose={() => setEditing(null)}
-          onSaved={refresh}
-        />
-      )}
+      <DialogPresence value={editing}>
+        {(editing) => (
+          <SchemeDialog
+            scheme={editing === "new" ? null : editing}
+            view={view}
+            taken={taken}
+            onClose={() => setEditing(null)}
+            onSaved={refresh}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { CampaignDetailDialog } from "./campaign-detail-dialog";
 import { CampaignFormDialog } from "./campaign-form-dialog";
 import { CampaignTable } from "./campaign-table";
 import { GiftCardPage } from "./gift-card-page";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Dialog form: tertutup, campaign baru, atau ubah satu campaign. */
 type FormState = { campaign: PromoCampaign | null } | null;
@@ -82,13 +83,15 @@ export function PromoPage() {
         </TabsContent>
       </Tabs>
 
-      {formState && (
-        <CampaignFormDialog
-          key={formState.campaign?.id ?? "new"}
-          campaign={formState.campaign}
-          onClose={() => setFormState(null)}
-        />
-      )}
+      <DialogPresence value={formState}>
+        {(formState) => (
+          <CampaignFormDialog
+            key={formState.campaign?.id ?? "new"}
+            campaign={formState.campaign}
+            onClose={() => setFormState(null)}
+          />
+        )}
+      </DialogPresence>
 
       <CampaignDetailDialog
         campaign={detailCampaign}

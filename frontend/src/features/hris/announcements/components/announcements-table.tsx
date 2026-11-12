@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import type { Announcement } from "../types";
@@ -10,7 +11,7 @@ interface AnnouncementsTableProps {
 
 export function AnnouncementsTable({ announcements, onEdit, onDelete }: AnnouncementsTableProps) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200/70 bg-white shadow-sm">
+    <ScrollRegion label="Tabel pengumuman" className="overflow-x-auto rounded-xl border border-gray-200/70 bg-white shadow-sm">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
@@ -72,6 +73,6 @@ export function AnnouncementsTable({ announcements, onEdit, onDelete }: Announce
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }

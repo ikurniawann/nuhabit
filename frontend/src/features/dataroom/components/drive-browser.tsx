@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState } from "react";
 import { ChevronRight, Download, ExternalLink, Eye, Loader2, Lock, X } from "lucide-react";
 import { formatBytes, isImageMime, isPreviewable } from "@/lib/dataroom/config";
@@ -112,14 +113,14 @@ export function DriveDataroomBrowser({ rootId, rootName }: { rootId: string; roo
               <a href={dl(preview)} className="inline-flex items-center gap-1 rounded-xl bg-white/10 px-3 py-1.5 text-xs font-semibold hover:bg-white/15"><Download className="size-3.5" /> Unduh</a>
               <button type="button" onClick={() => setPreview(null)} className="rounded-xl p-1.5 hover:bg-white/15" aria-label="Tutup"><X className="size-4" /></button>
             </div>
-            <div className="min-h-[50vh] flex-1 overflow-auto bg-black/40">
+            <ScrollRegion label="Pratinjau file" axis="y" className="min-h-[50vh] flex-1 overflow-auto bg-black/40">
               {isImageMime(preview.mime) ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={dl(preview, true)} alt={preview.name} className="mx-auto max-h-[78vh] w-auto max-w-full object-contain" />
               ) : (
                 <iframe src={dl(preview, true)} title={preview.name} className="h-[78vh] w-full bg-white" />
               )}
-            </div>
+            </ScrollRegion>
           </div>
         </div>
       )}

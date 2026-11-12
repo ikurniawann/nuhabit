@@ -97,7 +97,7 @@ function TextPane({ url, raw = false, note }: { url: string; raw?: boolean; note
   return (
     <div className="flex h-[72vh] flex-col">
       {note && <p className="border-b bg-amber-50 px-3 py-2 text-xs text-amber-800">{note}</p>}
-      <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed">{state.text}</pre>
+      <pre tabIndex={0} role="region" aria-label="Pratinjau teks" className="flex-1 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest/40">{state.text}</pre>
       {state.truncated && <p className="border-t px-3 py-1.5 text-xs text-muted-foreground">Teks dipotong; unduh file untuk isi lengkap.</p>}
     </div>
   );

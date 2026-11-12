@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -404,7 +405,7 @@ export function EditReturnPage({
                     <p className="text-sm text-gray-600">Item yang dapat diretur tidak ditemukan</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto p-4">
+                  <ScrollRegion label="Tabel item retur" className="overflow-x-auto p-4">
                     <ReturnItemsTable
                       variant="edit"
                       items={returnableItems}
@@ -415,7 +416,7 @@ export function EditReturnPage({
                       onQtyChange={updateQtyReturn}
                       onNotesChange={updateConditionNotes}
                     />
-                  </div>
+                  </ScrollRegion>
                 )}
               </CardContent>
             </Card>

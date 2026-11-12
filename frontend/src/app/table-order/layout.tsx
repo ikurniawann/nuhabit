@@ -14,6 +14,8 @@ export const viewport: Viewport = {
   themeColor: "#00281a",
 };
 
+// The guest app paints light surfaces, so it keeps the light tokens even when
+// the device stored dark mode for the dashboard.
 export default function TableOrderLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <div className="theme-light">{children}</div>;
 }

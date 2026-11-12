@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ClipboardCheck, Eye, PackageCheck, Truck } from "lucide-react";
@@ -129,7 +130,7 @@ export function ReceivingWorkspaceTable({
   ];
 
   return (
-    <div className="overflow-x-auto">
+    <ScrollRegion label="Tabel penerimaan barang" className="overflow-x-auto">
       <table className="min-w-full text-sm">
         <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
           <tr>
@@ -217,6 +218,6 @@ export function ReceivingWorkspaceTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }

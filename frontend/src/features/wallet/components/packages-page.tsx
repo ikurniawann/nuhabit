@@ -26,6 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Field, TableNote } from "@/features/crm/engagement/components/shared";
 import { formatNumber, formatRupiah } from "@/lib/format";
 import { walletApi, type TopupPackage } from "../api";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const PACKAGES_KEY = ["wallet", "packages"];
 
@@ -147,9 +148,9 @@ export function PackagesPage() {
         )}
       </Card>
 
-      {editing && (
-        <PackageDialog pkg={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={refresh} />
-      )}
+      <DialogPresence value={editing}>
+        {(editing) => <PackageDialog pkg={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={refresh} />}
+      </DialogPresence>
       <ConfirmDialog
         open={deactivating !== null}
         onOpenChange={(open) => !open && setDeactivating(null)}

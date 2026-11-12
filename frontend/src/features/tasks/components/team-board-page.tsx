@@ -19,6 +19,7 @@ import { MonitorPanel } from "./monitor-panel";
 import { PriorityBadge, TaskMetaLine } from "./task-badges";
 import { TaskDetailSheet } from "./task-detail-sheet";
 import { TaskFormDialog } from "./task-form-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const VIEWS: { value: TaskView; label: string }[] = [
   { value: "today", label: "Hari ini" },
@@ -191,7 +192,9 @@ export function TeamBoardPage() {
         </>
       )}
 
-      {creating && meta.data && <TaskFormDialog meta={meta.data} departmentId={department} onClose={() => setCreating(false)} />}
+      <DialogPresence value={creating && meta.data}>
+        {(taskMeta) => <TaskFormDialog meta={taskMeta} departmentId={department} onClose={() => setCreating(false)} />}
+      </DialogPresence>
       <TaskDetailSheet occurrenceId={openId} onClose={() => setOpenId(null)} />
     </div>
   );

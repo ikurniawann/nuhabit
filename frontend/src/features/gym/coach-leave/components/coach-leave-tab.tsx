@@ -24,6 +24,7 @@ import {
   type Portal,
 } from "../api";
 import { CoverList, CoverRow, SubstituteDialog } from "./cover-list";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /**
  * Kelas Saya → Cuti: ajukan cuti dengan pratinjau kelas dan PT yang
@@ -241,17 +242,19 @@ function MyLeaves({ portal, onDone }: { portal: Portal; onDone: () => void }) {
           </Card>
         );
       })}
-      {picking && (
-        <SubstituteDialog
-          cover={picking}
-          title="Minta pengganti"
-          confirmLabel="Kirim permintaan"
-          load={coachLeaveApi.myCandidates}
-          pick={coachLeaveApi.requestSubstitute}
-          onClose={() => setPicking(null)}
-          onDone={onDone}
-        />
-      )}
+      <DialogPresence value={picking}>
+        {(picking) => (
+          <SubstituteDialog
+            cover={picking}
+            title="Minta pengganti"
+            confirmLabel="Kirim permintaan"
+            load={coachLeaveApi.myCandidates}
+            pick={coachLeaveApi.requestSubstitute}
+            onClose={() => setPicking(null)}
+            onDone={onDone}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

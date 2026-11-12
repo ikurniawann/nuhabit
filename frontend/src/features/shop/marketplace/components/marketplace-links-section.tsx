@@ -1,5 +1,6 @@
 'use client';
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState } from 'react';
 import { Link2, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -149,7 +150,7 @@ export function MarketplaceLinksSection({ account }: { account: MarketplaceAccou
         )}
 
         {links.length > 0 ? (
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel listing marketplace" className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
@@ -199,7 +200,7 @@ export function MarketplaceLinksSection({ account }: { account: MarketplaceAccou
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         ) : (
           <p className="text-xs text-gray-400">Belum ada mapping untuk toko ini.</p>
         )}

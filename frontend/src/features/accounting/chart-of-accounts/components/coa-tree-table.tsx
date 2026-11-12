@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ export function CoaTreeTable({
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className="overflow-x-auto px-4">
+    <ScrollRegion label="Tabel bagan akun" className="overflow-x-auto px-4">
       <table className="w-full min-w-[900px] text-sm">
         <thead>
           <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -146,6 +147,6 @@ export function CoaTreeTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }

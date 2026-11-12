@@ -30,6 +30,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { engagementApi, fromLocalInput, toLocalInput, waktu, type CrmEvent, type EventBooking, type EventInput } from "../api";
 import { formatNumber, formatRupiah } from "@/lib/format";
 import { Field, TableNote, TEXTAREA } from "./shared";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const EVENTS_KEY = ["crm-engagement", "events"];
 
@@ -181,25 +182,33 @@ export function EventsPage() {
         )}
       </Card>
 
-      {editing && (
-        <EventDialog
-          event={editing === "new" ? null : editing}
-          onClose={() => setEditing(null)}
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: EVENTS_KEY })}
-        />
-      )}
-      {roster && <RosterDialog event={roster} onClose={() => setRoster(null)} />}
-      {linking && (
-        <LinkDialog
-          source="crm"
-          eventId={linking.id}
-          title={linking.title}
-          linkedId={linking.site_event_id}
-          onClose={() => setLinking(null)}
-          onChanged={() => void queryClient.invalidateQueries({ queryKey: EVENTS_KEY })}
-        />
-      )}
-      {checklist && <EventChecklistDialog source="crm" eventId={checklist.id} title={checklist.title} onClose={() => setChecklist(null)} />}
+      <DialogPresence value={editing}>
+        {(editing) => (
+          <EventDialog
+            event={editing === "new" ? null : editing}
+            onClose={() => setEditing(null)}
+            onSaved={() => void queryClient.invalidateQueries({ queryKey: EVENTS_KEY })}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={roster}>
+        {(roster) => <RosterDialog event={roster} onClose={() => setRoster(null)} />}
+      </DialogPresence>
+      <DialogPresence value={linking}>
+        {(linking) => (
+          <LinkDialog
+            source="crm"
+            eventId={linking.id}
+            title={linking.title}
+            linkedId={linking.site_event_id}
+            onClose={() => setLinking(null)}
+            onChanged={() => void queryClient.invalidateQueries({ queryKey: EVENTS_KEY })}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={checklist}>
+        {(checklist) => <EventChecklistDialog source="crm" eventId={checklist.id} title={checklist.title} onClose={() => setChecklist(null)} />}
+      </DialogPresence>
       <ConfirmDialog
         open={cancelling !== null}
         onOpenChange={(open) => !open && setCancelling(null)}

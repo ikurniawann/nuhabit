@@ -16,6 +16,7 @@ import { Can } from "@/components/iam/can";
 import { DESK_MENUS } from "@/features/gym/permissions";
 import { GYM_KEYS, jam, schedulingApi, strikeRulesNote, waktu, type CheckInResult, type MemberHit, type Session } from "../api";
 import { DROP_IN_LEAD_MS, dropInSessions } from "../drop-in";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const HOUR = 3_600_000;
 
@@ -166,18 +167,20 @@ export function DropInPanel({ branchId, onResult }: { branchId: string; onResult
         </div>
       )}
 
-      {selling && credits.data && (
-        <SellDialog
-          credits={credits.data}
-          branchId={session?.branch_id ?? (branchId || null)}
-          onClose={() => setSelling(false)}
-          onDone={(purchase) => {
-            void queryClient.invalidateQueries({ queryKey: ["gym", "member-search"] });
-            void queryClient.invalidateQueries({ queryKey: ["gym-credits"] });
-            setMember((cur) => cur && { ...cur, credits: cur.credits + purchase.credits });
-          }}
-        />
-      )}
+      <DialogPresence value={selling && credits.data}>
+        {(memberCredits) => (
+          <SellDialog
+            credits={memberCredits}
+            branchId={session?.branch_id ?? (branchId || null)}
+            onClose={() => setSelling(false)}
+            onDone={(purchase) => {
+              void queryClient.invalidateQueries({ queryKey: ["gym", "member-search"] });
+              void queryClient.invalidateQueries({ queryKey: ["gym-credits"] });
+              setMember((cur) => cur && { ...cur, credits: cur.credits + purchase.credits });
+            }}
+          />
+        )}
+      </DialogPresence>
       {selling && credits.error && <p className="text-sm text-danger">{credits.error.message}</p>}
     </div>
   );

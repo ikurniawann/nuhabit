@@ -13,7 +13,7 @@ export function ProductPhoto({ src, alt, compact = false }: { src: string | null
   }
 
   return (
-    <div role="img" aria-label={`Image unavailable for ${alt}`} className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#f5f7f3] text-everglade/45">
+    <div role="img" aria-label={`Image unavailable for ${alt}`} className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#f5f7f3] text-everglade/80">
       <Package className={compact ? "h-5 w-5" : "h-10 w-10"} />
       {!compact ? <span className="text-[10px] font-semibold uppercase tracking-[0.2em]">NüHabit Gear</span> : null}
     </div>

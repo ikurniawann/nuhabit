@@ -423,7 +423,7 @@ export function OrderTracking({
               </div>
             ))}
             {xpEnabled && order.total_xp > 0 && (
-              <div className="flex justify-between text-amber-600">
+              <div className="flex justify-between text-amber-800">
                 <span>XP</span>
                 <span className="font-semibold">+{order.total_xp} XP</span>
               </div>

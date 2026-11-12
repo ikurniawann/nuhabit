@@ -16,6 +16,7 @@ import { formatRupiah } from "@/lib/format";
 import { incentivesApi } from "../api";
 import { useRefreshAll, useSchemes } from "../queries";
 import { SchemeDialog } from "./scheme-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Skema honor: satu default organisasi + skema khusus per coach. */
 export function SchemesTab() {
@@ -115,15 +116,17 @@ export function SchemesTab() {
           </Table>
         )}
       </Card>
-      {editing && data && (
-        <SchemeDialog
-          scheme={editing === "new" ? null : editing}
-          coaches={coachOptions}
-          classTypes={data.class_types}
-          onClose={() => setEditing(null)}
-          onSaved={refresh}
-        />
-      )}
+      <DialogPresence value={editing && data ? { editing, classTypes: data.class_types } : null}>
+        {({ editing, classTypes }) => (
+          <SchemeDialog
+            scheme={editing === "new" ? null : editing}
+            coaches={coachOptions}
+            classTypes={classTypes}
+            onClose={() => setEditing(null)}
+            onSaved={refresh}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -357,7 +358,7 @@ export function ReturnDetailPage({
               {!ret.items?.length ? (
                 <div className="py-12 text-center text-sm text-gray-500">Item tidak ditemukan.</div>
               ) : (
-                <div className="overflow-x-auto p-4">
+                <ScrollRegion label="Tabel item retur" className="overflow-x-auto p-4">
                   <table className="min-w-full text-sm">
                     <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                       <tr>
@@ -426,7 +427,7 @@ export function ReturnDetailPage({
                       </tr>
                     </tfoot>
                   </table>
-                </div>
+                </ScrollRegion>
               )}
             </CardContent>
           </Card>

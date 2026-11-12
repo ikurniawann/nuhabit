@@ -27,6 +27,7 @@ import { incentivesApi, type PayoutRow } from "../api";
 import { usePayoutDetail, useRefreshMonth } from "../queries";
 import { monthLabel, PAYOUT_VARIANT } from "./shared";
 import { StatementDialog } from "./statements-tab";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Payout satu bulan: setujui, bayar dengan referensi, atau void dengan alasan. */
 export function PayoutsTab({ month, query }: { month: string; query: UseQueryResult<PayoutRow[], Error> }) {
@@ -116,10 +117,12 @@ export function PayoutsTab({ month, query }: { month: string; query: UseQueryRes
           </TableBody>
         </Table>
       )}
-      {acting && (
-        <PayoutActionDialog payout={acting.payout} action={acting.action} onClose={() => setActing(null)} onDone={refresh} />
-      )}
-      {viewing && <FrozenStatementDialog payout={viewing} onClose={() => setViewing(null)} />}
+      <DialogPresence value={acting}>
+        {(acting) => <PayoutActionDialog payout={acting.payout} action={acting.action} onClose={() => setActing(null)} onDone={refresh} />}
+      </DialogPresence>
+      <DialogPresence value={viewing}>
+        {(viewing) => <FrozenStatementDialog payout={viewing} onClose={() => setViewing(null)} />}
+      </DialogPresence>
     </Card>
   );
 }

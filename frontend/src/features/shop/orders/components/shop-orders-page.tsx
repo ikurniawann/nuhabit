@@ -18,6 +18,7 @@ import { formatDate, formatDateTime, formatRupiah } from '@/lib/format';
 import { useShopOrders } from '../queries';
 import { courierLabel, isPickupOrder, ORDER_STATUS_TABS, orderStatusLabel, orderStatusTone } from '../status';
 import { ShopOrderDetailDialog } from './shop-order-detail-dialog';
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const TERMS_LABEL = { invoice: 'Invoice', pay_later: 'Bayar nanti' } as const;
 
@@ -182,9 +183,9 @@ export function ShopOrdersPage({ wholesale = false }: { wholesale?: boolean }) {
         </>
       )}
 
-      {selectedId ? (
-        <ShopOrderDetailDialog key={selectedId} orderId={selectedId} onClose={() => setSelectedId(null)} />
-      ) : null}
+      <DialogPresence value={selectedId}>
+        {(selectedId) => <ShopOrderDetailDialog key={selectedId} orderId={selectedId} onClose={() => setSelectedId(null)} />}
+      </DialogPresence>
     </div>
   );
 }

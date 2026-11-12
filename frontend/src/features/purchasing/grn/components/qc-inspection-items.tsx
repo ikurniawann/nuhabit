@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { ClipboardCheck, Package } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,7 +41,7 @@ export function QcItemsCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Tabel item inspeksi" className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200/70 bg-gray-50/80 text-left text-xs text-gray-500">
@@ -82,7 +83,7 @@ export function QcItemsCard({
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       </CardContent>
     </Card>
   );

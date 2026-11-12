@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState } from "react";
 import { IdentificationIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
@@ -109,7 +110,7 @@ export function BandsSection() {
           <p className="mt-2 text-sm text-gray-500">Memuat registry gelang...</p>
         </div>
       ) : (
-        <div className="overflow-x-auto px-4 pb-4">
+        <ScrollRegion label="Tabel stok gelang" className="overflow-x-auto px-4 pb-4">
           <table className="w-full text-sm">
             <thead>
               <TableRow className="border-b border-gray-200/70 bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500 hover:bg-gray-50/80">
@@ -215,7 +216,7 @@ export function BandsSection() {
               </div>
             </div>
           ) : null}
-        </div>
+        </ScrollRegion>
       )}
 
       <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>

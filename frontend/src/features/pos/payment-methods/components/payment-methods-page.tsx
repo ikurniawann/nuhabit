@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useMemo, useState } from "react";
 import { CreditCard, Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -131,7 +132,7 @@ export function PaymentMethodsPage() {
             Belum ada data metode bayar.
           </p>
         ) : (
-          <div className="overflow-x-auto px-4 pb-4">
+          <ScrollRegion label="Tabel metode pembayaran" className="overflow-x-auto px-4 pb-4">
             <table className="w-full text-sm">
               <thead>
                 <TableRow className="border-b border-gray-200/70 bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground hover:bg-muted/40">
@@ -294,7 +295,7 @@ export function PaymentMethodsPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
 

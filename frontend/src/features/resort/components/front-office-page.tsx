@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { ReservationDetailDialog } from "@/features/resort/components/reservation-detail-dialog";
 import { resortApi, useFrontOffice, useResortMutation } from "@/features/resort/queries";
 import { ROOM_STATUS_CLASS, ROOM_STATUS_LABEL, STATUS_CLASS } from "@/features/resort/types";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 type BoardRoom = FrontOfficeBoard["rooms"][number];
 
@@ -132,7 +133,9 @@ export function ResortFrontOfficePage() {
         </>
       )}
 
-      {detailId && <ReservationDetailDialog id={detailId} onClose={() => setDetailId(null)} />}
+      <DialogPresence value={detailId}>
+        {(detailId) => <ReservationDetailDialog id={detailId} onClose={() => setDetailId(null)} />}
+      </DialogPresence>
     </div>
   );
 }

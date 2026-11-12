@@ -18,6 +18,7 @@ import { pushShopEvent } from '../analytics';
 import { readCheckoutContact, saveCheckoutContact } from '../cart-store';
 import { rememberPendingOrder } from '../pending-order';
 import { fetchShippingRates, previewPromoCode, submitShopCheckout, useShopMember, type RateQuote } from '../queries';
+import { exitMotion, useStoreDialog } from './use-store-dialog';
 
 const INPUT_CLASS =
   'mt-1.5 w-full rounded-xl border border-forest/15 bg-white px-3.5 py-3 text-base text-forest outline-none placeholder:text-gray-500 sm:text-sm focus:border-forest focus:ring-2 focus:ring-forest/10';
@@ -78,33 +79,7 @@ export function CheckoutSheet({
   const triedCode = useRef<string | null>(null);
   const [payment, setPayment] = useState<PaymentMethod>('xendit');
   const [formError, setFormError] = useState<string | null>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef(onClose);
-  useEffect(() => { closeRef.current = onClose; }, [onClose]);
-
-  useEffect(() => {
-    if (!open) return;
-    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const oldOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    dialogRef.current?.querySelector<HTMLElement>('button, input, select, textarea, a[href]')?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { event.preventDefault(); closeRef.current(); return; }
-      if (event.key !== 'Tab') return;
-      const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href]') ?? [])];
-      if (focusable.length === 0) return;
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = oldOverflow;
-      previouslyFocused?.focus();
-    };
-  }, [open]);
+  const { panelRef, closing, requestClose } = useStoreDialog(onClose, open);
 
   // Member values win over the remembered contact, once per member load.
   const member = useShopMember(slug, open);
@@ -285,14 +260,14 @@ export function CheckoutSheet({
     : !selectedArea ? 'Choose a delivery area' : !selectedRate ? 'Choose a courier' : 'Pay Now';
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-forest/55 sm:p-6">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Checkout" className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-hero">
+    <div className={`motion-fade-in fixed inset-0 z-40 flex items-center justify-center bg-forest/55 sm:p-6 ${exitMotion.backdrop(closing)}`}>
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Checkout" className={`motion-rise-in sm:motion-pop-in flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-hero ${exitMotion.sheet(closing)}`}>
         <div className="flex items-center justify-between border-b border-forest/10 px-5 py-4 sm:px-8">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-everglade">NüHabit Shop</p>
             <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight text-forest">Checkout</h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={requestClose} aria-label="Close" data-autofocus>
             <X className="h-5 w-5 text-forest/60" />
           </button>
         </div>

@@ -127,7 +127,7 @@ export function GlobalSearch({
           id={listId}
           role="listbox"
           aria-label="Hasil quick search"
-          className="absolute inset-x-0 top-full z-40 mt-2 max-h-[60dvh] overflow-y-auto rounded-2xl border border-border bg-card p-1 shadow-float"
+          className="absolute inset-x-0 top-full z-40 mt-2 max-h-[60dvh] overflow-y-auto rounded-2xl border border-border bg-card p-1 shadow-float animate-in fade-in-0 slide-in-from-top-1 duration-(--motion-fast) ease-(--ease-standard)"
         >
           {groups.length === 0 ? (
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">

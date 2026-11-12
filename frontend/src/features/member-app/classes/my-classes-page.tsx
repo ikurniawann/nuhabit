@@ -2,6 +2,7 @@
 
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useRouter } from "next/navigation";
 import { activePackages, joinDot } from "../lib/classes-view";
 import { fill, useT } from "../lib/i18n";
@@ -64,7 +65,7 @@ export function MyClassesPage() {
       ) : (
         <>
           {/* Where the entitlement comes from */}
-          <div className="-mx-5 flex snap-x gap-2.5 overflow-x-auto px-5 pb-1">
+          <ScrollRegion label={t("Active packages")} className="-mx-5 flex snap-x gap-2.5 overflow-x-auto px-5 pb-1">
             {activePkgs.map((p) => (
               <div key={p.lotId} className="nh-surface-ink min-w-56 shrink-0 snap-start rounded-2xl p-4 text-white">
                 <p className="truncate text-sm font-extrabold">{t(p.name)}</p>
@@ -74,7 +75,7 @@ export function MyClassesPage() {
                 </p>
               </div>
             ))}
-          </div>
+          </ScrollRegion>
 
           <div className="flex flex-col gap-3">
             {entitled.map((c) => {

@@ -2,6 +2,8 @@
 
 import * as React from "react"
 
+import { cn } from "@/lib/utils"
+
 type ScrollRegionProps = React.ComponentProps<"div"> & {
   /** Screen-reader name of the region while it scrolls, in the page language. */
   label?: string
@@ -14,7 +16,7 @@ type ScrollRegionProps = React.ComponentProps<"div"> & {
  * keys. It turns into a named, focusable region only while its content
  * overflows, so a table that fits adds no extra tab stop.
  */
-function ScrollRegion({ label = "Tabel", axis = "x", ...props }: ScrollRegionProps) {
+function ScrollRegion({ label = "Tabel", axis = "x", className, ...props }: ScrollRegionProps) {
   const ref = React.useRef<HTMLDivElement>(null)
   const [scrollable, setScrollable] = React.useState(false)
 
@@ -44,6 +46,10 @@ function ScrollRegion({ label = "Tabel", axis = "x", ...props }: ScrollRegionPro
     <div
       ref={ref}
       {...props}
+      className={cn(
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest/40",
+        className,
+      )}
       {...(scrollable ? { tabIndex: 0, role: "region", "aria-label": label } : {})}
     />
   )

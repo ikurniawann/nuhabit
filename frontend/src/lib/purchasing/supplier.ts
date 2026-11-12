@@ -25,6 +25,9 @@ async function fetchApi<T>(
     ...options,
   });
 
+  // DELETE answers 204 with no body; parsing it would throw and report a failed delete.
+  if (res.status === 204) return undefined as T;
+
   const json = await res.json();
 
   if (!res.ok) {

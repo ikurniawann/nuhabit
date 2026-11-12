@@ -4,10 +4,11 @@ import * as React from "react"
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog"
 
 import { cn } from "@/lib/utils"
+import { usePresenceProps } from "@/components/ui/dialog-presence"
 import { Button } from "@/components/ui/button"
 
-function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
-  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
+function AlertDialog(props: AlertDialogPrimitive.Root.Props) {
+  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...usePresenceProps(props)} />
 }
 
 function AlertDialogTrigger({ ...props }: AlertDialogPrimitive.Trigger.Props) {
@@ -30,7 +31,7 @@ function AlertDialogOverlay({
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-ink/50 backdrop-blur-[2px] duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-ink/50 backdrop-blur-[2px] duration-(--motion-base) ease-(--ease-standard) data-closed:duration-(--motion-fast) data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
@@ -52,7 +53,7 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
-          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-4 rounded-card bg-card p-6 text-card-foreground shadow-float duration-100 outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-4 rounded-card bg-card p-6 text-card-foreground shadow-float duration-(--motion-base) ease-(--ease-emphasized) outline-none data-closed:duration-(--motion-fast) data-closed:ease-(--ease-standard) data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}

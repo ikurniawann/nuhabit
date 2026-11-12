@@ -1,5 +1,6 @@
 'use client';
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState } from 'react';
 import { Loader2, Save, Search } from 'lucide-react';
 import { toast } from 'sonner';
@@ -64,7 +65,7 @@ export function RateTestSection() {
         </Button>
 
         {!rateTest.isPending && quotes.length > 0 ? (
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel hasil cek tarif" className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
@@ -87,7 +88,7 @@ export function RateTestSection() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         ) : null}
       </div>
     </PurchasingListSection>

@@ -13,6 +13,7 @@ import { formatDate } from "@/lib/format";
 import { COMPLAINT_KEYS, EMPTY_FILTERS, complaintsApi, listQuery, ticketHref } from "../api";
 import { NewTicketDialog } from "./new-ticket-dialog";
 import { PriorityBadge, StatusBadge } from "./ticket-bits";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Tab Keluhan di profil 360 member: tiket member ini dan "Buat tiket" dari front desk. */
 export function MemberComplaints({ customerId, name }: { customerId: string; name: string | null }) {
@@ -57,7 +58,9 @@ export function MemberComplaints({ customerId, name }: { customerId: string; nam
           ))
         )}
       </Card>
-      {creating && <NewTicketDialog member={{ id: customerId, name }} onClose={() => setCreating(false)} />}
+      <DialogPresence value={creating}>
+        {() => <NewTicketDialog member={{ id: customerId, name }} onClose={() => setCreating(false)} />}
+      </DialogPresence>
     </div>
   );
 }

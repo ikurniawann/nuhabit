@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -150,7 +151,7 @@ export function ArReceiptsPage() {
             </Link>
           </p>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel penerimaan piutang" className="overflow-x-auto px-4">
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-left text-muted-foreground">
@@ -180,7 +181,7 @@ export function ArReceiptsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
 

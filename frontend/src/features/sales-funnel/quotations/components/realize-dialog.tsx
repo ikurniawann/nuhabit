@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { formatNumber } from "@/lib/format";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,7 @@ export function RealizeDialog({
         </DialogHeader>
 
         {conflict && conflict.shortages.length > 0 ? (
-          <div className="overflow-x-auto rounded-xl border border-amber-200 bg-amber-50/50">
+          <ScrollRegion label="Tabel kekurangan stok" className="overflow-x-auto rounded-xl border border-amber-200 bg-amber-50/50">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs uppercase tracking-wide text-amber-700">
@@ -79,7 +80,7 @@ export function RealizeDialog({
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         ) : null}
 
         {conflict && conflict.warnings.length > 0 ? (

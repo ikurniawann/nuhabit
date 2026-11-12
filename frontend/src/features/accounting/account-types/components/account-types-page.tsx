@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useMemo, useState } from "react";
 import { TagIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
@@ -189,7 +190,7 @@ export function AccountTypesPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel tipe akun" className="overflow-x-auto px-4">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -243,7 +244,7 @@ export function AccountTypesPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
 

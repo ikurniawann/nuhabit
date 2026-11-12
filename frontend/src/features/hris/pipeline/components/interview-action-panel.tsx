@@ -21,6 +21,7 @@ import {
   positionTitleOf,
   type StagePanelProps,
 } from "./stage-panel-parts";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const SESSION_STATUS_LABELS: Record<InterviewAiSession["status"], string> = {
   sent: "Terkirim",
@@ -125,17 +126,19 @@ export function InterviewActionPanel({ candidate, onMove, moving = false }: Stag
         }}
       />
 
-      {sendOpen && (
-        <InterviewSendDialog candidate={candidate} positionTitle={positionTitle} open onOpenChange={setSendOpen} />
-      )}
-      {proctorSession && (
-        <InterviewProctorDialog
-          key={proctorSession.id}
-          session={proctorSession}
-          open
-          onOpenChange={(open) => !open && setProctorSession(null)}
-        />
-      )}
+      <DialogPresence value={sendOpen}>
+        {() => <InterviewSendDialog candidate={candidate} positionTitle={positionTitle} open onOpenChange={setSendOpen} />}
+      </DialogPresence>
+      <DialogPresence value={proctorSession}>
+        {(proctorSession) => (
+          <InterviewProctorDialog
+            key={proctorSession.id}
+            session={proctorSession}
+            open
+            onOpenChange={(open) => !open && setProctorSession(null)}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { careApi, type MemberFlag, type MemberFlags } from "../api";
 import { hiddenMedicalLabel, REVIEW_LABEL, SOURCE_LABEL } from "../display";
 import { AddFlagDialog, ReviewFlagDialog, useRefreshCare } from "./flag-dialogs";
 import { FlagBadge, useMemberFlags } from "./flag-badges";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /**
  * Siapa yang boleh menambah, meninjau, dan menghapus penanda dari layar ini:
@@ -83,7 +84,9 @@ export function FlagList({ entry, coach = false }: { entry: MemberFlags | undefi
           {hiddenMedicalLabel(entry.hidden_medical)}. Detailnya hanya untuk coach member ini dan manajer gym.
         </li>
       )}
-      {reviewing && <ReviewFlagDialog flag={reviewing} onClose={() => setReviewing(null)} />}
+      <DialogPresence value={reviewing}>
+        {(reviewing) => <ReviewFlagDialog flag={reviewing} onClose={() => setReviewing(null)} />}
+      </DialogPresence>
     </ul>
   );
 }
@@ -105,7 +108,9 @@ export function MemberFlagsPanel({ customerId }: { customerId: string }) {
         )}
       </div>
       {empty ? <p className="text-sm text-muted-foreground">Tidak ada penanda aktif.</p> : <FlagList entry={entry} />}
-      {adding && <AddFlagDialog customerId={customerId} onClose={() => setAdding(false)} />}
+      <DialogPresence value={adding}>
+        {() => <AddFlagDialog customerId={customerId} onClose={() => setAdding(false)} />}
+      </DialogPresence>
     </Card>
   );
 }

@@ -34,6 +34,7 @@ import {
   normalizeAssignments,
   resizeLabels,
 } from "./split-bill-calc";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 export interface SplitItemMapping {
   order_item_index: number;
@@ -74,8 +75,7 @@ interface SplitBillModalProps {
 
 /** Isi modal di-mount ulang tiap dibuka → mode, jumlah tamu & label kembali ke awal. */
 export function SplitBillModal(props: SplitBillModalProps) {
-  if (!props.open) return null;
-  return <SplitBillBody {...props} />;
+  return <DialogPresence value={props.open && props}>{(p) => <SplitBillBody {...p} />}</DialogPresence>;
 }
 
 function SplitBillBody({

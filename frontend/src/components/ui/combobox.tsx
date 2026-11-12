@@ -91,7 +91,7 @@ export function Combobox({
         aria-labelledby={ariaLabelledBy}
         aria-expanded={open}
         className={cn(
-          "flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-gray-200/80 bg-transparent px-3 text-sm outline-none transition-colors hover:border-gray-300 hover:bg-muted focus-visible:border-pink-200 focus-visible:ring-1 focus-visible:ring-pink-100 disabled:pointer-events-none disabled:opacity-50",
+          "flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-2xl border border-border bg-card px-3 text-sm text-foreground outline-none transition-colors hover:bg-surface focus-visible:border-forest focus-visible:ring-2 focus-visible:ring-forest/20 aria-expanded:border-forest disabled:pointer-events-none disabled:opacity-50",
           className
         )}
         disabled={disabled}
@@ -123,25 +123,25 @@ export function Combobox({
       </PopoverTrigger>
       <PopoverContent
         className={cn(
-          "z-[9999] w-auto min-w-(--anchor-width) max-w-[min(28rem,calc(100vw-2rem))] border border-gray-200/80 bg-white p-0 shadow-xl ring-1 ring-gray-200/60",
+          "z-[9999] w-auto min-w-(--anchor-width) max-w-[min(28rem,calc(100vw-2rem))] border border-border bg-popover p-0 text-popover-foreground shadow-float ring-0",
           contentClassName
         )}
         align="start"
         sideOffset={4}
       >
-        <Command shouldFilter={false} className="bg-white">
-          <div className="flex items-center border-b border-gray-200 px-3 py-2.5">
-            <Search className="mr-2 h-4 w-4 shrink-0 text-gray-400" />
+        <Command shouldFilter={false} className="bg-popover">
+          <div className="flex items-center border-b border-border px-3 py-2.5">
+            <Search className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
             <input
               data-combobox-search="true"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full border-0! bg-transparent text-sm text-gray-900 shadow-none! outline-none! ring-0! placeholder:text-gray-400 focus:border-0! focus:shadow-none! focus:outline-none! focus:ring-0!"
+              className="w-full border-0! bg-transparent text-sm text-foreground shadow-none! outline-none! ring-0! placeholder:text-muted-foreground focus:border-0! focus:shadow-none! focus:outline-none! focus:ring-0!"
               style={{ border: 0, boxShadow: "none", outline: "none" }}
             />
           </div>
-          <CommandList className="max-h-75 overflow-y-auto bg-white p-1">
+          <CommandList className="max-h-75 overflow-y-auto bg-popover p-1">
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
               {filteredOptions.map((option) => (
@@ -153,7 +153,7 @@ export function Combobox({
                     setOpen(false);
                     setSearchValue("");
                   }}
-                  className="hover:bg-gray-100 data-[selected=true]:bg-gray-200 cursor-pointer py-2 px-3 bg-white rounded-sm items-start"
+                  className="cursor-pointer items-start rounded-xl px-3 py-2 hover:bg-surface data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
                 >
                   <span
                     className="min-w-0 flex-1 wrap-break-word whitespace-normal leading-snug"

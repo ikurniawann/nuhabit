@@ -188,7 +188,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="theme-light bg-background pb-24">
+    <div className="theme-light motion-fade-in bg-background pb-24">
       {grouped ? (
         <div className="sticky top-[5.25rem] z-20 px-3 md:px-4">
           <CollectionNav groups={groups} />

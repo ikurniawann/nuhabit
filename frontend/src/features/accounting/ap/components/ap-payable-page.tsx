@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import Link from "next/link";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
@@ -44,7 +45,7 @@ export function ApPayablePage() {
             Tidak ada hutang outstanding.
           </p>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel hutang outstanding" className="overflow-x-auto px-4">
             <table className="w-full min-w-[800px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-left text-muted-foreground">
@@ -83,7 +84,7 @@ export function ApPayablePage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
     </div>

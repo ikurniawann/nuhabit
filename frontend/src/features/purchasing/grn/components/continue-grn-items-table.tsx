@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { formatNumber } from "@/lib/format";
 import {
@@ -20,7 +21,7 @@ type Props = {
 export function ContinueGrnItemsTable({ lines, poLines, onGoodQtyChange }: Props) {
   return (
     <div className="p-4">
-      <div className="overflow-x-auto rounded-xl border border-gray-200/70">
+      <ScrollRegion label="Tabel item penerimaan" className="overflow-x-auto rounded-xl border border-gray-200/70">
         <table className="w-full table-fixed border-collapse text-sm [&_td]:border [&_td]:border-gray-200/70 [&_th]:border [&_th]:border-gray-200/70">
           <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
             <tr>
@@ -89,7 +90,7 @@ export function ContinueGrnItemsTable({ lines, poLines, onGoodQtyChange }: Props
             })}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
     </div>
   );
 }

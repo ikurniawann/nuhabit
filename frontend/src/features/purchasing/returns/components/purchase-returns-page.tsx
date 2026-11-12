@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -258,7 +259,7 @@ export function PurchaseReturnsPage({
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              <ScrollRegion label="Tabel retur pembelian" className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                     <tr>
@@ -362,7 +363,7 @@ export function PurchaseReturnsPage({
                     })}
                   </tbody>
                 </table>
-              </div>
+              </ScrollRegion>
 
               <PurchasingTablePagination
                 page={page}

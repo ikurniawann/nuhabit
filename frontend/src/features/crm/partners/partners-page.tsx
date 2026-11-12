@@ -28,6 +28,7 @@ import { Field, TableNote } from "@/features/crm/engagement/components/shared";
 import { crmFetch as call } from "../crm-fetch";
 import { PARTNER_TYPE_LABELS, PARTNER_TYPES, PARTNER_XP_CAP, type PartnerType } from "@/lib/crm/partner-types";
 import { formatDateTime, formatNumber } from "@/lib/format";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 // The origin never changes after load; the server snapshot is "" so hydration matches.
 const noSubscribe = () => () => {};
@@ -314,26 +315,32 @@ X-Signature: sha256=<hex HMAC-SHA256(raw body, secret)>
         )}
       </Card>
 
-      {creating && (
-        <CreatePartnerDialog
-          onClose={() => setCreating(false)}
-          onCreated={(code, newSecret) => {
-            setSecret({ code, secret: newSecret });
-            refresh();
-          }}
-        />
-      )}
-      {matching && (
-        <MatchDialog
-          event={matching}
-          onClose={() => setMatching(null)}
-          onMatched={() => {
-            void queryClient.invalidateQueries({ queryKey: PARTNERS_KEY });
-            setMatching(null);
-          }}
-        />
-      )}
-      {secret && <SecretDialog code={secret.code} secret={secret.secret} onClose={() => setSecret(null)} />}
+      <DialogPresence value={creating}>
+        {() => (
+          <CreatePartnerDialog
+            onClose={() => setCreating(false)}
+            onCreated={(code, newSecret) => {
+              setSecret({ code, secret: newSecret });
+              refresh();
+            }}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={matching}>
+        {(matching) => (
+          <MatchDialog
+            event={matching}
+            onClose={() => setMatching(null)}
+            onMatched={() => {
+              void queryClient.invalidateQueries({ queryKey: PARTNERS_KEY });
+              setMatching(null);
+            }}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={secret}>
+        {(secret) => <SecretDialog code={secret.code} secret={secret.secret} onClose={() => setSecret(null)} />}
+      </DialogPresence>
       <ConfirmDialog
         open={rotating !== null}
         onOpenChange={(open) => !open && setRotating(null)}

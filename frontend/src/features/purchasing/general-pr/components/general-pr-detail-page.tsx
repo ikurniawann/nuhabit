@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { use } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -185,21 +186,24 @@ export function GeneralPRDetailPage({ params }: GeneralPRDetailPageProps) {
                 Informasi Permintaan
               </CardTitle>
             </CardHeader>
+            {/* The field pairs are a description list; display: contents keeps the grid. */}
             <CardContent className="grid gap-4 p-4 md:grid-cols-2">
-              <DetailField label="Departemen" value={pr.department?.name || pr.department_name || "-"} />
-              <DetailField label="Pemohon" value={requesterName} />
-              <DetailField
-                label="Tanggal Dibutuhkan"
-                value={pr.required_date ? formatDate(pr.required_date) : "-"}
-              />
-              <div>
-                <dt className="text-xs text-gray-500">Prioritas</dt>
-                <dd className="mt-1">
-                  <Badge variant="outline" className={priorityStyle}>
-                    {priorityLabel}
-                  </Badge>
-                </dd>
-              </div>
+              <dl className="contents">
+                <DetailField label="Departemen" value={pr.department?.name || pr.department_name || "-"} />
+                <DetailField label="Pemohon" value={requesterName} />
+                <DetailField
+                  label="Tanggal Dibutuhkan"
+                  value={pr.required_date ? formatDate(pr.required_date) : "-"}
+                />
+                <div>
+                  <dt className="text-xs text-gray-500">Prioritas</dt>
+                  <dd className="mt-1">
+                    <Badge variant="outline" className={priorityStyle}>
+                      {priorityLabel}
+                    </Badge>
+                  </dd>
+                </div>
+              </dl>
               {pr.notes && (
                 <div className="md:col-span-2 border-t border-gray-200/70 pt-4">
                   <p className="text-xs font-medium text-gray-500">Catatan</p>
@@ -220,7 +224,7 @@ export function GeneralPRDetailPage({ params }: GeneralPRDetailPageProps) {
               {!pr.items?.length ? (
                 <div className="py-12 text-center text-sm text-gray-500">Tidak ada item.</div>
               ) : (
-                <div className="overflow-x-auto p-4">
+                <ScrollRegion label="Tabel item diminta" className="overflow-x-auto p-4">
                   <table className="min-w-full text-sm">
                     <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                       <tr>
@@ -258,7 +262,7 @@ export function GeneralPRDetailPage({ params }: GeneralPRDetailPageProps) {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </ScrollRegion>
               )}
             </CardContent>
           </Card>

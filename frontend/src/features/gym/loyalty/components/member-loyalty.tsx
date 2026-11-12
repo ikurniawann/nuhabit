@@ -14,6 +14,7 @@ import { Field, TableNote } from "@/features/crm/engagement/components/shared";
 import { SELECT } from "@/features/gym/shared";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import { LOYALTY_KEYS, STATUS_HINTS, STATUS_LABELS, loyaltyApi, perkLines, type MemberStatus, type Standing } from "../api";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const STATUS_VARIANT: Record<MemberStatus, "success" | "warning" | "destructive"> = {
   active: "success",
@@ -121,7 +122,9 @@ export function MemberLoyalty({ customerId, name }: { customerId: string; name: 
           </div>
         )}
       </Card>
-      {editing && <StatusDialog customerId={customerId} name={name} current={standing} onClose={() => setEditing(false)} />}
+      <DialogPresence value={editing}>
+        {() => <StatusDialog customerId={customerId} name={name} current={standing} onClose={() => setEditing(false)} />}
+      </DialogPresence>
     </div>
   );
 }

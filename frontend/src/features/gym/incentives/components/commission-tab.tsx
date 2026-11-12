@@ -38,6 +38,7 @@ import {
   type PaymentMethod,
 } from "../commission";
 import { monthLabel } from "./shared";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 export const commissionKeys = {
   all: ["gym", "incentives", "commission"] as const,
@@ -223,14 +224,16 @@ function BranchMonth({ data }: { data: CommissionMonth }) {
           </Table>
         </div>
       )}
-      {paying && data.settings && (
-        <PayLineDialog
-          line={paying}
-          month={data}
-          onClose={() => setPaying(null)}
-          onDone={refresh}
-        />
-      )}
+      <DialogPresence value={data.settings ? paying : null}>
+        {(paying) => (
+          <PayLineDialog
+            line={paying}
+            month={data}
+            onClose={() => setPaying(null)}
+            onDone={refresh}
+          />
+        )}
+      </DialogPresence>
     </Card>
   );
 }

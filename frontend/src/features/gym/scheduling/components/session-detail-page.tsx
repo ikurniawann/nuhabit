@@ -45,6 +45,7 @@ import { BookingActionConfirm, type PendingBookingAction } from "./booking-actio
 import { CorrectionDialog, type PendingCorrection } from "./correction-dialog";
 import { SessionDialog } from "./session-dialog";
 import { FlagBadges, useMemberFlags } from "@/features/gym/care/components/flag-badges";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 type SessionAction = "publish" | "cancel" | "complete" | "delete";
 type BookingAction = "cancel" | "no_show" | "check_in";
@@ -235,10 +236,12 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
         )}
       </Card>
 
-      {editing && (
-        <SessionDialog session={session} hasAnyBooking={roster.length > 0} onClose={() => setEditing(false)} onSaved={refresh} />
-      )}
-      {adding && <AddMemberDialog session={session} onClose={() => setAdding(false)} onAdded={refresh} />}
+      <DialogPresence value={editing}>
+        {() => <SessionDialog session={session} hasAnyBooking={roster.length > 0} onClose={() => setEditing(false)} onSaved={refresh} />}
+      </DialogPresence>
+      <DialogPresence value={adding}>
+        {() => <AddMemberDialog session={session} onClose={() => setAdding(false)} onAdded={refresh} />}
+      </DialogPresence>
       <ConfirmDialog
         open={confirming !== null}
         onOpenChange={(value) => !value && setConfirming(null)}

@@ -33,6 +33,7 @@ import {
   type ScrapBatchPreset,
 } from "../../scrap/components/scrap-dialog";
 import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const WINDOWS = [7, 14, 30, 60, 90];
 type StatusFilter = "all" | "near" | "expired";
@@ -249,9 +250,9 @@ export function ExpiringStockPage() {
         )}
       </Card>
 
-      {writeOff && (
-        <ScrapDialog preset={writeOff} onClose={() => setWriteOff(null)} />
-      )}
+      <DialogPresence value={writeOff}>
+        {(writeOff) => <ScrapDialog preset={writeOff} onClose={() => setWriteOff(null)} />}
+      </DialogPresence>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Handshake, MessageCircle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 import { isOfferOpen, offerChecklist } from "@/lib/recruitment/pipeline-stage-rules";
 import { OFFER_REJECTION_WA_TEMPLATE } from "@/lib/recruitment/pipeline-wa-templates";
 import { useCandidateOffers } from "../queries";
@@ -91,16 +92,18 @@ export function OfferActionPanel({ candidate, onMove, moving = false }: StagePan
         </Button>
       </DecisionCard>
 
-      {sendOpen && reference && (
-        <OfferSendDialog
-          candidate={candidate}
-          positionTitle={positionTitle}
-          salaryReference={reference}
-          hasOpenOffer={offers.some(isOfferOpen)}
-          open
-          onOpenChange={setSendOpen}
-        />
-      )}
+      <DialogPresence value={sendOpen && reference}>
+        {(reference) => (
+          <OfferSendDialog
+            candidate={candidate}
+            positionTitle={positionTitle}
+            salaryReference={reference}
+            hasOpenOffer={offers.some(isOfferOpen)}
+            open
+            onOpenChange={setSendOpen}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

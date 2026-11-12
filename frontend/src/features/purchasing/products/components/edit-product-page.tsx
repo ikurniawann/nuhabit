@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -194,7 +195,7 @@ function EditProductForm({ productId, data }: EditProductFormProps) {
                 </CardContent>
               ) : (
                 <CardContent className="p-0">
-                  <div className="overflow-x-auto px-4">
+                  <ScrollRegion label="Tabel resep produk" className="overflow-x-auto px-4">
                     <table className="w-full min-w-160 text-sm">
                       <thead>
                         <tr className="border-b border-gray-200/70 text-left text-xs text-muted-foreground">
@@ -237,7 +238,7 @@ function EditProductForm({ productId, data }: EditProductFormProps) {
                         })}
                       </tbody>
                     </table>
-                  </div>
+                  </ScrollRegion>
                   <div className="flex justify-end border-t border-gray-200/70 px-4 py-3">
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Total Estimasi HPP</p>

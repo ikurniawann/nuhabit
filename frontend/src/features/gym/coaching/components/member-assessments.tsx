@@ -25,6 +25,7 @@ import { AXIS } from "@/features/gym/reports/components/charts";
 import { SELECT } from "@/features/gym/shared";
 import { COACHING_KEYS, coachingApi } from "../api";
 import { AssessmentDialog } from "./assessment-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Tab Asesmen di profil 360 member: progres per metrik, grafik, dan riwayat. */
 export function MemberAssessments({ customerId }: { customerId: string }) {
@@ -134,14 +135,16 @@ export function MemberAssessments({ customerId }: { customerId: string }) {
           </Card>
         </>
       )}
-      {editing && (
-        <AssessmentDialog
-          customerId={customerId}
-          assessment={editing === "new" ? undefined : editing}
-          onClose={() => setEditing(null)}
-          onSaved={refresh}
-        />
-      )}
+      <DialogPresence value={editing}>
+        {(editing) => (
+          <AssessmentDialog
+            customerId={customerId}
+            assessment={editing === "new" ? undefined : editing}
+            onClose={() => setEditing(null)}
+            onSaved={refresh}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

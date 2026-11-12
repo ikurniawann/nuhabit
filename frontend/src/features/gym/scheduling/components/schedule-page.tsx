@@ -40,6 +40,7 @@ import { Can } from "@/components/iam/can";
 import { useCan } from "@/components/iam/iam-access-provider";
 import { SCHEDULE_MENUS } from "@/features/gym/permissions";
 import { SessionDialog } from "./session-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /** Gym → Jadwal Kelas: grid mingguan Senin–Minggu, buat sesi, salin minggu. */
 export function SchedulePage() {
@@ -145,10 +146,12 @@ export function SchedulePage() {
         </div>
       )}
 
-      {creatingOn && <SessionDialog date={creatingOn} onClose={() => setCreatingOn(null)} onSaved={refresh} />}
-      {copying && (
-        <CopyWeekDialog week={week} count={rows.length} onClose={() => setCopying(false)} onCopied={refresh} />
-      )}
+      <DialogPresence value={creatingOn}>
+        {(creatingOn) => <SessionDialog date={creatingOn} onClose={() => setCreatingOn(null)} onSaved={refresh} />}
+      </DialogPresence>
+      <DialogPresence value={copying}>
+        {() => <CopyWeekDialog week={week} count={rows.length} onClose={() => setCopying(false)} onCopied={refresh} />}
+      </DialogPresence>
     </div>
   );
 }

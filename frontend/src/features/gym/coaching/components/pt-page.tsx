@@ -22,6 +22,7 @@ import { COACHING_KEYS, coachingApi, PT_BADGE, type PendingRequests, type PtAppo
 import { AppointmentDialog } from "./appointment-dialog";
 import { AvailabilityPanel } from "./availability-panel";
 import { BookDialog } from "./book-dialog";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const TABS = [
   { value: "jadwal", label: "Jadwal PT" },
@@ -198,8 +199,12 @@ function Agenda({ coachOptions, initialStatus }: { coachOptions: { id: string; n
         </div>
       )}
 
-      {booking && <BookDialog coachId={coachId || undefined} date={days.includes(today) ? today : week} onClose={() => setBooking(false)} onBooked={refresh} />}
-      {open && <AppointmentDialog appointment={open} onClose={() => setOpen(null)} onChanged={refresh} />}
+      <DialogPresence value={booking}>
+        {() => <BookDialog coachId={coachId || undefined} date={days.includes(today) ? today : week} onClose={() => setBooking(false)} onBooked={refresh} />}
+      </DialogPresence>
+      <DialogPresence value={open}>
+        {(open) => <AppointmentDialog appointment={open} onClose={() => setOpen(null)} onChanged={refresh} />}
+      </DialogPresence>
     </div>
   );
 }

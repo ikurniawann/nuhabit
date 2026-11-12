@@ -1,8 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { useEscapeKey } from './use-escape-key';
+import { exitMotion, useStoreDialog } from './use-store-dialog';
 
 const STEPS = [
   {
@@ -37,28 +36,21 @@ const STEPS = [
 
 /** The store's how-to guide, opened from the top of the storefront. */
 export function HowToUseSheet({ onClose }: { onClose: () => void }) {
-  const [opener] = useState(() => document.activeElement);
-  const closeRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    closeRef.current?.focus();
-    return () => {
-      if (opener instanceof HTMLElement) opener.focus();
-    };
-  }, [opener]);
-  useEscapeKey(onClose);
+  const { panelRef, closing, requestClose } = useStoreDialog(onClose);
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
+    <div className={`motion-fade-in fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center ${exitMotion.backdrop(closing)}`} onClick={requestClose}>
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="store-how-to-use"
-        className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-5 sm:rounded-2xl"
+        className={`motion-rise-in sm:motion-pop-in max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-5 sm:rounded-2xl ${exitMotion.sheet(closing)}`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 id="store-how-to-use" className="text-xl font-semibold text-gray-900">How to use</h2>
-          <button ref={closeRef} type="button" onClick={onClose} aria-label="Close" className="p-2">
+          <button type="button" onClick={requestClose} aria-label="Close" className="p-2" data-autofocus>
             <X className="h-5 w-5 text-gray-500" />
           </button>
         </div>

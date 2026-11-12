@@ -32,6 +32,7 @@ import { ResetPasswordDialog } from "./reset-password-dialog";
 import { ContactSections } from "./user-form/contact-sections";
 import { EmploymentSection } from "./user-form/employment-section";
 import { PersonalSection } from "./user-form/personal-section";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const EMPTY_TREE: BusinessTree = { holdings: [] };
 
@@ -176,16 +177,18 @@ function UserEmployeeForm({
         </Button>
       </FormPageFooter>
 
-      {editId ? (
-        <ResetPasswordDialog
-          target={{
-            id: editId,
-            fullName: form.full_name || detail?.fullName || "Employee",
-          }}
-          open={resetDialogOpen}
-          onOpenChange={setResetDialogOpen}
-        />
-      ) : null}
+      <DialogPresence value={editId}>
+        {(editId) => (
+          <ResetPasswordDialog
+            target={{
+              id: editId,
+              fullName: form.full_name || detail?.fullName || "Employee",
+            }}
+            open={resetDialogOpen}
+            onOpenChange={setResetDialogOpen}
+          />
+        )}
+      </DialogPresence>
     </FormPageLayout>
   );
 }

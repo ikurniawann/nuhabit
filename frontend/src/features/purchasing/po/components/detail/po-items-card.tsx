@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Package } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatNumber, formatRupiah } from "@/lib/format";
@@ -21,7 +22,7 @@ export function POItemsCard({ items, showReceived }: { items: PurchaseOrderItem[
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Tabel item purchase order" className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
               <tr>
@@ -57,7 +58,7 @@ export function POItemsCard({ items, showReceived }: { items: PurchaseOrderItem[
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       </CardContent>
     </Card>
   );

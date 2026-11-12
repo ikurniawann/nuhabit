@@ -239,7 +239,7 @@ export function ReceiptSettingsCard() {
             <label className="mb-1 block text-xs font-medium text-gray-600">
               Preview (renderer struk asli, order contoh)
             </label>
-            <pre className="max-h-96 overflow-auto rounded-md border border-dashed border-gray-300 bg-gray-50 p-3 text-center font-mono text-[11px] leading-4 text-gray-700">
+            <pre tabIndex={0} role="region" aria-label="Pratinjau struk" className="max-h-96 overflow-auto rounded-md border border-dashed border-gray-300 bg-gray-50 p-3 text-center font-mono text-[11px] leading-4 text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest/40">
               {previewLines.join("\n")}
             </pre>
           </div>

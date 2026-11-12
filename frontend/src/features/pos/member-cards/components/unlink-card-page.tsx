@@ -18,6 +18,7 @@ import {
 import type { CardDialog } from "../types";
 import { CancelRefundDialog, CompleteRefundDialog, RefundDialog, UnlinkDialog } from "./card-dialogs";
 import { MemberCardGrid, OpenRefundRequests, RefundHistory, UnlinkHistory } from "./member-card-lists";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /**
  * POS → Member → Unlink Card (permintaan owner 2026-09-01): daftar member
@@ -169,14 +170,18 @@ export function UnlinkCardPage() {
       <RefundHistory requests={requests.filter((r) => r.status !== "requested")} />
       <UnlinkHistory logs={data?.recent_unlinks ?? []} />
 
-      {dialog?.kind === "unlink" ? <UnlinkDialog key={dialog.member.id} member={dialog.member} {...dialogProps} /> : null}
-      {dialog?.kind === "refund" ? <RefundDialog key={dialog.member.id} member={dialog.member} {...dialogProps} /> : null}
-      {dialog?.kind === "complete" ? (
-        <CompleteRefundDialog key={dialog.request.id} request={dialog.request} {...dialogProps} />
-      ) : null}
-      {dialog?.kind === "cancel" ? (
-        <CancelRefundDialog key={dialog.request.id} request={dialog.request} {...dialogProps} />
-      ) : null}
+      <DialogPresence value={dialog?.kind === "unlink" ? dialog : null}>
+        {(dialog) => <UnlinkDialog key={dialog.member.id} member={dialog.member} {...dialogProps} />}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "refund" ? dialog : null}>
+        {(dialog) => <RefundDialog key={dialog.member.id} member={dialog.member} {...dialogProps} />}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "complete" ? dialog : null}>
+        {(dialog) => <CompleteRefundDialog key={dialog.request.id} request={dialog.request} {...dialogProps} />}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "cancel" ? dialog : null}>
+        {(dialog) => <CancelRefundDialog key={dialog.request.id} request={dialog.request} {...dialogProps} />}
+      </DialogPresence>
     </div>
   );
 }

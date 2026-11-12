@@ -1,5 +1,6 @@
 'use client';
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Package, RefreshCw, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,6 +18,7 @@ import { ModifiersDialog } from './modifiers-dialog';
 import { PRODUCT_TABLE_HEADERS, ProductTableRow, type ProductRowActions } from './product-table-row';
 import { SyncPurchasingDialog } from './sync-purchasing-dialog';
 import { VariantsDialog } from './variants-dialog';
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 type LocalEdit = Partial<Pick<PosCatalogProduct, 'variants' | 'modifierGroups' | 'hasVariants' | 'hasModifiers'>>;
 type OpenDialog = { kind: 'variants' | 'modifiers' | 'merch'; product: PosCatalogProduct } | null;
@@ -201,7 +203,7 @@ export function ProductsPage() {
             <p className="text-sm">No products found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel katalog produk" className="overflow-x-auto px-4">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
@@ -223,7 +225,7 @@ export function ProductsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
 
         <div className="border-t border-gray-100 px-5 py-3 text-xs text-gray-500">
@@ -232,43 +234,49 @@ export function ProductsPage() {
       </PurchasingListSection>
 
       <SyncPurchasingDialog open={syncOpen} posSkus={posSkus} onClose={() => setSyncOpen(false)} />
-      {dialog?.kind === 'merch' ? (
-        <MerchSettingsDialog
-          key={dialog.product.id}
-          product={dialog.product}
-          saving={savingProductId !== null}
-          onClose={() => setDialog(null)}
-          onSaveProduct={(payload) => patchProductMutation.mutateAsync({ id: dialog.product.id, payload }).then(() => {})}
-        />
-      ) : null}
-      {dialog?.kind === 'variants' ? (
-        <VariantsDialog
-          key={dialog.product.id}
-          product={dialog.product}
-          onClose={() => setDialog(null)}
-          onSave={(variants) =>
-            saveLocalEdit(
-              dialog.product.id,
-              { variants, hasVariants: variants.some((variant) => variant.active) },
-              'Variants saved locally'
-            )
-          }
-        />
-      ) : null}
-      {dialog?.kind === 'modifiers' ? (
-        <ModifiersDialog
-          key={dialog.product.id}
-          product={dialog.product}
-          onClose={() => setDialog(null)}
-          onSave={(modifierGroups) =>
-            saveLocalEdit(
-              dialog.product.id,
-              { modifierGroups, hasModifiers: modifierGroups.some((group) => group.active) },
-              'Modifiers saved locally'
-            )
-          }
-        />
-      ) : null}
+      <DialogPresence value={dialog?.kind === 'merch' ? dialog : null}>
+        {(dialog) => (
+          <MerchSettingsDialog
+            key={dialog.product.id}
+            product={dialog.product}
+            saving={savingProductId !== null}
+            onClose={() => setDialog(null)}
+            onSaveProduct={(payload) => patchProductMutation.mutateAsync({ id: dialog.product.id, payload }).then(() => {})}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === 'variants' ? dialog : null}>
+        {(dialog) => (
+          <VariantsDialog
+            key={dialog.product.id}
+            product={dialog.product}
+            onClose={() => setDialog(null)}
+            onSave={(variants) =>
+              saveLocalEdit(
+                dialog.product.id,
+                { variants, hasVariants: variants.some((variant) => variant.active) },
+                'Variants saved locally'
+              )
+            }
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === 'modifiers' ? dialog : null}>
+        {(dialog) => (
+          <ModifiersDialog
+            key={dialog.product.id}
+            product={dialog.product}
+            onClose={() => setDialog(null)}
+            onSave={(modifierGroups) =>
+              saveLocalEdit(
+                dialog.product.id,
+                { modifierGroups, hasModifiers: modifierGroups.some((group) => group.active) },
+                'Modifiers saved locally'
+              )
+            }
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

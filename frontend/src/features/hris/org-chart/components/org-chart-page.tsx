@@ -123,7 +123,7 @@ function DepartmentSection({ dept, employees }: { dept: OrgDepartment; employees
         </div>
       </button>
       {!collapsed && (
-        <div className="overflow-x-auto pb-4">
+        <div className="overflow-x-auto pb-4" tabIndex={0} role="region" aria-label="Bagan organisasi">
           <div className="flex gap-8 min-w-max px-4">
             {rootNodes.map((node) => (
               <EmployeeCard key={node.id} node={node} depth={0} />

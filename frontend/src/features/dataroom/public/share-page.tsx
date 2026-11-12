@@ -18,6 +18,7 @@ import { OTP_ENABLED } from "@/lib/otp-availability";
 import { ItemIcon } from "@/features/dataroom/components/item-icon";
 import { PreviewDialog } from "@/features/dataroom/components/preview-dialog";
 import type { DataroomItem } from "@/features/dataroom/types";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /**
  * Halaman publik /share/[token]: gerbang verifikasi (email + kode 6 digit
@@ -111,13 +112,15 @@ export function SharePage({ token }: { token: string }) {
         )}
       </main>
 
-      {preview && (
-        <PreviewDialog
-          open name={preview.name} mime={preview.mime} size={preview.size_bytes}
-          inlineUrl={fileUrl(preview, false)} downloadUrl={fileUrl(preview, true)} canDownload={canDownload}
-          onClose={() => setPreview(null)}
-        />
-      )}
+      <DialogPresence value={preview}>
+        {(preview) => (
+          <PreviewDialog
+            open name={preview.name} mime={preview.mime} size={preview.size_bytes}
+            inlineUrl={fileUrl(preview, false)} downloadUrl={fileUrl(preview, true)} canDownload={canDownload}
+            onClose={() => setPreview(null)}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

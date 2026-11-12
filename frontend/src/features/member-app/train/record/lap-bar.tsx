@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useT } from "../../lib/i18n";
 import { formatDuration } from "../../ui";
 
@@ -21,7 +22,7 @@ export function LapBar({
       >
         {t("Lap")} {laps.length + 1}
       </button>
-      <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
+      <ScrollRegion label={t("Recorded laps")} className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
         {laps.map((at, i) => (
           <span
             key={i}
@@ -35,7 +36,7 @@ export function LapBar({
             {t("Tap to mark a lap.")}
           </span>
         ) : null}
-      </div>
+      </ScrollRegion>
     </div>
   );
 }

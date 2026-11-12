@@ -25,6 +25,7 @@ import { Field, TableNote, TEXTAREA } from "@/features/crm/engagement/components
 import { crmFetch } from "../crm-fetch";
 import { REVIEW_REPLY_MAX, type ReviewSummary } from "@/lib/crm/member-reviews";
 import { formatDateTime, formatNumber } from "@/lib/format";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 interface MemberReview {
   id: string;
@@ -267,13 +268,15 @@ export function MemberReviewsPage() {
         )}
       </Card>
 
-      {replying && (
-        <ReplyDialog
-          review={replying}
-          onClose={() => setReplying(null)}
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: ["crm", "member-reviews"] })}
-        />
-      )}
+      <DialogPresence value={replying}>
+        {(replying) => (
+          <ReplyDialog
+            review={replying}
+            onClose={() => setReplying(null)}
+            onSaved={() => void queryClient.invalidateQueries({ queryKey: ["crm", "member-reviews"] })}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

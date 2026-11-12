@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -292,7 +293,7 @@ export default function QaReportPage() {
           description="Daftar scenario utama yang sudah dicoba, termasuk area yang masih perlu QA formal berikutnya."
         />
         <div className="overflow-hidden rounded-xl border border-pink-100 bg-white shadow-sm">
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel skenario pengujian" className="overflow-x-auto">
             <table className="min-w-[980px] w-full border-collapse text-left text-sm">
               <thead className="bg-pink-50 text-xs uppercase text-pink-800">
                 <tr>
@@ -319,7 +320,7 @@ export default function QaReportPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </div>
       </section>
 

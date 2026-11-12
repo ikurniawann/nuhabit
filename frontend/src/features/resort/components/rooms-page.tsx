@@ -4,6 +4,7 @@ import { useState } from "react";
 import { BedDouble, Building2, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import type { RoomRow, RoomTypeRow } from "@/lib/resort/types";
 import { cn } from "@/lib/utils";
 import { resortApi, useResortMutation, useRoomTypes, useRooms } from "@/features/resort/queries";
 import { ROOM_STATUS_CLASS, ROOM_STATUS_LABEL } from "@/features/resort/types";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /**
  * Resort → Kamar & Tipe (owner 2026-09-06): master tipe kamar (kapasitas,
@@ -115,7 +117,7 @@ export function ResortRoomsPage() {
         ) : rooms.length === 0 ? (
           <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">Belum ada unit kamar.</CardContent></Card>
         ) : (
-          <Card><CardContent className="overflow-x-auto p-0">
+          <Card><CardContent className="p-0"><ScrollRegion label="Tabel unit kamar" className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-xs text-muted-foreground">
                 <tr>
@@ -149,26 +151,30 @@ export function ResortRoomsPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></ScrollRegion>
           </CardContent></Card>
         )}
       </section>
 
-      {typeDialog && (
-        <TypeDialog
-          initial={typeDialog.mode === "edit" ? typeDialog.row : null}
-          onClose={() => setTypeDialog(null)}
-          onSaved={() => setTypeDialog(null)}
-        />
-      )}
-      {roomDialog && types && (
-        <RoomDialog
-          types={types.filter((t) => t.is_active)}
-          initial={roomDialog.mode === "edit" ? roomDialog.row : null}
-          onClose={() => setRoomDialog(null)}
-          onSaved={() => setRoomDialog(null)}
-        />
-      )}
+      <DialogPresence value={typeDialog}>
+        {(typeDialog) => (
+          <TypeDialog
+            initial={typeDialog.mode === "edit" ? typeDialog.row : null}
+            onClose={() => setTypeDialog(null)}
+            onSaved={() => setTypeDialog(null)}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={roomDialog && types ? { roomDialog, types } : null}>
+        {({ roomDialog, types }) => (
+          <RoomDialog
+            types={types.filter((t) => t.is_active)}
+            initial={roomDialog.mode === "edit" ? roomDialog.row : null}
+            onClose={() => setRoomDialog(null)}
+            onSaved={() => setRoomDialog(null)}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

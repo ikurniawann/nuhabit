@@ -38,6 +38,7 @@ import {
   type NewsForm,
   type NewsView,
 } from "../api";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const STATE_BADGE = {
   draft: { label: "Draf", variant: "outline" },
@@ -144,14 +145,16 @@ export function NewsPage() {
           </Table>
         )}
       </Card>
-      {editing && query.data && (
-        <NewsDialog
-          article={editing === "new" ? null : editing}
-          view={query.data}
-          onClose={() => setEditing(null)}
-          onSaved={refresh}
-        />
-      )}
+      <DialogPresence value={editing && query.data ? { editing, view: query.data } : null}>
+        {({ editing, view }) => (
+          <NewsDialog
+            article={editing === "new" ? null : editing}
+            view={view}
+            onClose={() => setEditing(null)}
+            onSaved={refresh}
+          />
+        )}
+      </DialogPresence>
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}

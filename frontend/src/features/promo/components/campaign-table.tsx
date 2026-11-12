@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -20,7 +21,7 @@ export function CampaignTable({ campaigns, onEdit, onDetail }: {
     updateMutation.mutate({ id, values });
 
   return (
-    <div className="overflow-x-auto px-4 pb-4">
+    <ScrollRegion label="Tabel kampanye promo" className="overflow-x-auto px-4 pb-4">
       <table className="w-full text-sm">
         <thead>
           <TableRow className="border-b border-gray-200/70 bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground hover:bg-muted/40">
@@ -101,6 +102,6 @@ export function CampaignTable({ campaigns, onEdit, onDetail }: {
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }

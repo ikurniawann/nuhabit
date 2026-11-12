@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -85,7 +86,7 @@ export function GeneralReceiveListPage() {
             <p className="text-gray-500">Tidak ada purchase order yang menunggu penerimaan</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel penerimaan barang umum" className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
@@ -123,7 +124,7 @@ export function GeneralReceiveListPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
     </div>

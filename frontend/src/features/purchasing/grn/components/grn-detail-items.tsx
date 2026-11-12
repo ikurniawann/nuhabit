@@ -1,3 +1,4 @@
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Banknote, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +30,7 @@ export function GrnItemsCard({ items, itemColumnLabel }: { items: GrnDetailItem[
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4">
-        <div className="overflow-x-auto rounded-xl border border-gray-200/70">
+        <ScrollRegion label="Tabel item penerimaan" className="overflow-x-auto rounded-xl border border-gray-200/70">
           <table className="w-full table-fixed border-collapse text-sm [&_td]:border [&_td]:border-gray-200/70 [&_th]:border [&_th]:border-gray-200/70">
             <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
               <tr>
@@ -79,7 +80,7 @@ export function GrnItemsCard({ items, itemColumnLabel }: { items: GrnDetailItem[
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       </CardContent>
     </Card>
   );

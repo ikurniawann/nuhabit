@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatNumber } from "@/lib/format";
@@ -62,7 +63,7 @@ export function RawMaterialPriceHistoryTab({ materialId, baseUnitName }: RawMate
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <ScrollRegion label="Tabel riwayat harga pembelian" className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200/70 text-xs uppercase tracking-wide text-gray-500">
@@ -103,7 +104,7 @@ export function RawMaterialPriceHistoryTab({ materialId, baseUnitName }: RawMate
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
           )}
         </CardContent>
       </Card>

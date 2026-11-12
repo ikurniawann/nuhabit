@@ -23,6 +23,7 @@ import { formatDateTime, formatNumber } from "@/lib/format";
 import type { PublishStatus, SiteEvent } from "../types";
 import { siteAdminApi, type EventInput } from "./api";
 import { ImageUrlField, LabeledField, LongText } from "./fields";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const KEY = ["site", "events"];
 
@@ -304,17 +305,21 @@ export function EventsPage() {
           save.mutate(reason);
         }}
       />
-      {linking && (
-        <LinkDialog
-          source="site"
-          eventId={linking.id}
-          title={linking.title}
-          linkedId={linking.crm_event_id}
-          onClose={() => setLinking(null)}
-          onChanged={refresh}
-        />
-      )}
-      {checklist && <EventChecklistDialog source="site" eventId={checklist.id} title={checklist.title} onClose={() => setChecklist(null)} />}
+      <DialogPresence value={linking}>
+        {(linking) => (
+          <LinkDialog
+            source="site"
+            eventId={linking.id}
+            title={linking.title}
+            linkedId={linking.crm_event_id}
+            onClose={() => setLinking(null)}
+            onChanged={refresh}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={checklist}>
+        {(checklist) => <EventChecklistDialog source="site" eventId={checklist.id} title={checklist.title} onClose={() => setChecklist(null)} />}
+      </DialogPresence>
 
       <ConfirmDialog
         open={deleting !== null}

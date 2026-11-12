@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -199,7 +200,7 @@ export function VendorPODetailPage<Item extends VendorPODetailItem>({
               <CardTitle className="text-base">Item Order</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto p-4">
+              <ScrollRegion label="Tabel item order" className="overflow-x-auto p-4">
                 <table className="min-w-full text-sm">
                   <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase text-gray-500">
                     <tr>
@@ -222,7 +223,7 @@ export function VendorPODetailPage<Item extends VendorPODetailItem>({
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollRegion>
             </CardContent>
           </Card>
         </div>

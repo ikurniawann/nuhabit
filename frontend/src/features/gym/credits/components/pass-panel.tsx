@@ -26,6 +26,7 @@ import { GymApiError } from "@/features/gym/shared";
 import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import { gymCreditsApi, TILL_METHODS, type CreditPurchase, type MemberCredits, type MemberPass, type RefundMode, type RenewWith } from "../api";
 import { ShiftRequired } from "./desk-shift";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const RENEW_LABELS: Record<RenewWith, string> = { ark: "ARK Coin", invoice: "Invoice online", saved_method: "Metode tersimpan member" };
 
@@ -158,31 +159,35 @@ export function PassesCard({ credits, onDone }: { credits: MemberCredits; onDone
           ))}
         </TableBody>
       </Table>
-      {dialog?.kind === "freeze" && (
-        <DaysDialog
-          title={`Bekukan ${dialog.pass.package_name}`}
-          description={`Selama dibekukan, pass tidak bisa dipakai booking atau masuk gate. Masa berlaku bertambah sebanyak hari yang dibekukan. Minimal ${formatNumber(freeze.min_days)} hari, sisa jatah ${formatNumber(freeze.remaining_days)} hari.`}
-          min={freeze.min_days}
-          max={freeze.remaining_days}
-          confirmLabel="Bekukan"
-          action={(days) => gymCreditsApi.freezePass(dialog.pass.id, days)}
-          onClose={() => setDialog(null)}
-          onDone={onDone}
-        />
-      )}
-      {dialog?.kind === "extend" && (
-        <DaysDialog
-          title={`Perpanjang ${dialog.pass.package_name}`}
-          description={`Berakhir ${formatDate(dialog.pass.ends_at)}. Pass yang antre setelahnya ikut bergeser.`}
-          min={1}
-          max={365}
-          withReason
-          confirmLabel="Perpanjang"
-          action={(days, reason) => gymCreditsApi.extendPass(dialog.pass.id, days, reason)}
-          onClose={() => setDialog(null)}
-          onDone={onDone}
-        />
-      )}
+      <DialogPresence value={dialog?.kind === "freeze" ? dialog : null}>
+        {(dialog) => (
+          <DaysDialog
+            title={`Bekukan ${dialog.pass.package_name}`}
+            description={`Selama dibekukan, pass tidak bisa dipakai booking atau masuk gate. Masa berlaku bertambah sebanyak hari yang dibekukan. Minimal ${formatNumber(freeze.min_days)} hari, sisa jatah ${formatNumber(freeze.remaining_days)} hari.`}
+            min={freeze.min_days}
+            max={freeze.remaining_days}
+            confirmLabel="Bekukan"
+            action={(days) => gymCreditsApi.freezePass(dialog.pass.id, days)}
+            onClose={() => setDialog(null)}
+            onDone={onDone}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={dialog?.kind === "extend" ? dialog : null}>
+        {(dialog) => (
+          <DaysDialog
+            title={`Perpanjang ${dialog.pass.package_name}`}
+            description={`Berakhir ${formatDate(dialog.pass.ends_at)}. Pass yang antre setelahnya ikut bergeser.`}
+            min={1}
+            max={365}
+            withReason
+            confirmLabel="Perpanjang"
+            action={(days, reason) => gymCreditsApi.extendPass(dialog.pass.id, days, reason)}
+            onClose={() => setDialog(null)}
+            onDone={onDone}
+          />
+        )}
+      </DialogPresence>
     </Card>
   );
 }

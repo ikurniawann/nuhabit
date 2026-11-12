@@ -16,6 +16,7 @@ import { AddCandidateDialog } from "./add-candidate-dialog";
 import { CandidateFilters, EMPTY_CANDIDATE_FILTER, type CandidateFilterValues } from "./candidate-filters";
 import { CandidatesMobileHeader } from "./candidates-mobile-header";
 import { CandidatesPagination, CandidatesTable } from "./candidates-table";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const PER_PAGE = 20;
 const SEARCH_DEBOUNCE_MS = 400;
@@ -114,7 +115,9 @@ export function CandidatesPage() {
         </CardContent>
       </Card>
 
-      {showAddDialog && <AddCandidateDialog brands={brands} onClose={() => setShowAddDialog(false)} />}
+      <DialogPresence value={showAddDialog}>
+        {() => <AddCandidateDialog brands={brands} onClose={() => setShowAddDialog(false)} />}
+      </DialogPresence>
 
       <ConfirmDialog
         open={!!deleteTarget}

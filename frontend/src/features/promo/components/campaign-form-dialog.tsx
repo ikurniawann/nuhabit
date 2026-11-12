@@ -49,6 +49,8 @@ export function CampaignFormDialog({ campaign, onClose }: {
   const codesCount = Number(campaign?.codes_count) || 0;
   const [form, setForm] = useState<CampaignForm>(() => (campaign ? campaignFormFromCampaign(campaign) : EMPTY_CAMPAIGN_FORM));
   const [saving, setSaving] = useState(false);
+  const [nameTouched, setNameTouched] = useState(false);
+  const nameError = nameTouched && form.name.trim().length < 2;
   const createMutation = useCreateCampaign();
   const updateMutation = useUpdateCampaign();
 
@@ -127,8 +129,16 @@ export function CampaignFormDialog({ campaign, onClose }: {
               value={form.name}
               disabled={busy}
               onChange={(e) => set({ name: e.target.value })}
+              onBlur={() => setNameTouched(true)}
+              aria-invalid={nameError}
+              aria-describedby={nameError ? "promo_name_error" : undefined}
               className="border-gray-200/80"
             />
+            {nameError ? (
+              <p id="promo_name_error" className="text-xs text-red-600">
+                Nama campaign wajib diisi, minimal 2 karakter.
+              </p>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

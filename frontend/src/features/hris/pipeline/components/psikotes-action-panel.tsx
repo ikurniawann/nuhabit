@@ -25,6 +25,7 @@ import {
   positionTitleOf,
   type StagePanelProps,
 } from "./stage-panel-parts";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 /**
  * Action panel tahap Psikotes (EPIC-002 TG4): checklist otomatis, kirim tes
@@ -150,26 +151,30 @@ export function PsikotesActionPanel({ candidate, onMove, moving = false }: Stage
         }}
       />
 
-      {sendOpen && (
-        <PsikotesSendDialog candidate={candidate} positionTitle={positionTitle} open onOpenChange={setSendOpen} />
-      )}
-      {detailTest && (
-        <PsikotesTestDetailDialog
-          key={detailTest.id}
-          test={detailTest}
-          candidateId={candidate.id}
-          open
-          onOpenChange={(open) => !open && setDetailTestId(null)}
-        />
-      )}
-      {proctorSession && (
-        <PsikotesProctorDialog
-          key={proctorSession.id}
-          session={proctorSession}
-          open
-          onOpenChange={(open) => !open && setProctorSession(null)}
-        />
-      )}
+      <DialogPresence value={sendOpen}>
+        {() => <PsikotesSendDialog candidate={candidate} positionTitle={positionTitle} open onOpenChange={setSendOpen} />}
+      </DialogPresence>
+      <DialogPresence value={detailTest}>
+        {(detailTest) => (
+          <PsikotesTestDetailDialog
+            key={detailTest.id}
+            test={detailTest}
+            candidateId={candidate.id}
+            open
+            onOpenChange={(open) => !open && setDetailTestId(null)}
+          />
+        )}
+      </DialogPresence>
+      <DialogPresence value={proctorSession}>
+        {(proctorSession) => (
+          <PsikotesProctorDialog
+            key={proctorSession.id}
+            session={proctorSession}
+            open
+            onOpenChange={(open) => !open && setProctorSession(null)}
+          />
+        )}
+      </DialogPresence>
     </div>
   );
 }

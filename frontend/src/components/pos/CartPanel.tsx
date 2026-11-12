@@ -13,6 +13,7 @@ import { CartLine } from './cart-panel/cart-line';
 import { CartActions, CartHeader } from './cart-panel/cart-chrome';
 import { DiscountRow, SummaryRow } from './cart-panel/money';
 import { ScrollRegion } from '@/components/ui/scroll-region';
+import { DialogPresence } from '@/components/ui/dialog-presence';
 
 interface CartPanelProps {
   cart: PosCartItem[];
@@ -394,24 +395,26 @@ export function CartPanel({
         onPay={setShowPaymentModal}
       />
 
-      {showItemDiscountUi && itemForDialog && (
-        <ManualDiscountDialog
-          open={Boolean(itemDialogId)}
-          title="Diskon item"
-          description={itemForDialog.name}
-          basis={lineGross(itemForDialog)}
-          formatCurrency={formatCurrency}
-          initialType={itemForDialog.discount_type}
-          initialValue={itemForDialog.discount_value}
-          onClose={() => setItemDialogId(null)}
-          onApply={(type, value) => {
-            onSetItemDiscount?.(itemForDialog.id, type, value);
-          }}
-          onClear={() => {
-            onSetItemDiscount?.(itemForDialog.id, null, null);
-          }}
-        />
-      )}
+      <DialogPresence value={showItemDiscountUi && itemForDialog}>
+        {(itemForDialog) => (
+          <ManualDiscountDialog
+            open={Boolean(itemDialogId)}
+            title="Diskon item"
+            description={itemForDialog.name}
+            basis={lineGross(itemForDialog)}
+            formatCurrency={formatCurrency}
+            initialType={itemForDialog.discount_type}
+            initialValue={itemForDialog.discount_value}
+            onClose={() => setItemDialogId(null)}
+            onApply={(type, value) => {
+              onSetItemDiscount?.(itemForDialog.id, type, value);
+            }}
+            onClear={() => {
+              onSetItemDiscount?.(itemForDialog.id, null, null);
+            }}
+          />
+        )}
+      </DialogPresence>
 
       {showManualUi && (
         <ManualDiscountDialog

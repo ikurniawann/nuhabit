@@ -31,6 +31,7 @@ import { CARE_KEYS, careApi, type FlagCategory, type FlagColor, type FlagIcon, t
 import { CATEGORY_LABEL, FLAG_BADGE, FLAG_COLOR_LABEL, FLAG_ICON_LABEL, hiddenMedicalLabel, REVIEW_LABEL, SOURCE_LABEL } from "../display";
 import { FLAG_ICONS, FlagBadge } from "./flag-badges";
 import { useRefreshCare } from "./flag-dialogs";
+import { DialogPresence } from "@/components/ui/dialog-presence";
 
 const PAGE_SIZE = 25;
 
@@ -230,7 +231,9 @@ function FlagTypes() {
           </Table>
         )}
       </Card>
-      {editing && <FlagTypeDialog type={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
+      <DialogPresence value={editing}>
+        {(editing) => <FlagTypeDialog type={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
+      </DialogPresence>
     </div>
   );
 }

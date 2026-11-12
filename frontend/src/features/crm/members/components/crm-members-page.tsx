@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
@@ -141,7 +142,7 @@ export function CrmMembersPage() {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            <ScrollRegion label="Tabel member" className="overflow-x-auto">
               <table className="w-full min-w-[820px]">
                 <thead>
                   <tr className="border-b border-slate-100 text-left text-xs font-medium uppercase text-slate-500">
@@ -212,7 +213,7 @@ export function CrmMembersPage() {
                   )}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
         </section>
       </div>
     </div>
