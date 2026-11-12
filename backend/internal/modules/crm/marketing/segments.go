@@ -48,7 +48,7 @@ func (h *handler) requireSegment(ctx context.Context, id string, s *kit.Scope) (
 }
 
 func (h *handler) listSegments(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.guard.RequireScope(r, kit.GateSegments)
+	_, scope, err := h.guard.RequireScope(r, kit.GateSegmentsRead)
 	if err != nil {
 		return err
 	}

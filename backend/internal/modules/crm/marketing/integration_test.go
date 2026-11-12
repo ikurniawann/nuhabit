@@ -35,7 +35,7 @@ func newEnv(t *testing.T) *env {
 	t.Helper()
 	// Staff first: cleanups run in reverse, so the transaction that may
 	// reference the user rolls back before the user is deleted.
-	staff := crmtest.Staff(t, "crm.promo")
+	staff := crmtest.Staff(t, "crm.campaigns", "crm.marketing.segments", "crm.marketing.forms")
 	d := testutil.Deps(t, func() time.Time { return testNow })
 	tx := testutil.Tx(t)
 	h := newHandler(tx, d.Auth, func() time.Time { return testNow }, Ports{AppSettingsSQL{}, promoTables{}, FunnelSQL{}})

@@ -34,6 +34,13 @@ export const IAM = {
   posLoyalty: ["pos.loyalty"],
   posReports: ["pos.reports"],
   posSupervisors: ["pos.settings.supervisors"],
+  /** POS → halaman kasir (tablet, klasik, restoran, kasir pusat). */
+  posCashier: [
+    "pos.operations.cashier",
+    "pos.operations.cashier-classic",
+    "pos.operations.restaurant",
+    "pos.cashier.central",
+  ],
   hris: ["hris"],
   hrisKepegawaian: ["hris.kepegawaian"],
   hrisWorkforce: ["hris.workforce"],
@@ -91,6 +98,60 @@ export const IAM = {
   crmMemberReviews: ["crm.members.member-reviews"],
   /** CRM → Loyalty → Partner Loyalty (event eksternal bertanda tangan). */
   crmPartners: ["crm.loyalty.partners"],
+  /*
+   * CRM per sub-modul: satu key per menu daun, plus key gabungan untuk
+   * lookup yang dipanggil beberapa halaman CRM.
+   */
+  crmDashboard: ["crm.overview.dashboard"],
+  crmMemberList: ["crm.members.list"],
+  /** Cari member: halaman Members dan klaim redemption di Rewards. */
+  crmMemberLookup: ["crm.members.list", "crm.loyalty.rewards"],
+  crmRewards: ["crm.loyalty.rewards"],
+  /** Katalog reward dan riwayat redemption: Rewards dan detail member. */
+  crmRewardsRead: ["crm.loyalty.rewards", "crm.members.list"],
+  crmAvatars: ["crm.loyalty.avatars"],
+  /** Katalog avatar: halaman Avatars dan inventori di detail member. */
+  crmAvatarsRead: ["crm.loyalty.avatars", "crm.members.list"],
+  crmBadges: ["crm.badges"],
+  crmWallpapers: ["crm.wallpapers"],
+  /** Unggah gambar koleksi: Avatars, Badges, Wallpapers. */
+  crmCollectibleUpload: ["crm.loyalty.avatars", "crm.badges", "crm.wallpapers"],
+  /** Daftar tier: semua halaman CRM yang memilih tier. */
+  crmTiersRead: [
+    "crm.members.list",
+    "crm.loyalty.rewards",
+    "crm.loyalty.avatars",
+    "crm.wallpapers",
+    "crm.engagement.announcements",
+    "crm.settings.config",
+  ],
+  /** Pengaturan CRM: konfigurasi, tier, aturan XP, template inbox. */
+  crmSettingsConfig: ["crm.settings.config"],
+  crmApprovalRules: ["crm.settings.approvals"],
+  crmWorkflows: ["crm.settings.workflows"],
+  crmScoring: ["crm.settings.scoring"],
+  crmCustomFields: ["crm.settings.custom-fields"],
+  /** Inbox approval diskon quotation (halaman Sales Funnel → Approval). */
+  crmApprovalInbox: ["sales-funnel.approvals"],
+  crmAnnouncements: ["crm.engagement.announcements"],
+  crmChallenges: ["crm.engagement.challenges"],
+  crmCheckins: ["crm.engagement.checkins"],
+  crmEvents: ["crm.engagement.events"],
+  /** Analisis AI percakapan: Inbox dan Laporan CRM. */
+  crmInboxAnalyze: ["crm.members.inbox", "crm.reports.overview"],
+  crmCampaigns: ["crm.campaigns"],
+  crmSegments: ["crm.marketing.segments"],
+  /** Daftar segmen: halaman Segmen dan pemilih segmen di Campaign. */
+  crmSegmentsRead: ["crm.marketing.segments", "crm.campaigns"],
+  crmForms: ["crm.marketing.forms"],
+  crmReportsOverview: ["crm.reports.overview"],
+  crmReportBuilder: ["crm.reports.builder"],
+  /** Jalankan definisi report: Report Builder dan Atribusi. */
+  crmReportRun: ["crm.reports.builder", "crm.marketing.attribution"],
+  /** Daftar report tersimpan: Builder, Dashboard, Jadwal. */
+  crmSavedReports: ["crm.reports.builder", "crm.reports.dashboards", "crm.reports.schedules"],
+  crmReportDashboards: ["crm.reports.dashboards"],
+  crmReportSchedules: ["crm.reports.schedules"],
   settings: ["settings"],
   settingsUsers: ["settings.users"],
   settingsRoles: ["settings.roles"],

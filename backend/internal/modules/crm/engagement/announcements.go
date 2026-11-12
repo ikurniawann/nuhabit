@@ -16,7 +16,7 @@ import (
 // listAnnouncements is the announcement history, newest first, with the
 // number of members who read it.
 func (h *handler) listAnnouncements(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateEngagement); err != nil {
+	if _, err := h.guard.Require(r, kit.GateAnnouncements); err != nil {
 		return err
 	}
 	rows, err := kit.Query(r.Context(), h.db, `SELECT a.id, a.title, a.body, a.kind, a.audience, a.recipient_count, a.sent_at, a.image_url, a.link_url,
@@ -91,7 +91,7 @@ func emptyToNil(s *string) *string {
 // every member in the audience, or with preview only counts them. Pushes go
 // out after the commit.
 func (h *handler) sendAnnouncement(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.guard.Require(r, kit.GateEngagement)
+	user, err := h.guard.Require(r, kit.GateAnnouncements)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (h *handler) sendAnnouncement(w http.ResponseWriter, r *http.Request) error
 // checkinLog is the last 200 QR scans (accepted or denied) plus today's
 // (WIB) summary.
 func (h *handler) checkinLog(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateEngagement); err != nil {
+	if _, err := h.guard.Require(r, kit.GateCheckins); err != nil {
 		return err
 	}
 	ctx := r.Context()

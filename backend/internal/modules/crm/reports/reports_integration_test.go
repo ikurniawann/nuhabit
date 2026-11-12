@@ -14,7 +14,7 @@ func setup(t *testing.T) (*http.ServeMux, testutil.Staff) {
 	d := testutil.Deps(t, nil)
 	crmtest.MustExec(t, tx, `INSERT INTO crm.wa_conversations (phone, channel, external_id, status, is_complaint, category, csat_score, first_response_seconds)
 		VALUES ('+6299911', 'whatsapp', '+6299911', 'resolved', true, 'layanan', 4, 125)`)
-	return crmtest.Mux(newHandler(tx, d, Ports{}).routes()), crmtest.Staff(t, "crm.reports")
+	return crmtest.Mux(newHandler(tx, d, Ports{}).routes()), crmtest.Staff(t, "crm.reports.overview")
 }
 
 func TestLoyaltyReport(t *testing.T) {
@@ -49,7 +49,7 @@ func TestLoyaltyReport(t *testing.T) {
 func TestLoyaltyReportLastOrderAndVisit(t *testing.T) {
 	tx := testutil.Tx(t)
 	mux := crmtest.Mux(newHandler(tx, testutil.Deps(t, nil), Ports{}).routes())
-	staff := crmtest.Staff(t, "crm.reports")
+	staff := crmtest.Staff(t, "crm.reports.overview")
 	customer := crmtest.Scalar[string](t, tx, `INSERT INTO pos.pos_customers (phone, name) VALUES ('0899' || lpad((random() * 1e8)::int::text, 8, '0'), 'Go Loyal') RETURNING id::text`)
 	for _, at := range []string{"2019-02-03T02:00:00Z", "2019-02-04T05:06:07.890Z"} {
 		crmtest.MustExec(t, tx, `INSERT INTO pos.pos_orders (order_number, cashier_id, customer_id, status, payment_status, subtotal, total_amount, created_at)

@@ -31,6 +31,7 @@ var (
 	PosLoyalty                 = []string{"pos.loyalty"}
 	PosReports                 = []string{"pos.reports"}
 	PosSupervisors             = []string{"pos.settings.supervisors"}
+	PosCashier                 = []string{"pos.operations.cashier", "pos.operations.cashier-classic", "pos.operations.restaurant", "pos.cashier.central"}
 	Hris                       = []string{"hris"}
 	HrisKepegawaian            = []string{"hris.kepegawaian"}
 	HrisWorkforce              = []string{"hris.workforce"}
@@ -79,6 +80,38 @@ var (
 	CrmEngagement              = []string{"crm.engagement"}
 	CrmMemberReviews           = []string{"crm.members.member-reviews"}
 	CrmPartners                = []string{"crm.loyalty.partners"}
+	CrmDashboard               = []string{"crm.overview.dashboard"}
+	CrmMemberList              = []string{"crm.members.list"}
+	CrmMemberLookup            = []string{"crm.members.list", "crm.loyalty.rewards"}
+	CrmRewards                 = []string{"crm.loyalty.rewards"}
+	CrmRewardsRead             = []string{"crm.loyalty.rewards", "crm.members.list"}
+	CrmAvatars                 = []string{"crm.loyalty.avatars"}
+	CrmAvatarsRead             = []string{"crm.loyalty.avatars", "crm.members.list"}
+	CrmBadges                  = []string{"crm.badges"}
+	CrmWallpapers              = []string{"crm.wallpapers"}
+	CrmCollectibleUpload       = []string{"crm.loyalty.avatars", "crm.badges", "crm.wallpapers"}
+	CrmTiersRead               = []string{"crm.members.list", "crm.loyalty.rewards", "crm.loyalty.avatars", "crm.wallpapers", "crm.engagement.announcements", "crm.settings.config"}
+	CrmSettingsConfig          = []string{"crm.settings.config"}
+	CrmApprovalRules           = []string{"crm.settings.approvals"}
+	CrmWorkflows               = []string{"crm.settings.workflows"}
+	CrmScoring                 = []string{"crm.settings.scoring"}
+	CrmCustomFields            = []string{"crm.settings.custom-fields"}
+	CrmApprovalInbox           = []string{"sales-funnel.approvals"}
+	CrmAnnouncements           = []string{"crm.engagement.announcements"}
+	CrmChallenges              = []string{"crm.engagement.challenges"}
+	CrmCheckins                = []string{"crm.engagement.checkins"}
+	CrmEvents                  = []string{"crm.engagement.events"}
+	CrmInboxAnalyze            = []string{"crm.members.inbox", "crm.reports.overview"}
+	CrmCampaigns               = []string{"crm.campaigns"}
+	CrmSegments                = []string{"crm.marketing.segments"}
+	CrmSegmentsRead            = []string{"crm.marketing.segments", "crm.campaigns"}
+	CrmForms                   = []string{"crm.marketing.forms"}
+	CrmReportsOverview         = []string{"crm.reports.overview"}
+	CrmReportBuilder           = []string{"crm.reports.builder"}
+	CrmReportRun               = []string{"crm.reports.builder", "crm.marketing.attribution"}
+	CrmSavedReports            = []string{"crm.reports.builder", "crm.reports.dashboards", "crm.reports.schedules"}
+	CrmReportDashboards        = []string{"crm.reports.dashboards"}
+	CrmReportSchedules         = []string{"crm.reports.schedules"}
 	Settings                   = []string{"settings"}
 	SettingsUsers              = []string{"settings.users"}
 	SettingsRoles              = []string{"settings.roles"}
@@ -240,6 +273,7 @@ var ByKey = map[string][]string{
 	"posLoyalty":                 PosLoyalty,
 	"posReports":                 PosReports,
 	"posSupervisors":             PosSupervisors,
+	"posCashier":                 PosCashier,
 	"hris":                       Hris,
 	"hrisKepegawaian":            HrisKepegawaian,
 	"hrisWorkforce":              HrisWorkforce,
@@ -288,6 +322,38 @@ var ByKey = map[string][]string{
 	"crmEngagement":              CrmEngagement,
 	"crmMemberReviews":           CrmMemberReviews,
 	"crmPartners":                CrmPartners,
+	"crmDashboard":               CrmDashboard,
+	"crmMemberList":              CrmMemberList,
+	"crmMemberLookup":            CrmMemberLookup,
+	"crmRewards":                 CrmRewards,
+	"crmRewardsRead":             CrmRewardsRead,
+	"crmAvatars":                 CrmAvatars,
+	"crmAvatarsRead":             CrmAvatarsRead,
+	"crmBadges":                  CrmBadges,
+	"crmWallpapers":              CrmWallpapers,
+	"crmCollectibleUpload":       CrmCollectibleUpload,
+	"crmTiersRead":               CrmTiersRead,
+	"crmSettingsConfig":          CrmSettingsConfig,
+	"crmApprovalRules":           CrmApprovalRules,
+	"crmWorkflows":               CrmWorkflows,
+	"crmScoring":                 CrmScoring,
+	"crmCustomFields":            CrmCustomFields,
+	"crmApprovalInbox":           CrmApprovalInbox,
+	"crmAnnouncements":           CrmAnnouncements,
+	"crmChallenges":              CrmChallenges,
+	"crmCheckins":                CrmCheckins,
+	"crmEvents":                  CrmEvents,
+	"crmInboxAnalyze":            CrmInboxAnalyze,
+	"crmCampaigns":               CrmCampaigns,
+	"crmSegments":                CrmSegments,
+	"crmSegmentsRead":            CrmSegmentsRead,
+	"crmForms":                   CrmForms,
+	"crmReportsOverview":         CrmReportsOverview,
+	"crmReportBuilder":           CrmReportBuilder,
+	"crmReportRun":               CrmReportRun,
+	"crmSavedReports":            CrmSavedReports,
+	"crmReportDashboards":        CrmReportDashboards,
+	"crmReportSchedules":         CrmReportSchedules,
 	"settings":                   Settings,
 	"settingsUsers":              SettingsUsers,
 	"settingsRoles":              SettingsRoles,

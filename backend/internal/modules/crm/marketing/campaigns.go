@@ -31,7 +31,7 @@ func (h *handler) requireVenue(ctx context.Context) (company, branch string, err
 }
 
 func (h *handler) listCampaigns(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateCampaign); err != nil {
+	if _, err := h.guard.Require(r, kit.GateCampaigns); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -72,7 +72,7 @@ func (h *handler) parseSchedule(raw string) (time.Time, error) {
 }
 
 func (h *handler) createCampaign(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.guard.Require(r, kit.GateCampaign)
+	user, err := h.guard.Require(r, kit.GateCampaigns)
 	if err != nil {
 		return err
 	}
@@ -194,7 +194,7 @@ type actionResult struct {
 }
 
 func (h *handler) patchCampaign(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateCampaign); err != nil {
+	if _, err := h.guard.Require(r, kit.GateCampaigns); err != nil {
 		return err
 	}
 	f, err := kit.Form(r)
@@ -380,7 +380,7 @@ type campaignInApp struct {
 // Batch mode matches recipients' voucher codes; public mode matches the
 // numbers WA reached against the attached promo's redemptions.
 func (h *handler) campaignReport(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateCampaign); err != nil {
+	if _, err := h.guard.Require(r, kit.GateCampaigns); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -474,7 +474,7 @@ type campaignPreview struct {
 // previewCampaign mirrors the campaigns/preview route: the recipient count
 // after opt-outs and 5 samples, without sending.
 func (h *handler) previewCampaign(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateCampaign); err != nil {
+	if _, err := h.guard.Require(r, kit.GateCampaigns); err != nil {
 		return err
 	}
 	body, err := kit.ReadJSON(r)

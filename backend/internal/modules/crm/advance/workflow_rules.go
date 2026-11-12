@@ -10,7 +10,7 @@ import (
 const workflowRuleNotFound = "Rule tidak ditemukan"
 
 func (h *handler) listWorkflowRules(w http.ResponseWriter, r *http.Request) error {
-	_, s, err := h.guard.RequireScope(r, kit.GateSettings)
+	_, s, err := h.guard.RequireScope(r, kit.GateWorkflows)
 	if err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func workflowValues(in workflowRuleInput) []any {
 }
 
 func (h *handler) createWorkflowRule(w http.ResponseWriter, r *http.Request) error {
-	u, s, err := h.guard.RequireScope(r, kit.GateSettings)
+	u, s, err := h.guard.RequireScope(r, kit.GateWorkflows)
 	if err != nil {
 		return err
 	}

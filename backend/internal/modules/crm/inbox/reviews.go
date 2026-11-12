@@ -85,7 +85,7 @@ func loadReviewSettings(ctx context.Context, q database.Querier) (reviewSettings
 func canApproveReplies(role string) bool { return kit.RoleIn(role, "super_admin", "admin") }
 
 func (h *handler) listReviews(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.guard.Require(r, kit.GateInbox)
+	user, err := h.guard.Require(r, kit.GateReviews)
 	if err != nil {
 		return err
 	}
@@ -213,7 +213,7 @@ func parseReviewAction(body any) (reviewAction, bool) {
 }
 
 func (h *handler) reviewAction(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.guard.Require(r, kit.GateInbox)
+	user, err := h.guard.Require(r, kit.GateReviews)
 	if err != nil {
 		return err
 	}

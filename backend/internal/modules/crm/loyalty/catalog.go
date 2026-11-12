@@ -103,7 +103,7 @@ var crmDefaultTiers = []defaultTier{
 }
 
 func (h *handler) listTiers(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateTiersRead); err != nil {
 		return err
 	}
 	rows, err := kit.Query(r.Context(), h.db, `SELECT * FROM crm.crm_membership_tiers ORDER BY "rank" ASC`)
@@ -151,7 +151,7 @@ func (h *handler) saveTier(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) listXPRules(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateSettings); err != nil {
 		return err
 	}
 	sql := `SELECT * FROM crm.crm_xp_rules`
@@ -223,7 +223,7 @@ const rewardSelect = `SELECT *, (SELECT row_to_json(e) FROM (SELECT "code", "nam
 	WHERE "id" = crm_rewards."required_tier_id") e) AS "required_tier" FROM crm.crm_rewards`
 
 func (h *handler) listRewards(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateRewardsRead); err != nil {
 		return err
 	}
 	q := r.URL.Query()
@@ -247,7 +247,7 @@ func (h *handler) listRewards(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) saveReward(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateSettings); err != nil {
+	if _, err := h.guard.Require(r, kit.GateRewards); err != nil {
 		return err
 	}
 	f, err := kit.Form(r)
@@ -285,7 +285,7 @@ func (h *handler) saveReward(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) deleteReward(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateSettings); err != nil {
+	if _, err := h.guard.Require(r, kit.GateRewards); err != nil {
 		return err
 	}
 	id := r.URL.Query().Get("id")

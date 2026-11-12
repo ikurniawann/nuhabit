@@ -85,7 +85,7 @@ func (h *handler) storedInsight(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) analyze(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateInbox); err != nil {
+	if _, err := h.guard.Require(r, kit.GateInboxAnalyze); err != nil {
 		return err
 	}
 	body, present := validate.ReadBody(r)

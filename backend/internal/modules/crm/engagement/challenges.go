@@ -68,7 +68,7 @@ const challengeSelect = `SELECT c.*, c.target::float AS target, c.reward_ark_idr
 // getChallenges lists every challenge, or with ?id= one challenge's
 // participants by progress.
 func (h *handler) getChallenges(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateEngagement); err != nil {
+	if _, err := h.guard.Require(r, kit.GateChallenges); err != nil {
 		return err
 	}
 	id := r.URL.Query().Get("id")
@@ -136,7 +136,7 @@ func (h *handler) challengeParticipants(w http.ResponseWriter, r *http.Request, 
 
 // saveChallenge creates or updates a challenge.
 func (h *handler) saveChallenge(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateEngagement); err != nil {
+	if _, err := h.guard.Require(r, kit.GateChallenges); err != nil {
 		return err
 	}
 	f, err := kit.Form(r)

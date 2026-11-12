@@ -37,7 +37,7 @@ func redemptionLimit(raw string, present bool) string {
 }
 
 func (h *handler) listRedemptions(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateReader); err != nil {
+	if _, err := h.guard.Require(r, kit.GateRewardsRead); err != nil {
 		return err
 	}
 	q := r.URL.Query()
@@ -191,7 +191,7 @@ func (o redemptionOutcome) write(w http.ResponseWriter) error {
 }
 
 func (h *handler) claimRedemption(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.guard.Require(r, kit.GateOperator)
+	user, err := h.guard.Require(r, kit.GateRewards)
 	if err != nil {
 		return err
 	}
@@ -287,7 +287,7 @@ var transitions = map[string]struct {
 }
 
 func (h *handler) updateRedemption(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.guard.Require(r, kit.GateOperator)
+	user, err := h.guard.Require(r, kit.GateRewards)
 	if err != nil {
 		return err
 	}

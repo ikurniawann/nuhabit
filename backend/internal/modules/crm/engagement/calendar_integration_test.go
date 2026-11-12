@@ -23,8 +23,8 @@ func setupCalendar(t *testing.T) calendarEnv {
 	t.Helper()
 	// Staff first: the override row references the editor, so their cleanup
 	// must run after the transaction rolls back.
-	reader := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"crm.engagement": {"read"}}})
-	editor := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"crm.engagement": {"read", "update"}}})
+	reader := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"crm.engagement.events": {"read"}}})
+	editor := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"crm.engagement.events": {"read", "update"}}})
 	tx := testutil.Tx(t)
 	d := testutil.Deps(t, nil)
 	push := &recordingPush{}

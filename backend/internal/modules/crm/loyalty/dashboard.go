@@ -168,7 +168,7 @@ func (h *handler) recentXPActivity(ctx context.Context) []*kit.Row {
 }
 
 func (h *handler) dashboard(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateDashboard); err != nil {
 		return err
 	}
 	ctx := r.Context()

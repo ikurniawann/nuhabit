@@ -7,7 +7,6 @@ import (
 	"nuhabit/backend/internal/modules/crm/internal/kit"
 	"nuhabit/backend/internal/modules/crm/marketing/domain"
 	"nuhabit/backend/internal/platform/httpx"
-	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -29,7 +28,7 @@ func (h *handler) readConfig(ctx context.Context) (domain.CampaignConfig, error)
 }
 
 func (h *handler) getCampaignConfig(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateCampaign); err != nil {
+	if _, err := h.guard.Require(r, kit.GateCampaigns); err != nil {
 		return err
 	}
 	cfg, err := h.readConfig(r.Context())
@@ -42,7 +41,7 @@ func (h *handler) getCampaignConfig(w http.ResponseWriter, r *http.Request) erro
 // putCampaignConfig saves the sender config, master switch included; only
 // the crm menu (super admin and owners) may turn sending on.
 func (h *handler) putCampaignConfig(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Crm...); err != nil {
+	if _, err := h.guard.Require(r, kit.GateCampaigns); err != nil {
 		return err
 	}
 	f, err := kit.Form(r)
@@ -75,7 +74,7 @@ func (h *handler) putCampaignConfig(w http.ResponseWriter, r *http.Request) erro
 }
 
 func (h *handler) listOptouts(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateCampaign); err != nil {
+	if _, err := h.guard.Require(r, kit.GateCampaigns); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -91,7 +90,7 @@ func (h *handler) listOptouts(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) addOptout(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.guard.Require(r, kit.GateCampaign)
+	user, err := h.guard.Require(r, kit.GateCampaigns)
 	if err != nil {
 		return err
 	}
@@ -122,7 +121,7 @@ func (h *handler) addOptout(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) removeOptout(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateCampaign); err != nil {
+	if _, err := h.guard.Require(r, kit.GateCampaigns); err != nil {
 		return err
 	}
 	id := r.URL.Query().Get("id")

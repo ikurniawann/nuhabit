@@ -27,8 +27,8 @@ func setup(t *testing.T) *fixture {
 	// releases its locks before the staff rows are deleted.
 	f := &fixture{
 		t:     t,
-		pos:   crmtest.Staff(t, "pos"),
-		crm:   crmtest.Staff(t, "crm.members", "crm.loyalty"),
+		pos:   crmtest.Staff(t, "crm.members.list"),
+		crm:   crmtest.Staff(t, "crm.members.list"),
 		plain: crmtest.Staff(t, "hris"),
 	}
 	f.tx = testutil.Tx(t)
@@ -78,7 +78,7 @@ func TestMembersAuth(t *testing.T) {
 		status, body := f.call(c.method, c.path, map[string]any{}, nil)
 		expect(t, status, body, 401, "Authentication required")
 		status, body = f.call(c.method, c.path, map[string]any{}, &f.plain)
-		expect(t, status, body, 401, "Authentication required")
+		expect(t, status, body, 403, "Insufficient permissions")
 	}
 	for _, c := range []struct{ method, path string }{
 		{"GET", "/api/crm/members/x/activity?tab=checkins"}, {"GET", "/api/crm/members/x/consent"},

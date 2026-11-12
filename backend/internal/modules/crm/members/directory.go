@@ -112,7 +112,7 @@ func savepointQuery(ctx context.Context, db database.DB, sql string, args ...any
 
 // GET /api/crm/members?search&tier&limit
 func (h *handler) list(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateMemberLookup); err != nil {
 		return err
 	}
 	q := r.URL.Query()
@@ -283,7 +283,7 @@ func sliceEnd(n int, limit float64) int {
 
 // POST /api/crm/members
 func (h *handler) enroll(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateMemberList); err != nil {
 		return err
 	}
 	f, err := kit.Form(r)

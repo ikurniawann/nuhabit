@@ -22,7 +22,7 @@ const requiredTierEmbed = `(SELECT row_to_json(e) FROM (SELECT "code", "name", "
 
 // GET /api/crm/avatars?rarity
 func (h *handler) listAvatars(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateAvatarsRead); err != nil {
 		return err
 	}
 	sql := `SELECT *, ` + requiredTierEmbed + ` FROM crm.crm_collectible_avatars`
@@ -43,7 +43,7 @@ func (h *handler) listAvatars(w http.ResponseWriter, r *http.Request) error {
 
 // POST /api/crm/avatars: upsert by code.
 func (h *handler) saveAvatar(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateSettings); err != nil {
+	if _, err := h.guard.Require(r, kit.GateAvatars); err != nil {
 		return err
 	}
 	f, err := kit.Form(r)
@@ -91,7 +91,7 @@ func (h *handler) saveAvatar(w http.ResponseWriter, r *http.Request) error {
 
 // DELETE /api/crm/avatars?id
 func (h *handler) deleteAvatar(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateSettings); err != nil {
+	if _, err := h.guard.Require(r, kit.GateAvatars); err != nil {
 		return err
 	}
 	id := r.URL.Query().Get("id")
@@ -135,7 +135,7 @@ func loadActiveMember(ctx context.Context, q database.Querier, byID bool, id str
 
 // GET /api/crm/avatar-inventory?member_id|customer_id
 func (h *handler) listInventory(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateMemberList); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -168,7 +168,7 @@ func (h *handler) listInventory(w http.ResponseWriter, r *http.Request) error {
 // POST /api/crm/avatar-inventory: an admin grant. Redeeming avatars with
 // XP is retired (EPIC-011): XP is a lifetime score that never goes down.
 func (h *handler) grantAvatar(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateMemberList); err != nil {
 		return err
 	}
 	body, err := kit.ReadJSON(r)
@@ -308,7 +308,7 @@ func checkAvatarEligibility(ctx context.Context, q database.Querier, avatarID, c
 
 // PATCH /api/crm/avatar-inventory: equip an avatar the member owns.
 func (h *handler) equipAvatar(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateMemberList); err != nil {
 		return err
 	}
 	f, err := kit.Form(r)

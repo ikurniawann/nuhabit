@@ -112,7 +112,7 @@ func detailMember(ctx context.Context, db database.DB, profile *kit.Row) detailM
 
 // GET /api/crm/members/{id}
 func (h *handler) detail(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateMemberList); err != nil {
 		return err
 	}
 	data, err := h.loadMemberDetail(r.Context(), h.db, r.PathValue("id"))
@@ -247,7 +247,7 @@ func parseEmail(c *validate.Form) *string {
 
 // PATCH /api/crm/members/{id}
 func (h *handler) update(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateMemberList); err != nil {
 		return err
 	}
 	f, err := kit.Form(r)

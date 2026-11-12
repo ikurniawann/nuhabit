@@ -45,7 +45,7 @@ func (e *env) publish(topic, key string, payload any) {
 
 func TestSalesEventSubscriber(t *testing.T) {
 	e := setup(t)
-	actor := e.staff("crm.settings")
+	actor := e.staff(settingsMenus...)
 	lead, _, _ := e.salesFixture(actor.UserID)
 	bus := e.bus()
 	crmtest.MustExec(t, e.tx, `INSERT INTO crm.crm_scoring_rules (company_id, name, kind, field, operator, value, points)
@@ -81,7 +81,7 @@ func TestSalesEventSubscriber(t *testing.T) {
 // scoring still land.
 func TestSalesEventSubscriberIsolatesFailingRules(t *testing.T) {
 	e := setup(t)
-	actor := e.staff("crm.settings")
+	actor := e.staff(settingsMenus...)
 	lead, _, _ := e.salesFixture(actor.UserID)
 	bus := e.bus()
 	crmtest.MustExec(t, e.tx, `INSERT INTO crm.crm_workflow_rules (company_id, name, object, trigger_type, actions)
@@ -105,8 +105,8 @@ func TestSalesEventSubscriberIsolatesFailingRules(t *testing.T) {
 
 func TestQuotationPricedSubscriber(t *testing.T) {
 	e := setup(t)
-	requester := e.staff("crm.settings")
-	approver := e.staff("crm.settings")
+	requester := e.staff(settingsMenus...)
+	approver := e.staff(settingsMenus...)
 	_, _, quote := e.salesFixture(requester.UserID)
 	crmtest.MustExec(t, e.tx, `UPDATE crm.crm_sales_quotations SET approval_status = 'none' WHERE id = $1`, quote)
 	crmtest.MustExec(t, e.tx, `UPDATE crm.crm_approval_rules SET is_active = false`)

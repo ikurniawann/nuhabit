@@ -246,7 +246,7 @@ func TestGuards(t *testing.T) {
 
 func TestApprovalRules(t *testing.T) {
 	e := setup(t)
-	admin := e.staff("crm.settings")
+	admin := e.staff(settingsMenus...)
 
 	out := e.expect("POST", "/api/crm/approval-rules", map[string]any{"name": "x", "level": 1, "min_discount_percent": 10}, &admin, 400, "Validation failed")
 	if is := firstIssue(t, out); is["code"] != "custom" || is["message"] != "Pilih role atau user approver" {
@@ -295,7 +295,7 @@ func TestApprovalRules(t *testing.T) {
 func TestRuleAccessIsPerCompany(t *testing.T) {
 	e := setup(t)
 	scoped := e.createStaff(testutil.StaffOptions{Role: "admin", CompanyID: &e.venue.company,
-		Menus: map[string][]string{"crm.settings": {"read", "create", "update", "delete"}}})
+		Menus: map[string][]string{"crm.settings.scoring": {"read", "create", "update", "delete"}}})
 	other := crmtest.Scalar[string](t, e.tx, `INSERT INTO configuration.companies (holding_id, name, code)
 		SELECT holding_id, 'Other Co', 'OTH-'||$1 FROM configuration.companies WHERE id = $2 RETURNING id::text`, testutil.RandomHex(3), e.venue.company)
 	foreign := crmtest.Scalar[string](t, e.tx, `INSERT INTO crm.crm_scoring_rules (company_id, name, kind, event_type, points)
@@ -315,7 +315,7 @@ func TestRuleAccessIsPerCompany(t *testing.T) {
 
 func TestScoringRules(t *testing.T) {
 	e := setup(t)
-	admin := e.staff("crm.settings")
+	admin := e.staff(settingsMenus...)
 
 	out := e.expect("POST", "/api/crm/scoring-rules", map[string]any{"name": "x", "kind": "field", "field": "source", "points": 5}, &admin, 400, "Validation failed")
 	if firstIssue(t, out)["message"] != "Aturan field wajib punya field dan operator" {
@@ -362,7 +362,7 @@ func TestScoringRules(t *testing.T) {
 
 func TestCustomFields(t *testing.T) {
 	e := setup(t)
-	admin := e.staff("crm.settings")
+	admin := e.staff(settingsMenus...)
 	key := "f" + testutil.RandomHex(4)
 
 	out := e.expect("POST", "/api/crm/custom-fields", map[string]any{"object": "lead", "key": "Budget", "label": "B", "field_type": "text"}, &admin, 400, "Validation failed")
@@ -407,7 +407,7 @@ func TestCustomFields(t *testing.T) {
 
 func TestWorkflowRules(t *testing.T) {
 	e := setup(t)
-	admin := e.staff("crm.settings")
+	admin := e.staff(settingsMenus...)
 	act := []any{map[string]any{"type": "notify_in_app", "title": "t", "message": "m"}}
 
 	out := e.expect("POST", "/api/crm/workflow-rules", map[string]any{"name": "r", "object": "lead", "trigger_type": "inactive_days", "actions": act}, &admin, 400, "Validation failed")
@@ -502,7 +502,7 @@ func (e *env) approvalRequest(quote, requester, level2User string) string {
 func TestApprovalDecisionRunsWorkflowAndScoring(t *testing.T) {
 	e := setup(t)
 	ctx := context.Background()
-	salesMenu := map[string][]string{"sales-funnel": {"read", "create", "update"}}
+	salesMenu := map[string][]string{"sales-funnel.approvals": {"read", "create", "update"}}
 	requester := e.createStaff(testutil.StaffOptions{Role: "pos", Menus: salesMenu})
 	approver1 := e.createStaff(testutil.StaffOptions{Role: "admin", Menus: salesMenu})
 	approver2 := e.createStaff(testutil.StaffOptions{Role: "pos", Menus: salesMenu})
@@ -647,7 +647,7 @@ func TestApprovalDecisionRunsWorkflowAndScoring(t *testing.T) {
 
 func TestApprovalReject(t *testing.T) {
 	e := setup(t)
-	salesMenu := map[string][]string{"sales-funnel": {"read"}}
+	salesMenu := map[string][]string{"sales-funnel.approvals": {"read"}}
 	requester := e.createStaff(testutil.StaffOptions{Role: "pos", Menus: salesMenu})
 	approver := e.createStaff(testutil.StaffOptions{Role: "super_admin", Menus: salesMenu})
 	_, _, quote := e.salesFixture(requester.UserID)
@@ -677,7 +677,7 @@ func TestApprovalReject(t *testing.T) {
 
 func TestRecalculateScores(t *testing.T) {
 	e := setup(t)
-	admin := e.staff("crm.settings")
+	admin := e.staff(settingsMenus...)
 	lead, _, _ := e.salesFixture(admin.UserID)
 	crmtest.MustExec(t, e.tx, `INSERT INTO crm.crm_scoring_rules (company_id, name, kind, event_type, points, max_count)
 		VALUES ($1, 'Deal', 'event', 'deal_created', 15, 3)`, e.venue.company)
@@ -695,3 +695,6 @@ func TestRecalculateScores(t *testing.T) {
 		t.Fatalf("breakdown = %s", breakdown)
 	}
 }
+
+// settingsMenus are the CRM settings pages the advance routes serve.
+var settingsMenus = []string{"crm.settings.approvals", "crm.settings.workflows", "crm.settings.scoring", "crm.settings.custom-fields"}

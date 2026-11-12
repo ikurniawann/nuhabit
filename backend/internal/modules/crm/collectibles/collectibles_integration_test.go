@@ -27,9 +27,9 @@ func setup(t *testing.T) *fixture {
 	// releases its locks before the staff rows are deleted.
 	f := &fixture{
 		t:        t,
-		settings: crmtest.Staff(t, "crm.settings"),
-		reports:  crmtest.Staff(t, "crm.reports"),
-		pos:      crmtest.Staff(t, "pos"),
+		settings: crmtest.Staff(t, "crm.badges", "crm.wallpapers", "crm.loyalty.avatars"),
+		reports:  crmtest.Staff(t, "crm.reports.overview"),
+		pos:      crmtest.Staff(t, "crm.members.list"),
 		plain:    crmtest.Staff(t, "hris"),
 	}
 	f.tx = testutil.Tx(t)
@@ -78,7 +78,7 @@ func TestCollectiblesAuth(t *testing.T) {
 		{"POST", "/api/crm/avatar-inventory"}, {"PATCH", "/api/crm/avatar-inventory"},
 	} {
 		status, body := f.call(c.method, c.path, map[string]any{}, &f.plain)
-		expect(t, status, body, 401, "Authentication required")
+		expect(t, status, body, 403, "")
 	}
 }
 

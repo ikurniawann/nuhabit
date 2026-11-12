@@ -11,7 +11,7 @@ import (
 )
 
 func TestConversationInsightReport(t *testing.T) {
-	staff, inbox := crmtest.Staff(t, "crm.reports"), crmtest.Staff(t, "crm.inbox")
+	staff, inbox := crmtest.Staff(t, "crm.reports.overview"), crmtest.Staff(t, "crm.inbox")
 	tx := testutil.Tx(t)
 	mux := crmtest.Mux(newHandler(tx, testutil.Deps(t, nil), Ports{}).routes())
 	conv := func(phone, at string) string {

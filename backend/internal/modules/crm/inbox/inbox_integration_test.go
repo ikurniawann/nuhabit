@@ -109,7 +109,7 @@ func setup(t *testing.T) *env {
 		ai:     &fakeAI{content: `{"summary":"Tanya stok.","topic":"Tanya Stok","sentiment":"netral","is_complaint":false,"keywords":["stok kopi"]}`},
 		google: &fakeGoogle{reply: GoogleReply{OK: true}},
 		notify: &fakeNotifier{},
-		agent:  crmtest.Staff(t, "crm.members.inbox"),
+		agent:  crmtest.Staff(t, "crm.members.inbox", "crm.members.reviews"),
 	}
 	h := newHandler(tx, d, Ports{WhatsApp: e.wa, Instagram: e.ig, AI: e.ai, Google: e.google, Notifier: e.notify, Orders: PosOrdersSQL{}})
 	e.mux = crmtest.Mux(h.routes())
@@ -311,7 +311,7 @@ func TestInstagramReply(t *testing.T) {
 
 func TestTemplates(t *testing.T) {
 	e := setup(t)
-	admin := crmtest.Staff(t, "crm.settings")
+	admin := crmtest.Staff(t, "crm.settings.config")
 	if code, _ := e.call("POST", "/api/crm/inbox/templates", map[string]any{"title": "x", "body": "y"}, &e.agent); code != 403 {
 		t.Fatalf("inbox agent cannot manage: %d", code)
 	}
@@ -480,7 +480,7 @@ func TestReviewList(t *testing.T) {
 
 func TestReviewReplies(t *testing.T) {
 	e := setup(t)
-	agent := testutil.CreateStaff(t, testutil.StaffOptions{Role: "pos", Menus: map[string][]string{"crm.members.inbox": {"read", "create", "update"}}})
+	agent := testutil.CreateStaff(t, testutil.StaffOptions{Role: "pos", Menus: map[string][]string{"crm.members.reviews": {"read", "create", "update"}}})
 	low := e.review(1, "rv-"+testutil.RandomHex(4))
 	if code, body := e.call("POST", "/api/crm/reviews", map[string]any{"action": "reply", "id": "x", "comment": "a"}, &agent); code != 400 || body["error"] != "Payload tidak valid" {
 		t.Fatalf("invalid: %d %v", code, body)

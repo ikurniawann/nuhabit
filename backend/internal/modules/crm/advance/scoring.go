@@ -15,7 +15,7 @@ import (
 // lead's signals, write crm_sales_leads.score through the sales funnel.
 
 func (h *handler) recalculateScores(w http.ResponseWriter, r *http.Request) error {
-	_, s, err := h.guard.RequireScope(r, kit.GateSettings)
+	_, s, err := h.guard.RequireScope(r, kit.GateScoring)
 	if err != nil {
 		return err
 	}

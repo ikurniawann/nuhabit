@@ -10,7 +10,7 @@ import (
 // the avatar upload gated by the Engagement menu, so announcement senders
 // do not need CRM settings access.
 func (h *handler) uploadAnnouncementImage(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateEngagement); err != nil {
+	if _, err := h.guard.Require(r, kit.GateAnnouncements); err != nil {
 		return err
 	}
 	img, err := kit.UploadPublicImage(r, h.store, "crm-announcements")

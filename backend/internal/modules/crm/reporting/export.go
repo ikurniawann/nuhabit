@@ -10,7 +10,7 @@ import (
 // exportReport is GET /api/crm/report-builder/{id}/export: the saved report
 // run now, as an xlsx with a Data and an Info sheet.
 func (h *handler) exportReport(w http.ResponseWriter, r *http.Request) error {
-	u, s, err := h.guard.RequireScope(r, kit.GateReports)
+	u, s, err := h.guard.RequireScope(r, kit.GateReportBuilder)
 	if err != nil {
 		return err
 	}

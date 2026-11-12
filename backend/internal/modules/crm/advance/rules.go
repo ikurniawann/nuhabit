@@ -25,10 +25,18 @@ func ruleVisibility(alias string, s *kit.Scope, args *[]any) string {
 	return fmt.Sprintf("(%s.company_id IS NULL OR %s.company_id = $%d)", alias, alias, len(*args))
 }
 
-// settingsRule is the common prologue of the [id] routes:
-// requireCrmScope("settings") then assertRuleAccess.
+// ruleGates is the settings page that owns each rule table.
+var ruleGates = map[string]kit.Gate{
+	"crm_approval_rules": kit.GateApprovalRules,
+	"crm_custom_fields":  kit.GateCustomFields,
+	"crm_scoring_rules":  kit.GateScoring,
+	"crm_workflow_rules": kit.GateWorkflows,
+}
+
+// settingsRule is the common prologue of the [id] routes: the gate of the
+// table's settings page, then assertRuleAccess.
 func (h *handler) settingsRule(r *http.Request, table, notFound string) (string, error) {
-	u, s, err := h.guard.RequireScope(r, kit.GateSettings)
+	u, s, err := h.guard.RequireScope(r, ruleGates[table])
 	if err != nil {
 		return "", err
 	}
@@ -100,7 +108,7 @@ func jsonbText(v any) string {
 const approvalRuleNotFound = "Aturan tidak ditemukan"
 
 func (h *handler) listApprovalRules(w http.ResponseWriter, r *http.Request) error {
-	_, s, err := h.guard.RequireScope(r, kit.GateSettings)
+	_, s, err := h.guard.RequireScope(r, kit.GateApprovalRules)
 	if err != nil {
 		return err
 	}
@@ -116,7 +124,7 @@ func (h *handler) listApprovalRules(w http.ResponseWriter, r *http.Request) erro
 }
 
 func (h *handler) createApprovalRule(w http.ResponseWriter, r *http.Request) error {
-	u, s, err := h.guard.RequireScope(r, kit.GateSettings)
+	u, s, err := h.guard.RequireScope(r, kit.GateApprovalRules)
 	if err != nil {
 		return err
 	}
@@ -181,7 +189,7 @@ func emptyNil(s *string) *string {
 const scoringRuleNotFound = "Aturan tidak ditemukan"
 
 func (h *handler) listScoringRules(w http.ResponseWriter, r *http.Request) error {
-	_, s, err := h.guard.RequireScope(r, kit.GateSettings)
+	_, s, err := h.guard.RequireScope(r, kit.GateScoring)
 	if err != nil {
 		return err
 	}
@@ -197,7 +205,7 @@ func (h *handler) listScoringRules(w http.ResponseWriter, r *http.Request) error
 }
 
 func (h *handler) createScoringRule(w http.ResponseWriter, r *http.Request) error {
-	u, s, err := h.guard.RequireScope(r, kit.GateSettings)
+	u, s, err := h.guard.RequireScope(r, kit.GateScoring)
 	if err != nil {
 		return err
 	}
@@ -268,7 +276,7 @@ func (h *handler) deleteScoringRule(w http.ResponseWriter, r *http.Request) erro
 const customFieldNotFound = "Field tidak ditemukan"
 
 func (h *handler) listCustomFields(w http.ResponseWriter, r *http.Request) error {
-	_, s, err := h.guard.RequireScope(r, kit.GateSettings)
+	_, s, err := h.guard.RequireScope(r, kit.GateCustomFields)
 	if err != nil {
 		return err
 	}
@@ -288,7 +296,7 @@ func (h *handler) listCustomFields(w http.ResponseWriter, r *http.Request) error
 }
 
 func (h *handler) createCustomField(w http.ResponseWriter, r *http.Request) error {
-	u, s, err := h.guard.RequireScope(r, kit.GateSettings)
+	u, s, err := h.guard.RequireScope(r, kit.GateCustomFields)
 	if err != nil {
 		return err
 	}

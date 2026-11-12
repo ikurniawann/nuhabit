@@ -10,7 +10,7 @@ import (
 )
 
 func (h *handler) adjustXP(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.guard.Require(r, kit.GateMemberLoyaltyWrite)
+	user, err := h.guard.Require(r, kit.GateMemberList)
 	if err != nil {
 		return err
 	}

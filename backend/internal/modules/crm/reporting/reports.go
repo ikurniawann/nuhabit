@@ -132,7 +132,7 @@ func storedDefinition(row *kit.Row) (domain.Definition, error) {
 /* ── handlers ───────────────────────────────────────────────────────── */
 
 func (h *handler) datasets(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateReports); err != nil {
+	if _, err := h.guard.Require(r, kit.GateReportBuilder); err != nil {
 		return err
 	}
 	type field struct {
@@ -169,7 +169,7 @@ func (h *handler) datasets(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) listReports(w http.ResponseWriter, r *http.Request) error {
-	u, s, err := h.guard.RequireScope(r, kit.GateReports)
+	u, s, err := h.guard.RequireScope(r, kit.GateSavedReports)
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func definitionJSON(d domain.Definition) string {
 }
 
 func (h *handler) createReport(w http.ResponseWriter, r *http.Request) error {
-	u, s, err := h.guard.RequireScope(r, kit.GateReports)
+	u, s, err := h.guard.RequireScope(r, kit.GateReportBuilder)
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func (h *handler) createReport(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) runReport(w http.ResponseWriter, r *http.Request) error {
-	u, s, err := h.guard.RequireScope(r, kit.GateReports)
+	u, s, err := h.guard.RequireScope(r, kit.GateReportRun)
 	if err != nil {
 		return err
 	}
@@ -246,7 +246,7 @@ func (h *handler) runReport(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) getReport(w http.ResponseWriter, r *http.Request) error {
-	u, s, err := h.guard.RequireScope(r, kit.GateReports)
+	u, s, err := h.guard.RequireScope(r, kit.GateReportBuilder)
 	if err != nil {
 		return err
 	}
@@ -276,7 +276,7 @@ func (h *handler) getReport(w http.ResponseWriter, r *http.Request) error {
 
 // requireEditableReport: only the creator or an admin edits or deletes.
 func (h *handler) requireEditableReport(r *http.Request, verb string) (*auth.User, error) {
-	u, s, err := h.guard.RequireScope(r, kit.GateReports)
+	u, s, err := h.guard.RequireScope(r, kit.GateReportBuilder)
 	if err != nil {
 		return nil, err
 	}

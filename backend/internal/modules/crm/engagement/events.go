@@ -20,7 +20,7 @@ import (
 // listEvents lists every event, upcoming first, with attendee counts and
 // the names of its branch, host coach and organiser.
 func (h *handler) listEvents(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateEngagement); err != nil {
+	if _, err := h.guard.Require(r, kit.GateEvents); err != nil {
 		return err
 	}
 	rows, err := kit.Query(r.Context(), h.db, `SELECT e.*, e.price_idr::float AS price_idr,
@@ -53,7 +53,7 @@ type savedEvent struct {
 // update on the engagement menu, sends override_reason; the override is
 // recorded. Published events tell the involved staff about the change.
 func (h *handler) saveEvent(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.guard.Require(r, kit.GateEngagement)
+	user, err := h.guard.Require(r, kit.GateEvents)
 	if err != nil {
 		return err
 	}
@@ -186,7 +186,7 @@ func numDefault(f *validate.Form, key string, def float64, o validate.NumOpts, i
 // cancelEvent mirrors cancelEvent: every active booking is cancelled and its
 // member notified; the body counts the notified members.
 func (h *handler) cancelEvent(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.guard.Require(r, kit.GateEngagement)
+	user, err := h.guard.Require(r, kit.GateEvents)
 	if err != nil {
 		return err
 	}
@@ -247,7 +247,7 @@ func (h *handler) cancelEvent(w http.ResponseWriter, r *http.Request) error {
 
 // listBookings lists an event's bookings: confirmed, waitlist, then the rest.
 func (h *handler) listBookings(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateEngagement); err != nil {
+	if _, err := h.guard.Require(r, kit.GateEvents); err != nil {
 		return err
 	}
 	eventID := r.URL.Query().Get("event_id")
@@ -275,7 +275,7 @@ type bookingChanged struct {
 // or cancel for the member. A seat released by a confirmed booking goes to
 // the head of the waitlist.
 func (h *handler) changeBooking(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateEngagement); err != nil {
+	if _, err := h.guard.Require(r, kit.GateEvents); err != nil {
 		return err
 	}
 	f, err := kit.Form(r)

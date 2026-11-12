@@ -13,7 +13,7 @@ import (
 )
 
 func (h *handler) listForms(w http.ResponseWriter, r *http.Request) error {
-	_, scope, err := h.guard.RequireScope(r, kit.GateSegments)
+	_, scope, err := h.guard.RequireScope(r, kit.GateForms)
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func (h *handler) listForms(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) createForm(w http.ResponseWriter, r *http.Request) error {
-	user, scope, err := h.guard.RequireScope(r, kit.GateSegments)
+	user, scope, err := h.guard.RequireScope(r, kit.GateForms)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ type formRef struct{ id, slug string }
 // accessibleForm mirrors requireForm: the form in the user's company scope,
 // 404 otherwise.
 func (h *handler) accessibleForm(r *http.Request) (formRef, error) {
-	_, scope, err := h.guard.RequireScope(r, kit.GateSegments)
+	_, scope, err := h.guard.RequireScope(r, kit.GateForms)
 	if err != nil {
 		return formRef{}, err
 	}

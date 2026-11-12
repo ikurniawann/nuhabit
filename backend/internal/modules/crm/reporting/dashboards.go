@@ -19,7 +19,7 @@ import (
 const sameCompany = `COALESCE(company_id, '00000000-0000-0000-0000-000000000000'::uuid) = COALESCE($1::uuid, '00000000-0000-0000-0000-000000000000'::uuid)`
 
 func (h *handler) listDashboards(w http.ResponseWriter, r *http.Request) error {
-	_, s, err := h.guard.RequireScope(r, kit.GateReports)
+	_, s, err := h.guard.RequireScope(r, kit.GateReportDashboards)
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func (h *handler) listDashboards(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) createDashboard(w http.ResponseWriter, r *http.Request) error {
-	u, s, err := h.guard.RequireScope(r, kit.GateReports)
+	u, s, err := h.guard.RequireScope(r, kit.GateReportDashboards)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (h *handler) createDashboard(w http.ResponseWriter, r *http.Request) error 
 // requireDashboard mirrors requireDashboard: the dashboard in the user's
 // company scope, 404 otherwise.
 func (h *handler) requireDashboard(r *http.Request) (*auth.User, *kit.Scope, *kit.Row, error) {
-	u, s, err := h.guard.RequireScope(r, kit.GateReports)
+	u, s, err := h.guard.RequireScope(r, kit.GateReportDashboards)
 	if err != nil {
 		return nil, nil, nil, err
 	}

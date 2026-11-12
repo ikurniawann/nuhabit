@@ -75,7 +75,7 @@ func deleteOrDeactivate(ctx context.Context, q database.Querier, id, owned, deac
 
 // GET /api/crm/badges
 func (h *handler) listBadges(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateSettings); err != nil {
+	if _, err := h.guard.Require(r, kit.GateBadges); err != nil {
 		return err
 	}
 	rows, err := kit.Query(r.Context(), h.db, `SELECT b.*, (SELECT count(*)::int FROM crm.crm_member_badges mb WHERE mb.badge_id = b.id) AS awarded_count
@@ -89,7 +89,7 @@ func (h *handler) listBadges(w http.ResponseWriter, r *http.Request) error {
 // POST /api/crm/badges: lifetime_xp badges use min_lifetime_xp, the other
 // metrics a threshold (manual badges neither).
 func (h *handler) saveBadge(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateSettings); err != nil {
+	if _, err := h.guard.Require(r, kit.GateBadges); err != nil {
 		return err
 	}
 	f, err := kit.Form(r)
@@ -137,7 +137,7 @@ func (h *handler) saveBadge(w http.ResponseWriter, r *http.Request) error {
 // DELETE /api/crm/badges?id: a badge a member earned is proof of an
 // achievement, so it is deactivated instead.
 func (h *handler) deleteBadge(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateSettings); err != nil {
+	if _, err := h.guard.Require(r, kit.GateBadges); err != nil {
 		return err
 	}
 	id, err := catalogID(r)
@@ -157,7 +157,7 @@ func (h *handler) deleteBadge(w http.ResponseWriter, r *http.Request) error {
 
 // GET /api/crm/wallpapers
 func (h *handler) listWallpapers(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateSettings); err != nil {
+	if _, err := h.guard.Require(r, kit.GateWallpapers); err != nil {
 		return err
 	}
 	rows, err := kit.Query(r.Context(), h.db, `SELECT w.*, t.name AS required_tier_name
@@ -172,7 +172,7 @@ func (h *handler) listWallpapers(w http.ResponseWriter, r *http.Request) error {
 
 // POST /api/crm/wallpapers
 func (h *handler) saveWallpaper(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateSettings); err != nil {
+	if _, err := h.guard.Require(r, kit.GateWallpapers); err != nil {
 		return err
 	}
 	f, err := kit.Form(r)
@@ -218,7 +218,7 @@ func (h *handler) saveWallpaper(w http.ResponseWriter, r *http.Request) error {
 // DELETE /api/crm/wallpapers?id: an owned wallpaper is deactivated so the
 // member's collection keeps it.
 func (h *handler) deleteWallpaper(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateSettings); err != nil {
+	if _, err := h.guard.Require(r, kit.GateWallpapers); err != nil {
 		return err
 	}
 	id, err := catalogID(r)

@@ -34,7 +34,7 @@ func (o orderedJSON) MarshalJSON() ([]byte, error) {
 }
 
 func (h *handler) readSettings(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateSettings); err != nil {
 		return err
 	}
 	rows, err := h.db.Query(r.Context(), `SELECT key, value FROM crm.crm_settings WHERE key = ANY($1::text[])`, editableKeys)
@@ -148,7 +148,7 @@ func (h *handler) updateSettings(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *handler) loyaltyFeatures(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.PosSession(r); err != nil {
+	if _, err := h.guard.Require(r, kit.GateLoyaltyFeatures); err != nil {
 		return err
 	}
 	return kit.OK(w, loadFeatures(r, h.db))

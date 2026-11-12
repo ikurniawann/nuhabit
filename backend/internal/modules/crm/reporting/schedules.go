@@ -21,7 +21,7 @@ import (
 // manageGate mirrors requireCrmScope + assertCanManageSchedules: only
 // admins manage schedules (reports go to many recipients).
 func (h *handler) manageGate(r *http.Request, action string) (*auth.User, *kit.Scope, error) {
-	u, s, err := h.guard.RequireScope(r, kit.GateReports)
+	u, s, err := h.guard.RequireScope(r, kit.GateReportSchedules)
 	if err == nil && !canManageShared(u) {
 		err = httpx.Forbidden("Hanya admin yang bisa " + action)
 	}
@@ -29,7 +29,7 @@ func (h *handler) manageGate(r *http.Request, action string) (*auth.User, *kit.S
 }
 
 func (h *handler) listSchedules(w http.ResponseWriter, r *http.Request) error {
-	_, s, err := h.guard.RequireScope(r, kit.GateReports)
+	_, s, err := h.guard.RequireScope(r, kit.GateReportSchedules)
 	if err != nil {
 		return err
 	}

@@ -40,7 +40,7 @@ type env struct {
 
 func staff(t *testing.T, role string, venue testutil.Org) testutil.Staff {
 	all := []string{"read", "create", "update", "delete"}
-	return testutil.CreateStaff(t, testutil.StaffOptions{Role: role, Menus: map[string][]string{"crm.reports": all},
+	return testutil.CreateStaff(t, testutil.StaffOptions{Role: role, Menus: map[string][]string{"crm.reports.builder": all, "crm.reports.dashboards": all, "crm.reports.schedules": all},
 		CompanyID: &venue.CompanyID, BranchID: &venue.BranchID})
 }
 

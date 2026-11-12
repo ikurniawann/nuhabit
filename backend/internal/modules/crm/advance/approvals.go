@@ -14,7 +14,6 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
-	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/scope"
 )
 
@@ -26,7 +25,7 @@ const inboxLimit = 200
 // at the current level, or requested by me; view=all (not for sales): every
 // request in scope. status=pending (default)|approved|rejected|all.
 func (h *handler) approvalInbox(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.auth.RequireMenuPrefix(r, iam.SalesFunnel...)
+	u, err := h.guard.Require(r, kit.GateApprovalInbox)
 	if err != nil {
 		return err
 	}
@@ -125,7 +124,7 @@ type decisionResult struct {
 
 // decideApproval records an approver's decision on the current level.
 func (h *handler) decideApproval(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.auth.RequireUser(r)
+	u, err := h.guard.Require(r, kit.GateApprovalInbox)
 	if err != nil {
 		return err
 	}

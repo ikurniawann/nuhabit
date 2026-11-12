@@ -55,7 +55,7 @@ func setup(t *testing.T) env {
 	push := &recordingPush{}
 	h := newHandler(tx, d, Ports{Orders: OrdersSQL{}, Push: push})
 	return env{t: t, tx: tx, mux: crmtest.Mux(h.routes()), push: push,
-		staff: crmtest.Staff(t, "crm.engagement", "crm.members.member-reviews")}
+		staff: crmtest.Staff(t, "crm.engagement.announcements", "crm.engagement.challenges", "crm.engagement.checkins", "crm.engagement.events", "crm.members.member-reviews")}
 }
 
 func (e env) call(method, path string, body any) (int, map[string]any) {

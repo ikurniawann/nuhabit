@@ -70,14 +70,15 @@ func data(t *testing.T, body map[string]any) map[string]any {
 
 func TestTiersAndXPRules(t *testing.T) {
 	e := setup(t)
-	pos := crmtest.Staff(t, "pos")
-	settings := crmtest.Staff(t, "crm.settings")
+	pos := crmtest.Staff(t, "crm.members.list")
+	settings := crmtest.Staff(t, "crm.settings.config")
+	sibling := crmtest.Staff(t, "crm.badges")
 
 	if code, body := e.call("GET", "/api/crm/tiers", nil, nil); code != 401 || body["error"] != "Authentication required" {
 		t.Fatalf("anon tiers: %d %v", code, body)
 	}
-	if code, _ := e.call("GET", "/api/crm/tiers", nil, &settings); code != 401 {
-		t.Fatalf("tiers without pos grant must be 401, got %d", code)
+	if code, _ := e.call("GET", "/api/crm/tiers", nil, &sibling); code != 403 {
+		t.Fatalf("tiers for a page without tiers must be 403, got %d", code)
 	}
 	code, body := e.call("GET", "/api/crm/tiers", nil, &pos)
 	if code != 200 || body["meta"].(map[string]any)["schemaReady"] != true {
@@ -123,7 +124,7 @@ func TestTiersAndXPRules(t *testing.T) {
 	if code != 200 || row["xp_value"] != "2.0000" || row["priority"] != float64(100) || row["starts_at"] != "2026-10-01T00:00:00.000Z" {
 		t.Fatalf("xp rule upsert: %d %v", code, body)
 	}
-	code, body = e.call("GET", "/api/crm/xp-rules?source_channel=photobooth", nil, &pos)
+	code, body = e.call("GET", "/api/crm/xp-rules?source_channel=photobooth", nil, &settings)
 	if code != 200 {
 		t.Fatalf("xp rules list: %d %v", code, body)
 	}
@@ -140,9 +141,9 @@ func TestTiersAndXPRules(t *testing.T) {
 
 func TestRewardsAndRedemptions(t *testing.T) {
 	e := setup(t)
-	pos := crmtest.Staff(t, "pos")
-	settings := crmtest.Staff(t, "crm.settings")
-	operator := crmtest.Staff(t, "crm.loyalty")
+	pos := crmtest.Staff(t, "crm.members.list")
+	settings := crmtest.Staff(t, "crm.loyalty.rewards")
+	operator := crmtest.Staff(t, "crm.loyalty.rewards")
 
 	rewardCode := "go_reward_" + testutil.RandomHex(3)
 	code, body := e.call("POST", "/api/crm/rewards", map[string]any{
@@ -206,7 +207,7 @@ func TestRewardsAndRedemptions(t *testing.T) {
 		t.Fatalf("missing redemption: %d %v", code, body)
 	}
 
-	reader := crmtest.Staff(t, "crm.reports")
+	reader := crmtest.Staff(t, "crm.members.list")
 	code, body = e.call("GET", "/api/crm/redemptions?customer_id="+rich+"&limit=5", nil, &reader)
 	list := body["data"].([]any)
 	if code != 200 || len(list) != 1 || list[0].(map[string]any)["reward"].(map[string]any)["min_xp"] != float64(500) {
@@ -228,10 +229,10 @@ func TestRewardsAndRedemptions(t *testing.T) {
 
 func TestSettingsAndFeatures(t *testing.T) {
 	e := setup(t)
-	pos := crmtest.Staff(t, "pos")
-	settings := crmtest.Staff(t, "crm.settings")
+	pos := crmtest.Staff(t, "pos.operations.cashier")
+	settings := crmtest.Staff(t, "crm.settings.config")
 
-	code, body := e.call("GET", "/api/crm/settings", nil, &pos)
+	code, body := e.call("GET", "/api/crm/settings", nil, &settings)
 	if code != 200 || body["meta"].(map[string]any)["schemaReady"] != true {
 		t.Fatalf("settings: %d %v", code, body)
 	}
@@ -258,7 +259,7 @@ func TestSettingsAndFeatures(t *testing.T) {
 
 func TestXPAdjust(t *testing.T) {
 	e := setup(t)
-	writer := crmtest.Staff(t, "crm.loyalty")
+	writer := crmtest.Staff(t, "crm.members.list")
 	customer := e.customer(50)
 	path := "/api/crm/members/pos-" + customer + "/xp-adjust"
 	req := "550e8400-e29b-41d4-a716-" + testutil.RandomHex(6)
@@ -359,7 +360,7 @@ func TestPosSaleSubscriberAwardsXPAndStats(t *testing.T) {
 
 func TestDashboard(t *testing.T) {
 	e := setup(t)
-	pos := crmtest.Staff(t, "pos")
+	pos := crmtest.Staff(t, "crm.overview.dashboard")
 	if code, _ := e.call("GET", "/api/crm/dashboard", nil, nil); code != 401 {
 		t.Fatalf("anon: %d", code)
 	}

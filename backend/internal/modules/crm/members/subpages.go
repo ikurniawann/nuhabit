@@ -37,7 +37,7 @@ var activitySQL = map[string]string{
 
 // GET /api/crm/members/{id}/activity?tab=checkins|bookings|challenges|notifications|wallet
 func (h *handler) activity(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateMemberRead); err != nil {
+	if _, err := h.guard.Require(r, kit.GateMemberList); err != nil {
 		return err
 	}
 	tab := r.URL.Query().Get("tab")
@@ -97,7 +97,7 @@ func readConsent(ctx context.Context, q database.Querier, customerID string, bra
 
 // GET /api/crm/members/{id}/consent
 func (h *handler) consent(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateMemberRead); err != nil {
+	if _, err := h.guard.Require(r, kit.GateMemberList); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -114,7 +114,7 @@ func (h *handler) consent(w http.ResponseWriter, r *http.Request) error {
 
 // PUT /api/crm/members/{id}/consent
 func (h *handler) updateConsent(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.guard.Require(r, kit.GateMemberRead)
+	user, err := h.guard.Require(r, kit.GateMemberList)
 	if err != nil {
 		return err
 	}
@@ -187,7 +187,7 @@ func (h *handler) updateConsent(w http.ResponseWriter, r *http.Request) error {
 // GET /api/crm/members/{id}/badges: every active badge (plus owned ones)
 // with the member's owned/revoked state.
 func (h *handler) badges(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.Require(r, kit.GateMemberRead); err != nil {
+	if _, err := h.guard.Require(r, kit.GateMemberList); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -211,7 +211,7 @@ func (h *handler) badges(w http.ResponseWriter, r *http.Request) error {
 
 // POST /api/crm/members/{id}/badges: award or revoke a badge manually.
 func (h *handler) badgeAction(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.guard.Require(r, kit.GateMemberLoyaltyWrite)
+	user, err := h.guard.Require(r, kit.GateMemberList)
 	if err != nil {
 		return err
 	}

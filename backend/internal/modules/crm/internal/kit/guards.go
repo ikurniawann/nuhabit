@@ -1,57 +1,99 @@
 package kit
 
 import (
-	"errors"
 	"net/http"
 	"slices"
 
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
-	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/scope"
 )
 
-// Gate is a CRM_GATES key in lib/crm/guards.ts.
+// Gate names the menu codes a CRM route accepts: one CRM sub-module (a leaf
+// menu) or, for a lookup several pages share, every leaf whose page calls it.
 type Gate string
 
-// The CRM gates and the menu prefixes they accept.
+// The CRM gates.
 const (
-	GateSettings           Gate = "settings"
-	GateEngagement         Gate = "engagement"
-	GateCampaign           Gate = "campaign"
-	GateSegments           Gate = "segments"
-	GateInbox              Gate = "inbox"
-	GateReports            Gate = "reports"
-	GateOperator           Gate = "operator"
-	GateReader             Gate = "reader"
-	GateMemberRead         Gate = "memberRead"
-	GateMemberLoyaltyWrite Gate = "memberLoyaltyWrite"
-	GateMemberReviews      Gate = "memberReviews"
-	GatePartners           Gate = "partners"
+	GateDashboard         Gate = "dashboard"
+	GateMemberList        Gate = "memberList"
+	GateMemberLookup      Gate = "memberLookup"
+	GateRewards           Gate = "rewards"
+	GateRewardsRead       Gate = "rewardsRead"
+	GateAvatars           Gate = "avatars"
+	GateAvatarsRead       Gate = "avatarsRead"
+	GateBadges            Gate = "badges"
+	GateWallpapers        Gate = "wallpapers"
+	GateCollectibleUpload Gate = "collectibleUpload"
+	GateTiersRead         Gate = "tiersRead"
+	GateSettings          Gate = "settings"
+	GateApprovalRules     Gate = "approvalRules"
+	GateApprovalInbox     Gate = "approvalInbox"
+	GateWorkflows         Gate = "workflows"
+	GateScoring           Gate = "scoring"
+	GateCustomFields      Gate = "customFields"
+	GateAnnouncements     Gate = "announcements"
+	GateChallenges        Gate = "challenges"
+	GateCheckins          Gate = "checkins"
+	GateEvents            Gate = "events"
+	GateInbox             Gate = "inbox"
+	GateInboxAnalyze      Gate = "inboxAnalyze"
+	GateReviews           Gate = "reviews"
+	GateMemberReviews     Gate = "memberReviews"
+	GatePartners          Gate = "partners"
+	GateCampaigns         Gate = "campaigns"
+	GateSegments          Gate = "segments"
+	GateSegmentsRead      Gate = "segmentsRead"
+	GateForms             Gate = "forms"
+	GateReports           Gate = "reports"
+	GateReportBuilder     Gate = "reportBuilder"
+	GateReportRun         Gate = "reportRun"
+	GateSavedReports      Gate = "savedReports"
+	GateReportDashboards  Gate = "reportDashboards"
+	GateReportSchedules   Gate = "reportSchedules"
+	GateLoyaltyFeatures   Gate = "loyaltyFeatures"
 )
 
-func join(groups ...[]string) []string {
-	var out []string
-	for _, g := range groups {
-		out = append(out, g...)
-	}
-	return out
-}
-
 var gates = map[Gate][]string{
-	GateSettings:           iam.CrmSettings,
-	GateEngagement:         iam.CrmEngagement,
-	GateCampaign:           iam.CrmPromo,
-	GateSegments:           join(iam.CrmPromo, iam.Crm),
-	GateInbox:              iam.CrmInbox,
-	GateReports:            iam.CrmReports,
-	GateOperator:           join(iam.CrmLoyalty, iam.CrmMembers, iam.PosOperations),
-	GateReader:             join(iam.CrmReports, iam.CrmMembers, iam.CrmLoyalty),
-	GateMemberRead:         join(iam.CrmMembers, iam.CrmLoyalty),
-	GateMemberLoyaltyWrite: join(iam.CrmLoyalty, iam.CrmSettings),
-	GateMemberReviews:      iam.CrmMemberReviews,
-	GatePartners:           iam.CrmPartners,
+	GateDashboard:         iam.CrmDashboard,
+	GateMemberList:        iam.CrmMemberList,
+	GateMemberLookup:      iam.CrmMemberLookup,
+	GateRewards:           iam.CrmRewards,
+	GateRewardsRead:       iam.CrmRewardsRead,
+	GateAvatars:           iam.CrmAvatars,
+	GateAvatarsRead:       iam.CrmAvatarsRead,
+	GateBadges:            iam.CrmBadges,
+	GateWallpapers:        iam.CrmWallpapers,
+	GateCollectibleUpload: iam.CrmCollectibleUpload,
+	GateTiersRead:         iam.CrmTiersRead,
+	GateSettings:          iam.CrmSettingsConfig,
+	GateApprovalRules:     iam.CrmApprovalRules,
+	GateApprovalInbox:     iam.CrmApprovalInbox,
+	GateWorkflows:         iam.CrmWorkflows,
+	GateScoring:           iam.CrmScoring,
+	GateCustomFields:      iam.CrmCustomFields,
+	GateAnnouncements:     iam.CrmAnnouncements,
+	GateChallenges:        iam.CrmChallenges,
+	GateCheckins:          iam.CrmCheckins,
+	GateEvents:            iam.CrmEvents,
+	GateInbox:             iam.CrmInbox,
+	GateInboxAnalyze:      iam.CrmInboxAnalyze,
+	GateReviews:           iam.CrmReviews,
+	GateMemberReviews:     iam.CrmMemberReviews,
+	GatePartners:          iam.CrmPartners,
+	GateCampaigns:         iam.CrmCampaigns,
+	GateSegments:          iam.CrmSegments,
+	GateSegmentsRead:      iam.CrmSegmentsRead,
+	GateForms:             iam.CrmForms,
+	GateReports:           iam.CrmReportsOverview,
+	GateReportBuilder:     iam.CrmReportBuilder,
+	GateReportRun:         iam.CrmReportRun,
+	GateSavedReports:      iam.CrmSavedReports,
+	GateReportDashboards:  iam.CrmReportDashboards,
+	GateReportSchedules:   iam.CrmReportSchedules,
+	// The cashier reads the loyalty feature switches.
+	GateLoyaltyFeatures: iam.PosCashier,
 }
 
 // Guard resolves CRM callers.
@@ -63,17 +105,6 @@ type Guard struct {
 // Require mirrors requireCrmUser(gate).
 func (g Guard) Require(r *http.Request, gate Gate) (*auth.User, error) {
 	return g.Auth.RequireMenuPrefix(r, gates[gate]...)
-}
-
-// PosSession mirrors `if (!(await getPosSession())) throw ApiError.unauthorized()`:
-// a missing session or a missing pos grant are both 401.
-func (g Guard) PosSession(r *http.Request) (*auth.User, error) {
-	u, err := g.Auth.RequireMenuPrefix(r, iam.Pos...)
-	var he *httpx.Error
-	if errors.As(err, &he) && (he.Status == http.StatusUnauthorized || he.Status == http.StatusForbidden) {
-		return nil, httpx.Unauthorized("")
-	}
-	return u, err
 }
 
 // Scope is the user's business scope (lib/api/scope.ts UserScope).
