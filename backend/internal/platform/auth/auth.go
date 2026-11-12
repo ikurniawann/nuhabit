@@ -149,11 +149,7 @@ func (s *Service) RequireMenuAction(r *http.Request, action string, prefixes ...
 	if err != nil {
 		return nil, err
 	}
-	roleIDs, err := s.ResolveRoleIDs(r.Context(), u.ID, u.Role)
-	if err != nil {
-		return nil, err
-	}
-	granted, err := s.GrantedMenuActions(r.Context(), roleIDs)
+	granted, err := s.UserMenuActions(r.Context(), u.ID, u.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -171,11 +167,7 @@ func (s *Service) RequireAnyGrant(r *http.Request, grants ...iam.Grant) (*User, 
 	if err != nil {
 		return nil, -1, err
 	}
-	roleIDs, err := s.ResolveRoleIDs(r.Context(), u.ID, u.Role)
-	if err != nil {
-		return nil, -1, err
-	}
-	granted, err := s.GrantedMenuActions(r.Context(), roleIDs)
+	granted, err := s.UserMenuActions(r.Context(), u.ID, u.Role)
 	if err != nil {
 		return nil, -1, err
 	}
@@ -198,11 +190,7 @@ func (s *Service) HasMenuPrefix(ctx context.Context, u *User, prefixes ...string
 
 // HasMenuAction mirrors userHasIamAction.
 func (s *Service) HasMenuAction(ctx context.Context, u *User, action string, prefixes ...string) (bool, error) {
-	roleIDs, err := s.ResolveRoleIDs(ctx, u.ID, u.Role)
-	if err != nil {
-		return false, err
-	}
-	granted, err := s.GrantedMenuActions(ctx, roleIDs)
+	granted, err := s.UserMenuActions(ctx, u.ID, u.Role)
 	if err != nil {
 		return false, err
 	}

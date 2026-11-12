@@ -2,6 +2,8 @@
 
 A role gets IAM menu codes (`iam.role_menu_permissions`). The dashboard opens a page when the role holds its menu (`frontend/src/app/dashboard/(dashboard)/layout.tsx`), and each staff API route accepts only the menu codes of the pages that call it. Access is per sub-module: a role with Items > Produk cannot call purchase order routes, and a role with Payroll cannot call Recruitment routes. Actions (`create`, `update`, …) stay as they were; only routes that already checked an action still do.
 
+**Every employee** gets the Area Karyawan and Tugas Saya menus without any role grant: an account linked to an active `hris.employees` row holds `IAM.employeeBaseline` (Beranda, Pengumuman, Absensi, Izin & Cuti, Lembur, Pinjaman, Slip Gaji, KPI Saya, Feedback 360, Tugas Saya), and Shift Tim (`IAM.supervisorBaseline`) when an active employee reports to it. The list lives in `frontend/src/lib/iam/prefixes.ts`; the sidebar, page guards (`employee-baseline.ts`) and API guards (`auth/grants.go`) all add it. An account without an employee record, such as an outside investor, does not get it. The ESS APIs themselves only check the employee link and return the caller's own data.
+
 Shared lookups (units, warehouses, employee picker, member search, products) accept every sub-module whose pages use them. Guards match by prefix, so a code also covers the codes below it (`gym.schedule` covers `gym.schedule.templates`).
 
 Each module has a `TestSubModuleGuards` or `rbac_integration_test.go` that proves the owning menu passes and a sibling menu gets 403. When you add a route, add its codes here and to that test.

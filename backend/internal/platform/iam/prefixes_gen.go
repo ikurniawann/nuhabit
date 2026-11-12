@@ -7,6 +7,8 @@ package iam
 var (
 	Dashboard                   = []string{"dashboard"}
 	Ess                         = []string{"ess"}
+	EmployeeBaseline            = []string{"ess.home", "ess.announcements", "ess.attendance", "ess.leave", "ess.overtime", "ess.loans", "ess.payroll", "ess.kpi", "ess.feedback-360", "tasks"}
+	SupervisorBaseline          = []string{"ess.team-shifts"}
 	Items                       = []string{"items"}
 	ItemsPurchasing             = []string{"items.product.purchasing", "items.raw-material.purchasing"}
 	ItemsInventory              = []string{"items.product.inventory", "items.raw-material.inventory"}
@@ -271,6 +273,8 @@ var (
 var ByKey = map[string][]string{
 	"dashboard":                   Dashboard,
 	"ess":                         Ess,
+	"employeeBaseline":            EmployeeBaseline,
+	"supervisorBaseline":          SupervisorBaseline,
 	"items":                       Items,
 	"itemsPurchasing":             ItemsPurchasing,
 	"itemsInventory":              ItemsInventory,

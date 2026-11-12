@@ -272,3 +272,51 @@ func TestMemberSession(t *testing.T) {
 	}
 	expect(t, h, r, 401, "Unauthorized")
 }
+
+// An account linked to an active employee holds the employee baseline
+// (Area Karyawan, Tugas Saya) whatever its roles grant; Shift Tim joins once
+// someone reports to it.
+func TestEmployeeBaseline(t *testing.T) {
+	deps := testutil.Deps(t, nil)
+	db := testutil.DB(t)
+	ctx := context.Background()
+	staff := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"gym.packages": nil}})
+	req := func() *http.Request { return testutil.AsStaff(testutil.Request("GET", "/api/x", nil), staff) }
+	menu := func(code string) http.Handler {
+		return guardHandler(func(r *http.Request) (*auth.User, error) { return deps.Auth.RequireMenu(r, code) })
+	}
+	addTask := guardHandler(func(r *http.Request) (*auth.User, error) {
+		return deps.Auth.RequireMenuAction(r, "create", "tasks")
+	})
+
+	expect(t, menu("ess.attendance"), req(), 403, "Insufficient permissions")
+	expect(t, addTask, req(), 403, "Insufficient permissions")
+
+	suffix := testutil.RandomHex(4)
+	var employee string
+	if err := db.QueryRow(ctx, `INSERT INTO hris.employees (full_name, nip, email, phone, join_date, user_id)
+		VALUES ('Go Baseline', $1, $2, '0811', CURRENT_DATE, $3) RETURNING id::text`,
+		"GO-BASE-"+suffix, "go-base-"+suffix+"@nuhabit.test", staff.UserID).Scan(&employee); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.Exec(context.Background(), `DELETE FROM hris.employees WHERE reporting_to = $1::uuid OR id = $1::uuid`, employee)
+	})
+	for _, code := range []string{"ess.attendance", "ess.leave", "ess.payroll", "tasks"} {
+		expect(t, menu(code), req(), 200, "")
+	}
+	expect(t, addTask, req(), 200, "")
+	expect(t, menu("ess.team-shifts"), req(), 403, "Insufficient permissions")
+
+	if _, err := db.Exec(ctx, `INSERT INTO hris.employees (full_name, nip, email, phone, join_date, reporting_to)
+		VALUES ('Go Report', $1, $2, '0812', CURRENT_DATE, $3::uuid)`,
+		"GO-REP-"+suffix, "go-rep-"+suffix+"@nuhabit.test", employee); err != nil {
+		t.Fatal(err)
+	}
+	expect(t, menu("ess.team-shifts"), req(), 200, "")
+
+	if _, err := db.Exec(ctx, `UPDATE hris.employees SET is_active = false WHERE id = $1::uuid`, employee); err != nil {
+		t.Fatal(err)
+	}
+	expect(t, menu("ess.attendance"), req(), 403, "Insufficient permissions")
+}

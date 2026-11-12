@@ -3,6 +3,7 @@ import type { UserRole } from "@/types";
 import { filterMenusByLoyaltyFeatures } from "@/lib/crm/loyalty-features";
 import { getLoyaltyFeatures } from "@/lib/crm/loyalty-features-server";
 import { isEssOnlyRole } from "./access";
+import { loadEmployeeBaseline } from "./employee-baseline";
 import { iamDbQuery, isIamDbConfigured } from "./pg-client";
 import type { MenuRow, NavIconName, NavItem } from "./types";
 import { isNavVisibleMenuType } from "./types";
@@ -241,7 +242,8 @@ export const getUserMenus = cache(async (userId: string, role: UserRole): Promis
 
   try {
     const roleIds = await resolveRoleIds(userId, role);
-    const permittedIds = await fetchPermittedMenuIds(roleIds);
+    const [permittedIds, baseline] = await Promise.all([fetchPermittedMenuIds(roleIds), loadEmployeeBaseline(userId)]);
+    for (const menu of baseline) permittedIds.add(menu.id);
 
     if (permittedIds.size === 0) {
       return [];

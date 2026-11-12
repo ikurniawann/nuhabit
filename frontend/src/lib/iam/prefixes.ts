@@ -5,6 +5,24 @@
 export const IAM = {
   dashboard: ["dashboard"],
   ess: ["ess"],
+  /**
+   * Menu yang dimiliki setiap akun yang terhubung ke karyawan aktif, apa pun
+   * role-nya: Area Karyawan dan Tugas Saya. Grant role tidak diperlukan.
+   */
+  employeeBaseline: [
+    "ess.home",
+    "ess.announcements",
+    "ess.attendance",
+    "ess.leave",
+    "ess.overtime",
+    "ess.loans",
+    "ess.payroll",
+    "ess.kpi",
+    "ess.feedback-360",
+    "tasks",
+  ],
+  /** Shift Tim: ikut otomatis bila ada karyawan aktif yang melapor ke dia. */
+  supervisorBaseline: ["ess.team-shifts"],
   items: ["items"],
   itemsPurchasing: ["items.product.purchasing", "items.raw-material.purchasing"],
   itemsInventory: ["items.product.inventory", "items.raw-material.inventory"],

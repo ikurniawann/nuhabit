@@ -1,5 +1,6 @@
 import { cache } from "react";
 import type { UserRole } from "@/types";
+import { loadEmployeeBaseline } from "@/lib/iam/employee-baseline";
 import { resolveRoleIds } from "@/lib/iam/get-user-menus";
 import { iamDbQuery } from "@/lib/iam/pg-client";
 import {
@@ -57,19 +58,31 @@ export async function loadGrantedMenuActions(
   return map;
 }
 
+/** The role grants plus the employee baseline (Area Karyawan, Tugas Saya). */
 export const loadGrantedMenuCodesForUser = cache(
   async (userId: string, role: UserRole): Promise<string[]> => {
     const roleIds = await resolveRoleIds(userId, role);
-    return loadGrantedMenuCodes(roleIds);
+    const [codes, baseline] = await Promise.all([loadGrantedMenuCodes(roleIds), loadEmployeeBaseline(userId)]);
+    return [...new Set([...codes, ...baseline.map((menu) => menu.code)])];
+  }
+);
+
+/** granted_actions per menu: the role grants plus the employee baseline. */
+const loadUserMenuActions = cache(
+  async (userId: string, role: UserRole): Promise<Map<string, string[]>> => {
+    const roleIds = await resolveRoleIds(userId, role);
+    const [granted, baseline] = await Promise.all([loadGrantedMenuActions(roleIds), loadEmployeeBaseline(userId)]);
+    for (const menu of baseline) {
+      granted.set(menu.code, [...new Set([...(granted.get(menu.code) ?? []), ...menu.actions])]);
+    }
+    return granted;
   }
 );
 
 /** granted_actions per kode menu milik user, sebagai objek agar bisa dikirim ke klien. */
 export const loadGrantedMenuActionsForUser = cache(
-  async (userId: string, role: UserRole): Promise<Record<string, string[]>> => {
-    const roleIds = await resolveRoleIds(userId, role);
-    return Object.fromEntries(await loadGrantedMenuActions(roleIds));
-  }
+  async (userId: string, role: UserRole): Promise<Record<string, string[]>> =>
+    Object.fromEntries(await loadUserMenuActions(userId, role))
 );
 
 export async function userHasIamPrefix(
@@ -87,7 +100,6 @@ export async function userHasIamAction(
   prefixes: readonly string[],
   action: string
 ): Promise<boolean> {
-  const roleIds = await resolveRoleIds(userId, role);
-  const granted = await loadGrantedMenuActions(roleIds);
+  const granted = await loadUserMenuActions(userId, role);
   return hasGrantedAction(granted, prefixes, action);
 }

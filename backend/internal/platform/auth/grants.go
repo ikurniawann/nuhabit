@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 
 	"github.com/jackc/pgx/v5"
+
+	"nuhabit/backend/internal/platform/iam"
 )
 
 // ResolveRoleIDs mirrors resolveRoleIds: iam.user_roles rows, else the
@@ -30,13 +32,76 @@ func (s *Service) ResolveRoleIDs(ctx context.Context, userID, role string) ([]st
 	return []string{id}, nil
 }
 
-// GrantedMenuCodes mirrors loadGrantedMenuCodesForUser.
+// GrantedMenuCodes mirrors loadGrantedMenuCodesForUser: the role grants plus
+// the employee baseline.
 func (s *Service) GrantedMenuCodes(ctx context.Context, userID, role string) ([]string, error) {
 	roleIDs, err := s.ResolveRoleIDs(ctx, userID, role)
 	if err != nil {
 		return nil, err
 	}
-	return s.GrantedMenuCodesForRoles(ctx, roleIDs)
+	codes, err := s.GrantedMenuCodesForRoles(ctx, roleIDs)
+	if err != nil {
+		return nil, err
+	}
+	baseline, err := s.employeeBaseline(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	for code := range baseline {
+		codes = mergeUnique(codes, []string{code})
+	}
+	return codes, nil
+}
+
+// UserMenuActions mirrors loadGrantedMenuActionsForUser: the role grants plus
+// the employee baseline.
+func (s *Service) UserMenuActions(ctx context.Context, userID, role string) (map[string][]string, error) {
+	roleIDs, err := s.ResolveRoleIDs(ctx, userID, role)
+	if err != nil {
+		return nil, err
+	}
+	granted, err := s.GrantedMenuActions(ctx, roleIDs)
+	if err != nil {
+		return nil, err
+	}
+	baseline, err := s.employeeBaseline(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	for code, actions := range baseline {
+		granted[code] = mergeUnique(granted[code], actions)
+	}
+	return granted, nil
+}
+
+// employeeBaselineSQL mirrors EMPLOYEE_BASELINE_SQL in
+// frontend/src/lib/iam/employee-baseline.ts: an account linked to an active
+// employee gets iam.EmployeeBaseline, and iam.SupervisorBaseline when an
+// active employee reports to it, with each menu's own actions.
+const employeeBaselineSQL = `SELECT DISTINCT m.code, COALESCE(m.permission_context->'actions', '["read"]'::jsonb)
+     FROM iam.menus m
+     JOIN hris.employees e ON e.user_id = $1 AND e.is_active
+    WHERE m.deleted_at IS NULL AND m.is_active
+      AND (m.code = ANY($2)
+        OR (m.code = ANY($3) AND EXISTS (
+          SELECT 1 FROM hris.employees r WHERE r.reporting_to = e.id AND r.is_active)))`
+
+func (s *Service) employeeBaseline(ctx context.Context, userID string) (map[string][]string, error) {
+	out := map[string][]string{}
+	rows, err := s.db.Query(ctx, employeeBaselineSQL, userID, iam.EmployeeBaseline, iam.SupervisorBaseline)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var code string
+		var raw []byte
+		if err := rows.Scan(&code, &raw); err != nil {
+			return nil, err
+		}
+		out[code] = mergeUnique(out[code], parseGrantedActions(raw))
+	}
+	return out, rows.Err()
 }
 
 // GrantedMenuCodesForRoles mirrors loadGrantedMenuCodes.

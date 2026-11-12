@@ -59,11 +59,7 @@ func (h *handler) viewActor(ctx context.Context, u *auth.User) (*viewActor, erro
 	if v.Zone, err = localtime.BranchZone(ctx, h.svc.db, u.BranchID); err != nil {
 		return nil, err
 	}
-	roleIDs, err := h.auth.ResolveRoleIDs(ctx, u.ID, u.Role)
-	if err != nil {
-		return nil, err
-	}
-	granted, err := h.auth.GrantedMenuActions(ctx, roleIDs)
+	granted, err := h.auth.UserMenuActions(ctx, u.ID, u.Role)
 	if err != nil {
 		return nil, err
 	}
