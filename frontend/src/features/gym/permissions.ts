@@ -7,8 +7,8 @@ import { useIamAccess } from "@/components/iam/iam-access-provider";
 
 /** Sesi dan jadwal: buat, ubah, tutup, batal, hapus. */
 export const SCHEDULE_MENUS = ["gym.schedule", "gym.sessions"] as const;
-/** Front desk: daftarkan member ke kelas. */
-export const DESK_MENUS = ["gym.bookings", "gym.checkin", "gym.sessions"] as const;
+/** Daftarkan member ke kelas: dari Check-in (drop-in) dan roster sesi. */
+export const DESK_MENUS = ["gym.checkin", "gym.sessions"] as const;
 /** Ubah booking: batalkan, tandai tidak hadir. */
 export const BOOKING_MENUS = ["gym.bookings", "gym.sessions"] as const;
 /** Check-in di gate. */

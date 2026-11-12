@@ -305,9 +305,10 @@ func (h *Handler) refundQuote(w http.ResponseWriter, r *http.Request) error {
 	return httpx.OK(w, quote)
 }
 
-// receipt is the printable receipt of a purchase, for reprints too.
+// receipt is the printable receipt of a purchase, for reprints too. The
+// member 360 lists purchases with a reprint button, so Gym Member reads it.
 func (h *Handler) receipt(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.require(r, actRead, iam.GymCredits); err != nil {
+	if _, err := h.require(r, actRead, slices.Concat(iam.GymCredits, iam.GymMembers)); err != nil {
 		return err
 	}
 	id, err := validate.PathUUID(r, "id")

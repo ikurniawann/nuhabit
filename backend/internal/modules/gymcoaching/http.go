@@ -54,7 +54,7 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "GET /api/gym/pt/class-types", Handler: auth.Staff(h.guard, h.classTypes, ptAny...)},
 		{Pattern: "GET /api/gym/pt/class-type-flags", Handler: auth.Staff(h.guard, h.classTypeFlags, iam.Can(actUpdate, iam.GymClassTypes))},
 		{Pattern: "PATCH /api/gym/pt/class-type-flags/{id}", Handler: auth.Staff(h.guard, h.setPersonal, iam.Can(actUpdate, iam.GymClassTypes))},
-		{Pattern: "GET /api/gym/pt/coaches", Handler: h.scoped(h.coaches, ptAny...)},
+		{Pattern: "GET /api/gym/pt/coaches", Handler: h.scoped(h.coaches, append(ptAny, iam.Can(actRead, assess))...)},
 		{Pattern: "GET /api/gym/pt/members", Handler: auth.Staff(h.guard, h.searchMembers, ptRead, ptOwn, ptCreate, iam.Can(actRead, assess), iam.Can(actCreate, assess))},
 		{Pattern: "GET /api/gym/pt/availability/{coachId}", Handler: h.scoped(h.availability, ptAny...)},
 		{Pattern: "PUT /api/gym/pt/availability/{coachId}", Handler: h.scoped(h.setWeekly, ptUpdate)},

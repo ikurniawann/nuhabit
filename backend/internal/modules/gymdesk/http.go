@@ -28,7 +28,7 @@ type handler struct {
 func (h *handler) Routes() []module.Route {
 	members, reports := iam.GymMembers, iam.GymReports
 	return []module.Route{
-		{Pattern: "GET /api/gym/members", Handler: auth.Staff(h.guard, h.listMembers, iam.Can("read", members))},
+		{Pattern: "GET /api/gym/members", Handler: auth.Staff(h.guard, h.listMembers, iam.Can("read", members), iam.Can("create", iam.GymComplaints))},
 		{Pattern: "POST /api/gym/members", Handler: auth.Staff(h.guard, h.register, iam.Can("create", members))},
 		{Pattern: "GET /api/gym/members/import/template", Handler: auth.Staff(h.guard, h.memberTemplate, iam.Can("create", members))},
 		{Pattern: "POST /api/gym/members/import", Handler: auth.Staff(h.guard, h.importMembers, iam.Can("create", members))},
@@ -42,7 +42,7 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "GET /api/gym/reports/classes", Handler: auth.Staff(h.guard, h.classReport, iam.Can("read", reports))},
 		{Pattern: "GET /api/gym/reports/revenue", Handler: auth.Staff(h.guard, h.revenueReport, iam.Can("read", reports))},
 		{Pattern: "GET /api/gym/reports/members", Handler: auth.Staff(h.guard, h.membersReport, iam.Can("read", reports))},
-		{Pattern: "GET /api/gym/checkin/log", Handler: auth.Staff(h.guard, h.checkinLog, iam.Can("read", iam.GymCheckin))},
+		{Pattern: "GET /api/gym/checkin/log", Handler: auth.Staff(h.guard, h.checkinLog, iam.Can("read", iam.GymCheckinPage))},
 	}
 }
 

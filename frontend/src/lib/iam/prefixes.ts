@@ -151,6 +151,21 @@ export const IAM = {
   gymCheckin: ["gym.checkin", "gym.sessions"],
   /** Gym → seluruh menu gym (daftar cabang untuk form gym). */
   gym: ["gym"],
+  /** Gym → halaman Check-in saja (scan, log akses, cari member di desk, waiver). */
+  gymCheckinPage: ["gym.checkin"],
+  /** Gym → Template Jadwal (template mingguan, generate sesi). */
+  gymScheduleTemplates: ["gym.schedule.templates"],
+  /** Gym → halaman yang memilih cabang (GET /api/gym/branches). */
+  gymBranchPickers: [
+    "gym.schedule",
+    "gym.sessions",
+    "gym.coaches",
+    "gym.checkin",
+    "gym.gate-devices",
+    "gym.coach-leave",
+    "gym.credits",
+    "gym.rules",
+  ],
   /** Gym → Jadwal Kelas (kalender mingguan, salin minggu). */
   gymSchedule: ["gym.schedule"],
   /** Gym → Sesi & Absensi (roster, check-in manual, no-show, tutup sesi). */

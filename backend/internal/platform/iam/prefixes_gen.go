@@ -114,6 +114,9 @@ var (
 	GymScheduling              = []string{"gym.schedule", "gym.sessions", "gym.bookings", "gym.class-types", "gym.coaches"}
 	GymCheckin                 = []string{"gym.checkin", "gym.sessions"}
 	Gym                        = []string{"gym"}
+	GymCheckinPage             = []string{"gym.checkin"}
+	GymScheduleTemplates       = []string{"gym.schedule.templates"}
+	GymBranchPickers           = []string{"gym.schedule", "gym.sessions", "gym.coaches", "gym.checkin", "gym.gate-devices", "gym.coach-leave", "gym.credits", "gym.rules"}
 	GymSchedule                = []string{"gym.schedule"}
 	GymSessions                = []string{"gym.sessions"}
 	GymBookings                = []string{"gym.bookings"}
@@ -297,6 +300,9 @@ var ByKey = map[string][]string{
 	"gymScheduling":              GymScheduling,
 	"gymCheckin":                 GymCheckin,
 	"gym":                        Gym,
+	"gymCheckinPage":             GymCheckinPage,
+	"gymScheduleTemplates":       GymScheduleTemplates,
+	"gymBranchPickers":           GymBranchPickers,
 	"gymSchedule":                GymSchedule,
 	"gymSessions":                GymSessions,
 	"gymBookings":                GymBookings,

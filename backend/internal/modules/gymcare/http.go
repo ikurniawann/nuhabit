@@ -32,13 +32,19 @@ var (
 		iam.Can("read_own", iam.GymSessions),
 		iam.Can("read_own", iam.GymPt),
 	}
-	// desk is every staff screen that shows a member: the flags page, the
-	// member 360, check-in, session rosters and PT.
+	// desk is every staff screen that shows the flags of a member: the
+	// flags page, the member 360, check-in, session rosters and PT.
 	desk = []iam.Grant{
 		iam.Can("read", iam.GymMemberFlags),
 		iam.Can("read", iam.GymMembers),
 		iam.Can("read", iam.GymCheckin),
-		iam.Can("read", iam.GymSessions, iam.GymBookings),
+		iam.Can("read", iam.GymPt),
+	}
+	// typeReaders are the screens that list flag types to add a flag: the
+	// flags page, the member 360 and PT (check-in and rosters only read flags).
+	typeReaders = []iam.Grant{
+		iam.Can("read", iam.GymMemberFlags),
+		iam.Can("read", iam.GymMembers),
 		iam.Can("read", iam.GymPt),
 	}
 )
@@ -48,7 +54,7 @@ func flagsCan(action string) []iam.Grant { return []iam.Grant{iam.Can(action, ia
 // Routes lists the staff and member routes.
 func (h *handler) Routes() []module.Route {
 	return []module.Route{
-		{Pattern: "GET /api/gym/member-flag-types", Handler: h.staff(h.types, desk, portal...)},
+		{Pattern: "GET /api/gym/member-flag-types", Handler: h.staff(h.types, typeReaders, portal...)},
 		{Pattern: "POST /api/gym/member-flag-types", Handler: h.staff(h.createType, flagsCan("create"))},
 		{Pattern: "PATCH /api/gym/member-flag-types/{id}", Handler: h.staff(h.updateType, flagsCan("update"))},
 		{Pattern: "GET /api/gym/member-flags", Handler: h.staff(h.list, flagsCan("read"))},

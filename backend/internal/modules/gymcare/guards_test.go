@@ -42,11 +42,11 @@ func TestStaffRouteGrants(t *testing.T) {
 		anyID   = "0b7a8f8e-2d7c-4f3e-9a1b-5c6d7e8f9a0b"
 	)
 	want := map[string]string{
-		"GET /api/gym/member-flag-types":                manager + " | " + desk + " | " + portal,
+		"GET /api/gym/member-flag-types":                "read_medical gym.member-flags | read gym.member-flags | read gym.members | read gym.pt | read gym.my-classes | read_own gym.sessions | read_own gym.pt",
 		"POST /api/gym/member-flag-types":               manager + " | create gym.member-flags",
 		"PATCH /api/gym/member-flag-types/{id}":         manager + " | update gym.member-flags",
 		"GET /api/gym/member-flags":                     manager + " | read gym.member-flags",
-		"GET /api/gym/member-flags/members":             manager + " | " + desk + " | " + portal,
+		"GET /api/gym/member-flags/members":             "read_medical gym.member-flags | read gym.member-flags | read gym.members | read gym.checkin,gym.sessions | read gym.pt | read gym.my-classes | read_own gym.sessions | read_own gym.pt",
 		"POST /api/gym/member-flags":                    manager + " | create gym.member-flags | " + portal,
 		"PATCH /api/gym/member-flags/{id}":              manager + " | update gym.member-flags | " + portal,
 		"DELETE /api/gym/member-flags/{id}":             manager + " | delete gym.member-flags | " + portal,

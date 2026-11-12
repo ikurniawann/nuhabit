@@ -43,7 +43,7 @@ func TestStaffRouteGrants(t *testing.T) {
 		"GET /api/gym/pt/class-types":                        anyPT,
 		"GET /api/gym/pt/class-type-flags":                   "update gym.class-types",
 		"PATCH /api/gym/pt/class-type-flags/{id}":            "update gym.class-types",
-		"GET /api/gym/pt/coaches":                            anyPT,
+		"GET /api/gym/pt/coaches":                            "read gym.pt | read_own gym.pt | create gym.pt | read gym.assessments",
 		"GET /api/gym/pt/members":                            anyPT + " | read gym.assessments | create gym.assessments",
 		"GET /api/gym/pt/availability/{coachId}":             anyPT,
 		"PUT /api/gym/pt/availability/{coachId}":             update,

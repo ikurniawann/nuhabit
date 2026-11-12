@@ -46,7 +46,9 @@ const (
 var (
 	// planners manage sessions from the weekly calendar or the session list.
 	planners = slices.Concat(iam.GymSchedule, iam.GymSessions)
-	// desk staff book members in and check them in; GymCheckin covers gym.sessions too.
+	// desk is every page that acts on a booking: the booking list, check-in
+	// and the session roster (GymCheckin covers gym.sessions too). Only
+	// check-in and the roster book members in.
 	desk     = slices.Concat(iam.GymBookings, iam.GymCheckin)
 	ownClass = iam.Can(actReadOwn, iam.GymSessions)
 )
@@ -64,46 +66,46 @@ var bookingActionGrants = map[string][]iam.Grant{
 // Routes lists the staff (/api/gym/**) and member portal routes.
 func (h *handler) Routes() []module.Route {
 	return []module.Route{
-		{Pattern: "GET /api/gym/branches", Handler: auth.Staff(h.guard, h.branches, iam.Can(actRead, iam.Gym))},
+		{Pattern: "GET /api/gym/branches", Handler: auth.Staff(h.guard, h.branches, iam.Can(actRead, iam.GymBranchPickers))},
 		{Pattern: "GET /api/gym/class-types", Handler: auth.Staff(h.guard, h.listClassTypes, iam.Can(actRead, iam.GymClassTypes, planners), ownClass)},
 		{Pattern: "POST /api/gym/class-types", Handler: auth.Staff(h.guard, h.createClassType, iam.Can(actCreate, iam.GymClassTypes))},
 		{Pattern: "PATCH /api/gym/class-types/{id}", Handler: auth.Staff(h.guard, h.updateClassType, iam.Can(actUpdate, iam.GymClassTypes))},
 		{Pattern: "DELETE /api/gym/class-types/{id}", Handler: auth.Staff(h.guard, h.archiveClassType, iam.Can(actDelete, iam.GymClassTypes))},
 		{Pattern: "GET /api/gym/class-types/import/template", Handler: auth.Staff(h.guard, h.classTypeTemplate, iam.Can(actCreate, iam.GymClassTypes))},
 		{Pattern: "POST /api/gym/class-types/import", Handler: auth.Staff(h.guard, h.importClassTypes, iam.Can(actCreate, iam.GymClassTypes))},
-		{Pattern: "GET /api/gym/coaches", Handler: auth.Staff(h.guard, h.listCoaches, iam.Can(actRead, iam.GymCoaches, planners))},
+		{Pattern: "GET /api/gym/coaches", Handler: auth.Staff(h.guard, h.listCoaches, iam.Can(actRead, iam.GymCoaches, planners, iam.GymCoachLeave))},
 		{Pattern: "GET /api/gym/coaches/staff", Handler: auth.Staff(h.guard, h.staffUsers, iam.Can(actCreate, iam.GymCoaches), iam.Can(actUpdate, iam.GymCoaches))},
 		{Pattern: "POST /api/gym/coaches", Handler: auth.Staff(h.guard, h.createCoach, iam.Can(actCreate, iam.GymCoaches))},
 		{Pattern: "PATCH /api/gym/coaches/{id}", Handler: auth.Staff(h.guard, h.updateCoach, iam.Can(actUpdate, iam.GymCoaches))},
 		{Pattern: "POST /api/gym/coaches/photo", Handler: auth.Staff(h.guard, h.uploadCoachPhoto, iam.Can(actCreate, iam.GymCoaches), iam.Can(actUpdate, iam.GymCoaches))},
 		{Pattern: "GET /api/gym/coaches/import/template", Handler: auth.Staff(h.guard, h.coachTemplate, iam.Can(actCreate, iam.GymCoaches))},
 		{Pattern: "POST /api/gym/coaches/import", Handler: auth.Staff(h.guard, h.importCoaches, iam.Can(actCreate, iam.GymCoaches))},
-		{Pattern: "GET /api/gym/coaches/{id}/schedule", Handler: auth.Staff(h.guard, h.coachSchedule, iam.Can(actRead, iam.GymCoaches, planners))},
+		{Pattern: "GET /api/gym/coaches/{id}/schedule", Handler: auth.Staff(h.guard, h.coachSchedule, iam.Can(actRead, iam.GymCoaches))},
 		{Pattern: "GET /api/gym/my-classes", Handler: auth.Staff(h.guard, h.myClasses, myClassesRead, ownClass)},
 		{Pattern: "GET /api/gym/my-classes/sessions/{id}", Handler: auth.Staff(h.guard, h.mySession, myClassesRead, ownClass)},
-		{Pattern: "GET /api/gym/sessions", Handler: h.scoped(h.listSessions, iam.Can(actRead, planners), ownClass)},
+		{Pattern: "GET /api/gym/sessions", Handler: h.scoped(h.listSessions, iam.Can(actRead, planners), ownClass, iam.Can(actRead, iam.GymCheckinPage))},
 		{Pattern: "POST /api/gym/sessions", Handler: auth.Staff(h.guard, h.createSession, iam.Can(actCreate, planners))},
 		{Pattern: "POST /api/gym/sessions/duplicate-week", Handler: auth.Staff(h.guard, h.duplicateWeek, iam.Can(actCreate, iam.GymSchedule))},
 		{Pattern: "GET /api/gym/sessions/{id}", Handler: h.scoped(h.getSession, iam.Can(actRead, planners), ownClass)},
 		{Pattern: "PATCH /api/gym/sessions/{id}", Handler: auth.Staff(h.guard, h.updateSession, iam.Can(actUpdate, planners))},
 		{Pattern: "POST /api/gym/sessions/{id}", Handler: auth.Staff(h.guard, h.sessionAction, iam.Can(actUpdate, planners))},
 		{Pattern: "DELETE /api/gym/sessions/{id}", Handler: auth.Staff(h.guard, h.deleteSession, iam.Can(actDelete, planners))},
-		{Pattern: "GET /api/gym/session-templates", Handler: auth.Staff(h.guard, h.listTemplates, iam.Can(actRead, iam.GymSchedule))},
-		{Pattern: "POST /api/gym/session-templates", Handler: auth.Staff(h.guard, h.createTemplate, iam.Can(actCreate, iam.GymSchedule))},
-		{Pattern: "POST /api/gym/session-templates/generate", Handler: auth.Staff(h.guard, h.generateTemplates, iam.Can(actCreate, iam.GymSchedule))},
-		{Pattern: "PATCH /api/gym/session-templates/{id}", Handler: auth.Staff(h.guard, h.updateTemplate, iam.Can(actUpdate, iam.GymSchedule))},
-		{Pattern: "DELETE /api/gym/session-templates/{id}", Handler: auth.Staff(h.guard, h.deleteTemplate, iam.Can(actDelete, iam.GymSchedule))},
-		{Pattern: "GET /api/gym/session-templates/import/template", Handler: auth.Staff(h.guard, h.scheduleTemplateTemplate, iam.Can(actCreate, iam.GymSchedule))},
-		{Pattern: "POST /api/gym/session-templates/import", Handler: auth.Staff(h.guard, h.importScheduleTemplates, iam.Can(actCreate, iam.GymSchedule))},
-		{Pattern: "GET /api/gym/bookings", Handler: auth.Staff(h.guard, h.listBookings, iam.Can(actRead, iam.GymBookings, iam.GymSessions))},
-		{Pattern: "POST /api/gym/bookings", Handler: auth.Staff(h.guard, h.staffBook, iam.Can(actCreate, desk))},
-		{Pattern: "GET /api/gym/bookings/members", Handler: auth.Staff(h.guard, h.searchMembers, iam.Can(actRead, desk))},
+		{Pattern: "GET /api/gym/session-templates", Handler: auth.Staff(h.guard, h.listTemplates, iam.Can(actRead, iam.GymScheduleTemplates))},
+		{Pattern: "POST /api/gym/session-templates", Handler: auth.Staff(h.guard, h.createTemplate, iam.Can(actCreate, iam.GymScheduleTemplates))},
+		{Pattern: "POST /api/gym/session-templates/generate", Handler: auth.Staff(h.guard, h.generateTemplates, iam.Can(actCreate, iam.GymScheduleTemplates))},
+		{Pattern: "PATCH /api/gym/session-templates/{id}", Handler: auth.Staff(h.guard, h.updateTemplate, iam.Can(actUpdate, iam.GymScheduleTemplates))},
+		{Pattern: "DELETE /api/gym/session-templates/{id}", Handler: auth.Staff(h.guard, h.deleteTemplate, iam.Can(actDelete, iam.GymScheduleTemplates))},
+		{Pattern: "GET /api/gym/session-templates/import/template", Handler: auth.Staff(h.guard, h.scheduleTemplateTemplate, iam.Can(actCreate, iam.GymScheduleTemplates))},
+		{Pattern: "POST /api/gym/session-templates/import", Handler: auth.Staff(h.guard, h.importScheduleTemplates, iam.Can(actCreate, iam.GymScheduleTemplates))},
+		{Pattern: "GET /api/gym/bookings", Handler: auth.Staff(h.guard, h.listBookings, iam.Can(actRead, iam.GymBookings))},
+		{Pattern: "POST /api/gym/bookings", Handler: auth.Staff(h.guard, h.staffBook, iam.Can(actCreate, iam.GymCheckin))},
+		{Pattern: "GET /api/gym/bookings/members", Handler: auth.Staff(h.guard, h.searchMembers, iam.Can(actRead, iam.GymCheckin))},
 		{Pattern: "POST /api/gym/bookings/{id}", Handler: auth.Staff(h.guard, h.bookingAction, iam.Can(actRead, desk), ownClass, myClassesAttendance)},
-		{Pattern: "GET /api/gym/checkin", Handler: auth.Staff(h.guard, h.accessLog, iam.Can(actRead, iam.GymCheckin))},
-		{Pattern: "POST /api/gym/checkin", Handler: auth.Staff(h.guard, h.scan, iam.Can(actCreate, iam.GymCheckin))},
-		{Pattern: "GET /api/gym/checkin/members", Handler: auth.Staff(h.guard, h.deskMembers, iam.Can(actRead, desk))},
-		{Pattern: "POST /api/gym/checkin/members/{id}/waiver", Handler: auth.Staff(h.guard, h.recordWaiver, iam.Can(actCreate, iam.GymCheckin), iam.Can(actUpdate, iam.GymMembers))},
-		{Pattern: "GET /api/gym/open-gym-hours", Handler: auth.Staff(h.guard, h.openGymHours, iam.Can(actRead, iam.GymRules, iam.GymCheckin))},
+		{Pattern: "GET /api/gym/checkin", Handler: auth.Staff(h.guard, h.accessLog, iam.Can(actRead, iam.GymCheckinPage))},
+		{Pattern: "POST /api/gym/checkin", Handler: auth.Staff(h.guard, h.scan, iam.Can(actCreate, iam.GymCheckinPage))},
+		{Pattern: "GET /api/gym/checkin/members", Handler: auth.Staff(h.guard, h.deskMembers, iam.Can(actRead, iam.GymCheckinPage))},
+		{Pattern: "POST /api/gym/checkin/members/{id}/waiver", Handler: auth.Staff(h.guard, h.recordWaiver, iam.Can(actCreate, iam.GymCheckinPage), iam.Can(actUpdate, iam.GymMembers))},
+		{Pattern: "GET /api/gym/open-gym-hours", Handler: auth.Staff(h.guard, h.openGymHours, iam.Can(actRead, iam.GymRules))},
 		{Pattern: "PUT /api/gym/open-gym-hours", Handler: auth.Staff(h.guard, h.saveOpenGymHours, iam.Can(actUpdate, iam.GymRules))},
 		{Pattern: "GET /api/gym/gate-devices", Handler: auth.Staff(h.guard, h.listGateDevices, iam.Can(actRead, iam.GymGateDevices))},
 		{Pattern: "POST /api/gym/gate-devices", Handler: auth.Staff(h.guard, h.createGateDevice, iam.Can(actCreate, iam.GymGateDevices))},
