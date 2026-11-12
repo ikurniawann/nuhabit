@@ -3,13 +3,16 @@
  * Seeder: throwaway accounts and data for the Playwright suite (frontend/e2e).
  *
  * Fills, idempotently and in one transaction:
- *   - staff  : auth.users + configuration.users + iam.user_roles (super_admin)
+ *   - staff  : auth.users + configuration.users + iam.user_roles (super_admin,
+ *              with the venue company so accounting pages have books)
  *              + hris.employees, so the smoke spec can open every dashboard page
  *   - member : pos.pos_customers with a bcrypt password for the member portal
  *   - credits: tops the member up to E2E_MEMBER_CREDITS (default 20) with an
  *              adjustment lot that covers every class type
  *   - promo  : code E2E_PROMO_CODE (default E2E10, 10% off) on the shop channel
  *              of the default CRM venue, skipped when that venue is not set
+ *   - pos    : one cashier product (sku E2E-POS-001) whose master item sits
+ *              in a stall of the default CRM venue, for the POS sale spec
  *   - shop   : one web product (sku E2E-TEE-001), only when the web channel
  *              has no product yet, so a fresh CI database can check out
  *
@@ -57,6 +60,13 @@ function required(name) {
   return value;
 }
 
+// A super admin stays unscoped with a company set, but accounting books per
+// company and answers 400 without one, so the staff account takes the
+// default CRM venue's company (or the oldest active branch's, as on a fresh DB).
+const STAFF_COMPANY_SQL = `SELECT COALESCE(
+    (SELECT (value #>> '{}')::uuid FROM crm.crm_settings WHERE key = 'default_company_id'),
+    (SELECT company_id FROM configuration.branches WHERE is_active AND company_id IS NOT NULL ORDER BY created_at LIMIT 1))`;
+
 async function seedStaff(c, email, password) {
   const hash = await bcrypt.hash(password, 10);
   const userMeta = JSON.stringify({ role: "super_admin", full_name: "E2E Staff" });
@@ -87,6 +97,15 @@ async function seedStaff(c, email, password) {
        SET full_name = EXCLUDED.full_name, role = 'super_admin', email = EXCLUDED.email, status = 'active',
            business_scope = NULL, holding_id = NULL, company_id = NULL, branch_id = NULL, updated_at = NOW()`,
     [userId, email]
+  );
+  // Accounting writes need a company on the user even for super_admin, who
+  // stays unscoped because business_scope is NULL. Bind the venue company.
+  await c.query(
+    `UPDATE configuration.users u
+        SET holding_id = co.holding_id, company_id = co.id
+       FROM configuration.companies co
+      WHERE u.id = $1 AND co.id = (${STAFF_COMPANY_SQL})`,
+    [userId]
   );
   const role = await c.query(
     `INSERT INTO iam.roles (code, name, description, is_system, is_active)
@@ -239,6 +258,46 @@ async function seedPromo(c, code) {
   console.log("promo   : ok", code);
 }
 
+/**
+ * One cashier product the POS sale spec can sell. The cashier only rings up
+ * products whose master item has a stall, so the master item sits in a stall
+ * of the default venue branch.
+ */
+async function seedPosProduct(c) {
+  const venue = await defaultVenue(c);
+  if (!venue) {
+    console.log("pos     : skipped, no active branch for the stall");
+    return;
+  }
+  const stall = await c.query(
+    `SELECT id FROM configuration.warehouses WHERE branch_id = $1 AND is_active ORDER BY is_default, code LIMIT 1`,
+    [venue.branch_id]
+  );
+  if (!stall.rowCount) {
+    console.log("pos     : skipped, the venue branch has no stall");
+    return;
+  }
+  const warehouseId = stall.rows[0].id;
+  const found = await c.query(
+    `SELECT id FROM item.products WHERE kode = 'E2E-POS-001' AND warehouse_id = $1 AND deleted_at IS NULL LIMIT 1`,
+    [warehouseId]
+  );
+  const master = found.rowCount
+    ? found
+    : await c.query(
+        `INSERT INTO item.products (kode, nama, warehouse_id, company_id, branch_id, station)
+         VALUES ('E2E-POS-001', 'E2E Shaker Bottle', $1, $2, $3, 'merchandise') RETURNING id`,
+        [warehouseId, venue.company_id, venue.branch_id]
+      );
+  await c.query(
+    `INSERT INTO pos.pos_products (sku, name, description, base_price, station, source_product_id, is_active, is_available)
+     VALUES ('E2E-POS-001', 'E2E Shaker Bottle', 'Cashier product for the end-to-end suite.', 85000, 'merchandise', $1, true, true)
+     ON CONFLICT (sku) DO UPDATE SET source_product_id = EXCLUDED.source_product_id, is_active = true, is_available = true, updated_at = now()`,
+    [master.rows[0].id]
+  );
+  console.log("pos     : ok E2E-POS-001 in stall", warehouseId);
+}
+
 async function seedShopProduct(c) {
   const { rowCount } = await c.query(
     `SELECT 1 FROM shop.product_channels pc JOIN pos.pos_products p ON p.id = pc.product_id
@@ -287,6 +346,7 @@ async function main() {
     await seedCredits(c, customerId, credits);
     await seedPromo(c, promoCode);
     await seedShopProduct(c);
+    await seedPosProduct(c);
     await c.query("COMMIT");
   } catch (err) {
     await c.query("ROLLBACK").catch(() => {});

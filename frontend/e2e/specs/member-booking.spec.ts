@@ -1,4 +1,5 @@
-import type { APIRequestContext } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
+import { STORAGE_KEYS } from "../../src/lib/storage-keys";
 import { MEMBER_MISSING, MEMBER_STATE, memberCredentials } from "../support/auth";
 import { expect, test } from "../support/fixtures";
 
@@ -18,6 +19,21 @@ async function cancelActiveBooking(request: APIRequestContext, sessionId: string
   }
 }
 
+/**
+ * The member app defaults to Indonesian and follows the account language once
+ * signed in. The spec reads English copy, so it picks English on the device and
+ * records the account language as already seen, which stops the app switching back.
+ */
+async function preferEnglish(page: Page, accountLang?: string) {
+  await page.addInitScript(
+    ({ langKey, accountKey, accountLang }) => {
+      localStorage.setItem(langKey, "en");
+      if (accountLang) localStorage.setItem(accountKey, accountLang);
+    },
+    { langKey: STORAGE_KEYS.memberLang.key, accountKey: STORAGE_KEYS.memberAccountLang.key, accountLang }
+  );
+}
+
 /** The schedule's day chip reads like "Wed21" in Asia/Jakarta, the app's zone. */
 function dayChipName(offset: number) {
   const date = new Date(Date.now() + offset * 86_400_000);
@@ -33,12 +49,14 @@ test.describe("member sign-in", () => {
   test("signs in through the login form", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "one form sign-in per run keeps the account under its rate limit");
     const { username, password } = memberCredentials()!;
+    await preferEnglish(page);
     await page.goto("/member/auth/login?from=/member/classes");
     await page.getByLabel("WhatsApp number or email").fill(username);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL("/member/classes");
-    await expect(page.getByRole("heading", { name: "Classes" })).toBeVisible();
+    // After sign-in the app switches to the account language, which may be Indonesian.
+    await expect(page.getByRole("heading", { name: /^(Classes|Kelas)$/ })).toBeVisible();
   });
 });
 
@@ -56,6 +74,9 @@ test.describe("member books and cancels a class", () => {
     // Booking needs the current waiver (rule requireWaiver).
     const waiver = await page.request.patch("/api/member-portal/app/home/me", { data: { acceptWaiver: true } });
     expect(waiver.ok(), "accept waiver").toBeTruthy();
+    const settings = await page.request.get("/api/member-portal/app/home/settings");
+    expect(settings.ok(), "read settings").toBeTruthy();
+    await preferEnglish(page, ((await settings.json()) as { data: { language: string } }).data.language);
 
     await page.goto("/member/classes");
     await expect(page.getByRole("heading", { name: "Classes" })).toBeVisible();
@@ -79,6 +100,7 @@ test.describe("member books and cancels a class", () => {
     await booking.click();
 
     await page.getByRole("button", { name: "Cancel booking" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Confirm cancellation" }).click();
     await expect(page.getByText("Booking cancelled.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Book this class" })).toBeVisible();
   });

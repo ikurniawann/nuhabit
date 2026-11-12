@@ -1,6 +1,8 @@
 # End-to-end browser suite (frontend/e2e): journeys for the public site,
-# member booking, shop checkout and staff dashboard, plus a smoke walk of
-# every static page with axe and overflow checks in light and dark mode.
+# member booking, shop checkout, staff dashboard, a POS cash sale, a payroll
+# run and a manual journal, plus a smoke walk of every static page and of
+# every detail page with a seeded record, with axe and overflow checks in
+# light and dark mode.
 #
 # Runs on demand and nightly, not on every push: the whole run builds the Go
 # API and Next, seeds a fresh Postgres and walks about 1100 page checks.

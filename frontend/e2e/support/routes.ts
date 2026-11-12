@@ -26,7 +26,7 @@ function staticRoutes(relativeDir: string): string[] {
 const NEEDS_QUERY = new Set(["/join/status"]);
 
 /** Public marketing site, shop and sign-in pages. */
-export const PUBLIC_ROUTES = ["/", ...staticRoutes("(site)"), "/apparel", "/login", ...staticRoutes("member/auth")].filter(
+export const PUBLIC_ROUTES = [...new Set(["/", ...staticRoutes("(site)"), "/apparel", "/login", ...staticRoutes("member/auth")])].filter(
   (route) => !NEEDS_QUERY.has(route)
 );
 
@@ -35,3 +35,23 @@ export const MEMBER_ROUTES = staticRoutes("member/(app)");
 
 /** Staff dashboard pages behind the staff session. */
 export const DASHBOARD_ROUTES = staticRoutes("dashboard");
+
+/**
+ * Every page.tsx with a dynamic segment ([id], [...path]) under src/app, as
+ * browser path patterns with route groups stripped, e.g. "/dashboard/hris/payroll/[id]".
+ */
+export function dynamicRoutes(): string[] {
+  const routes: string[] = [];
+  const walk = (dir: string, segments: string[]) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name === "page.tsx" && segments.some((s) => s.startsWith("["))) {
+        routes.push("/" + segments.join("/"));
+      }
+      if (!entry.isDirectory() || entry.name.startsWith("_")) continue;
+      const group = entry.name.startsWith("(") && entry.name.endsWith(")");
+      walk(path.join(dir, entry.name), group ? segments : [...segments, entry.name]);
+    }
+  };
+  walk(APP_DIR, []);
+  return routes.sort();
+}
