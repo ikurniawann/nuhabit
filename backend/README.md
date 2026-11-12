@@ -138,6 +138,6 @@ docker run --rm -e MIGRATE_DATABASE_URL=... -e ALLOW_REMOTE_DB=1 --entrypoint /u
 ```
 
 The runtime image is Debian slim with the `tesseract` CLI (eng and ind) for
-OCR, running as `nonroot`. It has no curl, so the Docker `HEALTHCHECK` runs
+OCR, running as uid 1001 (the storage owner). It has no curl, so the Docker `HEALTHCHECK` runs
 `api -healthcheck`, which calls the local `/health`. Kubernetes and load balancers should probe `/health` and
 `/ready` over HTTP instead.

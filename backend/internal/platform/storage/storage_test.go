@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	"errors"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -230,5 +231,19 @@ func TestDir(t *testing.T) {
 	}
 	if d := Dir(func(string) string { return "" }); !strings.HasSuffix(filepath.ToSlash(d), "frontend/storage") {
 		t.Fatal(d)
+	}
+}
+
+// A folder the process cannot write fails with a message safe to show,
+// without the server path.
+func TestWriteFileHidesDiskPaths(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Chmod(root, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(root, 0o700) })
+	err := writeFile(filepath.Join(root, "private", "attendance", "x.jpg"), []byte("x"))
+	if !errors.Is(err, ErrNotSaved) || strings.Contains(err.Error(), root) {
+		t.Fatalf("err = %v", err)
 	}
 }

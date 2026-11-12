@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -233,6 +234,9 @@ func (s *Service) saveImage(dataURL string, maxBytes int, folder, invalid, tooLa
 		return "", httpx.BadRequest(tooLarge)
 	}
 	path, err := s.files.SavePrivateImage(data, mime, folder)
+	if errors.Is(err, storage.ErrNotSaved) {
+		return "", httpx.Status(http.StatusInternalServerError, err.Error())
+	}
 	if err != nil {
 		return "", httpx.BadRequest(err.Error())
 	}

@@ -13,6 +13,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -77,13 +78,23 @@ func within(base, rel string) (string, bool) {
 	return abs, strings.HasPrefix(abs, baseAbs+string(filepath.Separator))
 }
 
+// ErrNotSaved is a disk failure, such as a storage folder the process cannot
+// write. Callers show its text to users; writeFile logs the cause, whose
+// message names server paths.
+var ErrNotSaved = errors.New("Server gagal menyimpan file. Hubungi admin.")
+
 // writeFile creates parent directories and writes data, as fs.mkdir
 // recursive + fs.writeFile do under the containers' umask 022.
 func writeFile(abs string, data []byte) error {
-	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
-		return err
+	err := os.MkdirAll(filepath.Dir(abs), 0o755)
+	if err == nil {
+		err = os.WriteFile(abs, data, 0o644)
 	}
-	return os.WriteFile(abs, data, 0o644)
+	if err != nil {
+		slog.Error("storage: write failed", "path", abs, "error", err)
+		return ErrNotSaved
+	}
+	return nil
 }
 
 // timedName is `${Date.now()}-${randomBytes(n).hex}.${ext}`.
