@@ -231,6 +231,31 @@ the detail of each step.
 7. A backup taken ([BACKUP.md](BACKUP.md)) once the data is in, before
    members start booking.
 
+## IAM menus and sub-module access
+
+Staff APIs accept only the menu codes of the pages that call them (see
+[RBAC.md](RBAC.md)). After a deploy that changes menus or guards:
+
+1. Re-run the IAM seeders in order, `npm run db:seed:iam` from
+   `backend/database` (menus, then admin grants, then role grants).
+2. List custom roles that hold a group menu without any of its sub-menus.
+   Those roles lose the APIs below that group; grant the sub-menus they need
+   in Settings > Roles.
+
+```sql
+SELECT r.code AS role, m.code AS group_menu
+FROM iam.role_menu_permissions p
+JOIN iam.roles r ON r.id = p.role_id AND r.deleted_at IS NULL
+JOIN iam.menus m ON m.id = p.menu_id AND m.deleted_at IS NULL
+WHERE p.is_active
+  AND EXISTS (SELECT 1 FROM iam.menus c WHERE c.parent_id = m.id AND c.deleted_at IS NULL AND c.is_active)
+  AND NOT EXISTS (
+    SELECT 1 FROM iam.role_menu_permissions p2
+    JOIN iam.menus c ON c.id = p2.menu_id
+    WHERE p2.role_id = r.id AND p2.is_active AND c.parent_id = m.id)
+ORDER BY 1, 2;
+```
+
 ## Schema drift check
 
 `migrate -verify` creates a scratch database on the target's server
