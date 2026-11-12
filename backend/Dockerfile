@@ -3,7 +3,8 @@
 #
 # Build stage: dependencies download in their own layer so a source-only change
 # does not re-resolve the module graph.
-FROM golang:1.26-alpine AS build
+# Pinned to the patch go.mod names (toolchain): a cached floating tag can lag behind.
+FROM golang:1.26.11-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

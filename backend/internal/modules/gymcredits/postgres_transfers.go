@@ -35,6 +35,9 @@ func (Postgres) InsertTransfer(ctx context.Context, q database.Querier, t NewTra
 		 VALUES ($1, $2, $3, $4, $5, $6, $7)
 		 ON CONFLICT (idempotency_key) DO NOTHING RETURNING id::text`,
 		t.FromCustomerID, t.ToCustomerID, t.Credits, t.Channel, null(t.Note), t.IdempotencyKey, null(t.CreatedBy))
+	if err != nil {
+		return "", err
+	}
 	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
 	if err != nil || len(ids) == 0 {
 		return "", err

@@ -103,6 +103,7 @@ func TestWarehousesAndLookups(t *testing.T) {
 		t.Fatalf("lookup %v", out)
 	}
 	e.Fail("POST", "/api/purchasing/items/product-categories", map[string]any{"code": "PC1", "nama": "x"}, http.StatusBadRequest, "Kode sudah digunakan")
+	e.Fail("POST", "/api/purchasing/items/product-categories", map[string]any{"code": "PC2", "nama": "   "}, http.StatusBadRequest, "Nama wajib diisi")
 	e.Fail("GET", "/api/purchasing/items/nope", nil, http.StatusNotFound, "Tipe lookup tidak valid")
 	out = e.Call("DELETE", "/api/purchasing/items/product-categories/"+data["id"].(string), nil, http.StatusOK)
 	if out["message"] != "Berhasil dihapus" {

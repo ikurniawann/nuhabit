@@ -1,12 +1,15 @@
 package migrate
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 	"testing"
+
+	"nuhabit/backend/internal/platform/testutil"
 )
 
 var (
@@ -66,6 +69,24 @@ func TestIAMMenuSeederHasModuleMenus(t *testing.T) {
 		}
 		if !kept[code] {
 			t.Errorf("%s (from %s) is missing from the iam-menus.sql keep list and would be retired", code, migration)
+		}
+	}
+}
+
+// The IAM seeders must run on a migrated database: a merge once dropped two
+// commas and doubled two rows in iam-menus.sql, and every fresh setup and e2e
+// run lost its menus. Each runs inside a transaction that is rolled back.
+func TestIAMSeedersApply(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	dir := filepath.Join(filepath.Dir(file), "../../database/seeders")
+	for _, name := range []string{"iam-menus.sql", "iam-admin-permissions.sql"} {
+		sql, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		tx := testutil.Tx(t)
+		if _, err := tx.Exec(context.Background(), string(sql)); err != nil {
+			t.Errorf("%s: %v", name, err)
 		}
 	}
 }

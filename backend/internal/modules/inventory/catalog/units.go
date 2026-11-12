@@ -298,8 +298,9 @@ func (h *handler) listLookup(w http.ResponseWriter, r *http.Request) error {
 // lookupColumns validates itemsLookupSchema and shapes lookupColumns.
 func lookupColumns(r *http.Request) (*kit.Row, error) {
 	f := validate.New(validate.ReadBody(r))
-	code := f.Str("code", validate.Rule{}, validate.StrOpts{Check: minLen(1, "Kode wajib diisi"), Max: 30})
-	nama := f.Str("nama", validate.Rule{}, validate.StrOpts{Check: minLen(1, "Nama wajib diisi"), Max: 100})
+	// Trim before the length check so a name of only spaces is rejected, not saved blank.
+	code := f.Str("code", validate.Rule{}, validate.StrOpts{Trim: true, Check: minLen(1, "Kode wajib diisi"), Max: 30})
+	nama := f.Str("nama", validate.Rule{}, validate.StrOpts{Trim: true, Check: minLen(1, "Nama wajib diisi"), Max: 100})
 	desc := f.Str("deskripsi", validate.Rule{Optional: true, Nullable: true}, validate.StrOpts{})
 	active := f.Bool("is_active", validate.Rule{Optional: true})
 	if err := kit.FirstIssueErr(f); err != nil {

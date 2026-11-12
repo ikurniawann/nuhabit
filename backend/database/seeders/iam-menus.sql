@@ -214,8 +214,6 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('gym.referrals', 'Referral', '/dashboard/gym/referrals', 'user-plus', 'sidebar', 90, '{"actions":["read","update"]}'::jsonb),
   ('gym.complaints', 'Keluhan', '/dashboard/gym/complaints', 'megaphone', 'sidebar', 92, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.loyalty', 'Membership & Progres', '/dashboard/gym/loyalty', 'star', 'sidebar', 92, '{"actions":["read","create","update","delete"]}'::jsonb),
-  ('gym.reports', 'Laporan Gym', '/dashboard/gym/reports', 'chart-bar', 'sidebar', 95, '{"actions":["read"]}'::jsonb),
-  ('gym.rules', 'Aturan Gym', '/dashboard/gym/rules', 'settings', 'sidebar', 100, '{"actions":["read","update"]}'::jsonb),
   -- Investor portal (27 Oct 2026): read-only pages for the investor role and
   -- the directors' update editor (seeders_test.go checks every investor menu is here).
   ('investor', 'Investor', NULL, 'chart-pie', 'group', 4, '{"actions":["read"]}'::jsonb),
@@ -223,12 +221,12 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('investor.performance', 'Laporan Kinerja', '/dashboard/investor/performance', 'chart', 'sidebar', 20, '{"actions":["read"]}'::jsonb),
   ('investor.progress', 'Progres', '/dashboard/investor/progress', 'megaphone', 'sidebar', 30, '{"actions":["read"]}'::jsonb),
   ('investor.documents', 'Dokumen', '/dashboard/investor/documents', 'file-text', 'sidebar', 40, '{"actions":["read"]}'::jsonb),
-  ('investor.updates', 'Update untuk Investor', '/dashboard/investor/updates', 'paper-airplane', 'sidebar', 90, '{"actions":["read","create","update","delete"]}'::jsonb)
+  ('investor.updates', 'Update untuk Investor', '/dashboard/investor/updates', 'paper-airplane', 'sidebar', 90, '{"actions":["read","create","update","delete"]}'::jsonb),
   -- Tugas (MOM item 13): daftar sendiri, papan tim, KPI & tugas
   -- (internal/migrate/seeders_test.go checks every tasks menu is here).
   ('tasks', 'Tugas Saya', '/dashboard/tasks', 'clipboard-document-check', 'sidebar', 4, '{"actions":["read","create","update"]}'::jsonb),
   ('tasks.team', 'Papan Tim', '/dashboard/tasks/team', 'users', 'sidebar', 10, '{"actions":["read","create","update","delete","assign"]}'::jsonb),
-  ('tasks.kpi', 'KPI & Tugas', '/dashboard/tasks/kpi', 'chart', 'sidebar', 20, '{"actions":["read"]}'::jsonb)
+  ('tasks.kpi', 'KPI & Tugas', '/dashboard/tasks/kpi', 'chart', 'sidebar', 20, '{"actions":["read"]}'::jsonb),
   ('gym.news', 'News Member', '/dashboard/gym/news', 'megaphone', 'sidebar', 92, '{"actions":["read","create","update","delete"]}'::jsonb),
   ('gym.reports', 'Laporan Gym', '/dashboard/gym/reports', 'chart-bar', 'sidebar', 95, '{"actions":["read"]}'::jsonb),
   ('gym.automation', 'Otomasi & Pengingat', '/dashboard/gym/automation', 'clock', 'sidebar', 98, '{"actions":["read","update"]}'::jsonb),

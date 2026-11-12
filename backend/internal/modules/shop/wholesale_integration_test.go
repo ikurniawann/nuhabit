@@ -275,10 +275,12 @@ func TestWholesaleOrderValidationAndInvoice(t *testing.T) {
 func TestWholesalePayLaterOrder(t *testing.T) {
 	now := time.Date(2026, 10, 7, 9, 0, 0, 0, time.UTC)
 	f := newWholesaleFixture(t, "pay_later")
-	f.svc.now = func() time.Time { return now }
 	stock := "50"
 	f.catalog.products[f.product] = WebProduct{ID: f.product, Name: "Kaos", BasePrice: "100000", InventoryQuantity: &stock}
+	// Sign in on the real clock: the database checks the session expiry
+	// against now(), so a session from the fixed date expires a month later.
 	_, token := f.login(f.password)
+	f.svc.now = func() time.Time { return now }
 
 	res, body := f.partner(token, "POST", "/api/wholesale/orders", map[string]any{
 		"items":            []map[string]any{{"product_id": f.product, "quantity": 10}},
