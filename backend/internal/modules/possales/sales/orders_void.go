@@ -23,7 +23,7 @@ const voidColumns = `id, status, payment_status, payment_method, order_number, t
 // voidOrder is POST /api/pos/orders/{id}/void: supervisor-approved void of
 // an order and its checkout siblings, refunding paid tenders.
 func (h *Handler) voidOrder(w http.ResponseWriter, r *http.Request) error {
-	user, err := kit.PosUser(h.auth, r)
+	user, err := kit.PosUser(h.auth, r, kit.Orders)
 	if err != nil {
 		return err
 	}

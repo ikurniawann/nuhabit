@@ -35,8 +35,8 @@ func (h *Handler) settingsRoutes() []module.Route {
 var channelPriceMenu = []string{"pos.catalog.channel-prices"}
 
 // requirePosSession is route-guards' requirePosSession: the ApiError 401.
-func (h *Handler) requirePosSession(r *http.Request) (string, error) {
-	u, err := h.posUser(r)
+func (h *Handler) requirePosSession(r *http.Request, menus []string) (string, error) {
+	u, err := h.posUser(r, menus)
 	if err != nil {
 		return "", err
 	}
@@ -47,7 +47,7 @@ func (h *Handler) requirePosSession(r *http.Request) (string, error) {
 }
 
 func (h *Handler) receiptSettings(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePosSession(r); err != nil {
+	if _, err := h.requirePosSession(r, menusReceipt); err != nil {
 		return err
 	}
 	rows, err := h.svc.ReceiptSettings(r.Context())
@@ -58,7 +58,7 @@ func (h *Handler) receiptSettings(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (h *Handler) giftCardConfig(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePosSession(r); err != nil {
+	if _, err := h.requirePosSession(r, iam.PosCashier); err != nil {
 		return err
 	}
 	cfg, err := h.svc.GiftCardConfig(r.Context())
@@ -69,7 +69,7 @@ func (h *Handler) giftCardConfig(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) loyaltySettings(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePosSession(r); err != nil {
+	if _, err := h.requirePosSession(r, menusLoyaltyRead); err != nil {
 		return err
 	}
 	data, err := h.svc.LoyaltySettings(r.Context())
@@ -97,7 +97,7 @@ func (h *Handler) saveLoyaltySettings(w http.ResponseWriter, r *http.Request) er
 }
 
 func (h *Handler) paymentMethods(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, menusPaymentMethods, "Authentication required"); err != nil {
 		return err
 	}
 	q := r.URL.Query()
@@ -217,7 +217,7 @@ func (h *Handler) saveChannelPrices(w http.ResponseWriter, r *http.Request) erro
 }
 
 func (h *Handler) billingSettings(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.posUser(r)
+	user, err := h.posUser(r, menusBilling)
 	if err != nil {
 		return err
 	}

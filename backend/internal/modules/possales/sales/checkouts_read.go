@@ -18,7 +18,7 @@ import (
 // getCheckout is GET /api/pos/checkouts/{id}: the checkout plus the items of
 // its unpaid children.
 func (h *Handler) getCheckout(w http.ResponseWriter, r *http.Request) error {
-	if _, err := kit.PosUser(h.auth, r); err != nil {
+	if _, err := kit.PosUser(h.auth, r, kit.OrderDetail); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -77,7 +77,7 @@ func (h *Handler) scopeFilter(ctx context.Context, userID string) (string, strin
 
 // cancelCheckout is POST /api/pos/checkouts/{id}/cancel.
 func (h *Handler) cancelCheckout(w http.ResponseWriter, r *http.Request) error {
-	user, err := kit.PosUser(h.auth, r)
+	user, err := kit.PosUser(h.auth, r, kit.Cashier)
 	if err != nil {
 		return err
 	}

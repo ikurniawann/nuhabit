@@ -18,7 +18,7 @@ import (
 /* ── POST /api/pos/checkouts ─────────────────────────────────────────── */
 
 func (h *Handler) createCheckout(w http.ResponseWriter, r *http.Request) error {
-	user, err := kit.PosUser(h.auth, r)
+	user, err := kit.PosUser(h.auth, r, kit.Cashier)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func rejection(a Approval, invalid string) *response {
 /* ── POST /api/pos/checkouts/{id}/complete ───────────────────────────── */
 
 func (h *Handler) completeCheckout(w http.ResponseWriter, r *http.Request) error {
-	user, err := kit.PosUser(h.auth, r)
+	user, err := kit.PosUser(h.auth, r, kit.Cashier)
 	if err != nil {
 		return err
 	}

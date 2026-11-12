@@ -13,7 +13,6 @@ import (
 	"nuhabit/backend/internal/modules/possales/internal/kit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
-	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -21,7 +20,7 @@ var activeStatuses = []string{"pending", "confirmed", "preparing", "ready", "ser
 
 // acceptOrder is POST /api/pos/orders/{id}/accept (self-order "Dibuat").
 func (h *Handler) acceptOrder(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.Pos...)
+	user, err := h.auth.RequireMenuPrefix(r, kit.CashierOrOrders...)
 	if err != nil {
 		return err
 	}
@@ -77,7 +76,7 @@ func (h *Handler) acceptOrder(w http.ResponseWriter, r *http.Request) error {
 
 // preSettle is POST /api/pos/orders/{id}/pre-settle.
 func (h *Handler) preSettle(w http.ResponseWriter, r *http.Request) error {
-	if _, err := kit.PosUser(h.auth, r); err != nil {
+	if _, err := kit.PosUser(h.auth, r, kit.Cashier); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -104,7 +103,7 @@ func (h *Handler) preSettle(w http.ResponseWriter, r *http.Request) error {
 
 // moveTable is PATCH /api/pos/orders/{id}/table.
 func (h *Handler) moveTable(w http.ResponseWriter, r *http.Request) error {
-	if _, err := kit.PosUser(h.auth, r); err != nil {
+	if _, err := kit.PosUser(h.auth, r, kit.Cashier); err != nil {
 		return err
 	}
 	ctx := r.Context()
@@ -191,7 +190,7 @@ type jsonRawRow = []byte
 
 // listSplits is GET /api/pos/orders/{id}/splits.
 func (h *Handler) listSplits(w http.ResponseWriter, r *http.Request) error {
-	if _, err := kit.PosUser(h.auth, r); err != nil {
+	if _, err := kit.PosUser(h.auth, r, kit.Cashier); err != nil {
 		return err
 	}
 	data, err := h.rpcJSON(r, h.db, `SELECT * FROM "pos_get_order_splits"("p_order_id" := $1)`, r.PathValue("id"))
@@ -214,7 +213,7 @@ func (r rawJSON) MarshalJSON() ([]byte, error) {
 
 // cancelSplit is PATCH /api/pos/orders/{id}/splits/{splitId}.
 func (h *Handler) cancelSplit(w http.ResponseWriter, r *http.Request) error {
-	user, err := kit.PosUser(h.auth, r)
+	user, err := kit.PosUser(h.auth, r, kit.Cashier)
 	if err != nil {
 		return err
 	}
@@ -236,7 +235,7 @@ func (h *Handler) cancelSplit(w http.ResponseWriter, r *http.Request) error {
 
 // createSplits is POST /api/pos/orders/{id}/splits.
 func (h *Handler) createSplits(w http.ResponseWriter, r *http.Request) error {
-	if _, err := kit.PosUser(h.auth, r); err != nil {
+	if _, err := kit.PosUser(h.auth, r, kit.Cashier); err != nil {
 		return err
 	}
 	ctx := r.Context()

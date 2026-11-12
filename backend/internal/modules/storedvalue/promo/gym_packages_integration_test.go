@@ -28,7 +28,7 @@ func TestGymPackagesRoute(t *testing.T) {
 			`{"id":"22222222-2222-2222-2222-222222222222","name":"Pass Bulanan","kind":"pass","status":"archived"}]}`)
 
 	reader := e.staff
-	e.staff = testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"crm.promo": {"update"}}})
+	e.staff = testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"promo.campaigns": {"update"}}})
 	e.call("GET", "/api/promo/gym-packages", nil, 403)
 	e.staff = testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"gym.packages": {"read"}}})
 	e.call("GET", "/api/promo/gym-packages", nil, 403)

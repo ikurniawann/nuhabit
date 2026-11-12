@@ -108,7 +108,7 @@ type env struct {
 func setup(t *testing.T) *env {
 	t.Helper()
 	deps := testutil.Deps(t, nil)
-	staff := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"crm.promo": nil}})
+	staff := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"promo.campaigns": nil, "promo.offers.bundling": nil}})
 	tx := testutil.Tx(t)
 	e := &env{t: t, ctx: context.Background(), tx: tx, staff: staff}
 	e.scalar(`INSERT INTO configuration.branches (company_id, name, code)

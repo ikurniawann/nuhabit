@@ -26,7 +26,7 @@ type GymPackages interface {
 // gymPackages serves GET /api/promo/gym-packages to anyone who may read
 // the promo campaigns.
 func (h *handler) gymPackages(w http.ResponseWriter, r *http.Request) error {
-	if _, _, err := h.kit.Auth.RequireAnyGrant(r, iam.Grant{Action: "read", Prefixes: iam.Promo}); err != nil {
+	if _, _, err := h.kit.Auth.RequireAnyGrant(r, iam.Grant{Action: "read", Prefixes: iam.PromoCampaigns}); err != nil {
 		return err
 	}
 	out := []GymPackage{}

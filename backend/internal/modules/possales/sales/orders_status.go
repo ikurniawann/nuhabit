@@ -22,7 +22,7 @@ var kitchenBumpStatuses = []string{"pending", "confirmed", "preparing", "ready",
 // kitchen bump (optionally per item); the order status is derived from the
 // remaining F&B lines.
 func (h *Handler) updateKitchenStatus(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.PosKitchen...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.PosKds...); err != nil {
 		return err
 	}
 	ctx := r.Context()

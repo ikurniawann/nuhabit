@@ -33,7 +33,7 @@ func TestPromoCheckGuards(t *testing.T) {
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, company, branch); err != nil {
 		t.Fatal(err)
 	}
-	kasir := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.operations": nil}})
+	kasir := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.operations.cashier": nil}})
 	// The limiter counts on the pool, as every replica does.
 	t.Cleanup(func() {
 		_, _ = testutil.DB(t).Exec(context.Background(), `DELETE FROM platform.rate_limits WHERE key = $1`, "pos-promo-check:"+kasir.UserID)

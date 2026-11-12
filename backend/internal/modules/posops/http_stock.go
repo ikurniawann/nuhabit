@@ -3,6 +3,7 @@ package posops
 import (
 	"net/http"
 
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -15,7 +16,7 @@ func (h *Handler) stockRoutes() []module.Route {
 }
 
 func (h *Handler) stockAlerts(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, iam.PosStockAlerts, "Authentication required"); err != nil {
 		return err
 	}
 	data, err := h.svc.StockAlerts(r.Context())

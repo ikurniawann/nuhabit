@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"regexp"
 
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -38,7 +39,7 @@ func rushHourStatus(fallback string) func(error) (int, string) {
 }
 
 func (h *Handler) rushHourReport(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Authentication required")
+	user, err := h.requirePos(r, iam.PosReportRushHour, "Authentication required")
 	if err != nil {
 		return err
 	}
@@ -51,7 +52,7 @@ func (h *Handler) rushHourReport(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) voidReport(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Authentication required")
+	user, err := h.requirePos(r, iam.PosReportVoids, "Authentication required")
 	if err != nil {
 		return err
 	}
@@ -64,7 +65,7 @@ func (h *Handler) voidReport(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) paymentMethodReport(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Authentication required")
+	user, err := h.requirePos(r, iam.PosReportPaymentMethods, "Authentication required")
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func (h *Handler) paymentMethodReport(w http.ResponseWriter, r *http.Request) er
 }
 
 func (h *Handler) profitReport(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, iam.PosReportProfit, "Authentication required"); err != nil {
 		return err
 	}
 	data, err := h.svc.ProfitReport(r.Context(), r.URL.Query().Get("date_from"), r.URL.Query().Get("date_to"))
@@ -89,7 +90,7 @@ func (h *Handler) profitReport(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) revenueCompositionReport(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, iam.PosReportRevenueComposition, "Authentication required"); err != nil {
 		return err
 	}
 	data, err := h.svc.RevenueCompositionReport(r.Context(), r.URL.Query().Get("date_from"), r.URL.Query().Get("date_to"))
@@ -100,7 +101,7 @@ func (h *Handler) revenueCompositionReport(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *Handler) closingReport(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Authentication required")
+	user, err := h.requirePos(r, iam.PosReportClosing, "Authentication required")
 	if err != nil {
 		return err
 	}

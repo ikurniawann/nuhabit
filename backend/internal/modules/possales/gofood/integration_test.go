@@ -309,7 +309,7 @@ func TestAuthWiring(t *testing.T) {
 	if rec, body := testutil.Do(t, mux, testutil.AsStaff(testutil.Request("GET", "/api/pos/gofood/orders", nil), plain)); rec.Code != 403 || body["error"] != "Insufficient permissions" {
 		t.Fatalf("no POS grant: %d %v", rec.Code, body)
 	}
-	kasir := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.operations": nil}})
+	kasir := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.operations.gofood": nil}})
 	rec, body := testutil.Do(t, mux, testutil.AsStaff(testutil.Request("GET", "/api/pos/gofood/orders", nil), kasir))
 	if rec.Code != 200 || body["meta"] == nil {
 		t.Fatalf("with grant: %d %s", rec.Code, rec.Body.String())

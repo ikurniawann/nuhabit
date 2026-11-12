@@ -41,6 +41,32 @@ export const IAM = {
     "pos.operations.restaurant",
     "pos.cashier.central",
   ],
+  /** POS sub-modul per halaman (guard API per menu daun, bukan per modul). */
+  posOrders: ["pos.operations.orders"],
+  posTables: ["pos.operations.tables"],
+  posReservation: ["pos.operations.reservation"],
+  posGofood: ["pos.operations.gofood"],
+  posKds: ["pos.kitchen.kds"],
+  posQueueBoard: ["pos.kitchen.queue-board"],
+  posPrintQueue: ["pos.kitchen.print-queue"],
+  posStockAlerts: ["pos.catalog.stock-alerts"],
+  posChannelPrices: ["pos.catalog.channel-prices"],
+  posTopup: ["pos.loyalty.topup"],
+  posPaymentMethods: ["pos.loyalty.payment-methods"],
+  posUnlinkCard: ["pos.loyalty.unlink-card"],
+  posDashboard: ["pos.reports.dashboard"],
+  posReportProfit: ["pos.reports.profit"],
+  posReportRevenueComposition: ["pos.reports.revenue-composition"],
+  posReportTransactions: ["pos.reports.transactions"],
+  posReportRushHour: ["pos.reports.rush-hour"],
+  posReportProductSales: ["pos.reports.product-sales"],
+  posReportVoids: ["pos.reports.voids"],
+  posReportPaymentMethods: ["pos.reports.payment-methods"],
+  posReportClosing: ["pos.reports.closing"],
+  /** Promo → Kampanye (kode promo, gift card, redemption). */
+  promoCampaigns: ["promo.campaigns"],
+  /** Promo → Bundling, BxGy, Volume. */
+  promoOffers: ["promo.offers"],
   hris: ["hris"],
   hrisKepegawaian: ["hris.kepegawaian"],
   hrisWorkforce: ["hris.workforce"],
@@ -224,13 +250,6 @@ export const IAM = {
   ticketingMapping: ["ticketing.mapping"],
   ticketingChannelManager: ["ticketing.channel-manager"],
   ticketingSettings: ["ticketing.settings"],
-  /** Kasir POS yang mengecek saldo tab gelang ticketing. */
-  ticketingPosTab: [
-    "pos.operations.cashier",
-    "pos.operations.cashier-classic",
-    "pos.operations.restaurant",
-    "pos.cashier.central",
-  ],
   /** POS → Member → Dompet: paket top-up, koreksi saldo, pembayaran online, aturan saldo. */
   posWallet: ["pos.loyalty.wallet"],
   /** Gym → Stasiun & Latihan (pustaka HYROX + substitusi). */

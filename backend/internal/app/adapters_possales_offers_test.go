@@ -133,7 +133,7 @@ func expectResponse(t *testing.T, gotStatus int, gotBody string, status int, bod
 }
 
 func offersCashier(t *testing.T) *testutil.Staff {
-	s := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.operations": nil}})
+	s := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.operations.cashier": nil}})
 	return &s
 }
 

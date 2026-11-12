@@ -25,10 +25,10 @@ func (h *Handler) shiftRoutes() []module.Route {
 	}
 }
 
-// deskUser lets the caller's own shift be run by a POS user or by gym front
+// deskUser lets the caller's own shift be run by a cashier or by gym front
 // desk staff who sell packages (create on gym.credits) without POS access.
 func (h *Handler) deskUser(r *http.Request) (*auth.User, error) {
-	u, err := h.posUser(r)
+	u, err := h.posUser(r, iam.PosCashier)
 	if u != nil || err != nil {
 		return u, err
 	}
@@ -103,7 +103,7 @@ func queryParam(r *http.Request, key string) *string {
 }
 
 func (h *Handler) listShifts(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Unauthorized"); err != nil {
+	if _, err := h.requirePos(r, iam.PosReportClosing, "Unauthorized"); err != nil {
 		return err
 	}
 	f := shiftFilter{Status: queryParam(r, "status"), CashierID: queryParam(r, "cashier_id"), Date: queryParam(r, "date")}
@@ -126,7 +126,7 @@ func (h *Handler) listShifts(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) openShift(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Unauthorized")
+	user, err := h.requirePos(r, iam.PosCashier, "Unauthorized")
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (h *Handler) openShift(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) currentShift(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Unauthorized"); err != nil {
+	if _, err := h.requirePos(r, menusCurrentShift, "Unauthorized"); err != nil {
 		return err
 	}
 	cashierID := queryParam(r, "cashier_id")
@@ -153,7 +153,7 @@ func (h *Handler) currentShift(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) closeShift(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Unauthorized")
+	user, err := h.requirePos(r, iam.PosCashier, "Unauthorized")
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func (h *Handler) closeShift(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) sendShiftReport(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Authentication required")
+	user, err := h.deskUser(r)
 	if err != nil {
 		return err
 	}

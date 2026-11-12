@@ -31,7 +31,7 @@ type listMeta struct {
 
 // list is GET /api/pos/gofood/orders?status=active|<status>&limit=50.
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.RequireMenuPrefix(r, iam.PosOperations...); err != nil {
+	if _, err := h.guard.RequireMenuPrefix(r, iam.PosGofood...); err != nil {
 		return err
 	}
 	q := r.URL.Query()
@@ -64,7 +64,7 @@ var rejectReasons = []string{"HIGH_DEMAND", "RESTAURANT_CLOSED", "ITEMS_OUT_OF_S
 // action is POST /api/pos/gofood/orders/{id}
 // {action: accept | reject (reason_code, reason_description) | ready | create_pos_order}.
 func (h *Handler) action(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.guard.RequireMenuPrefix(r, iam.PosOperations...); err != nil {
+	if _, err := h.guard.RequireMenuPrefix(r, iam.PosGofood...); err != nil {
 		return err
 	}
 	id := r.PathValue("id")

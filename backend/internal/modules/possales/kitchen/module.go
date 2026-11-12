@@ -17,6 +17,7 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -80,7 +81,7 @@ func (h *Handler) Routes() []module.Route {
 // (constant time, both trimmed) to the POS_PRINT_WORKER_TOKEN env var.
 func (h *Handler) printQueue(fn httpx.HandlerFunc) http.Handler {
 	return httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
-		_, err := kit.PosUser(h.auth, r)
+		_, err := kit.PosUser(h.auth, r, iam.PosPrintQueue)
 		if err != nil {
 			var he *httpx.Error
 			if !errors.As(err, &he) || he.Status != http.StatusUnauthorized {

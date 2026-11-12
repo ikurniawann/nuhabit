@@ -173,7 +173,7 @@ func (h *Handler) viewPaymentProof() http.Handler {
 // checks the guest's proof before settling.
 func (h *Handler) posPaymentProof() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, err := kit.PosUser(h.auth, r); err != nil {
+		if _, err := kit.PosUser(h.auth, r, kit.Cashier); err != nil {
 			httpx.WriteError(w, r, err)
 			return
 		}

@@ -6,9 +6,11 @@ import (
 )
 
 var settingsMenus = map[string][]string{
-	"pos.operations":       {"read", "update", "delete"},
-	"pos.loyalty.settings": {"read", "update"},
-	"settings.billing":     {"read", "update"},
+	"pos.operations":           {"read", "update", "delete"},
+	"pos.operations.cashier":   nil,
+	"pos.catalog.stock-alerts": nil,
+	"pos.loyalty.settings":     {"read", "update"},
+	"settings.billing":         {"read", "update"},
 	// The seeded pos.catalog.channel-prices menu is soft-deleted locally; a
 	// child code passes the same prefix guard.
 	"pos.catalog.channel-prices.gt": {"read", "update"},

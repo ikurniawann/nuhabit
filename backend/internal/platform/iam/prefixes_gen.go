@@ -5,484 +5,528 @@ package iam
 
 // Menu code prefixes, one var per key of IAM in prefixes.ts.
 var (
-	Dashboard                  = []string{"dashboard"}
-	Ess                        = []string{"ess"}
-	Items                      = []string{"items"}
-	ItemsPurchasing            = []string{"items.product.purchasing", "items.raw-material.purchasing"}
-	ItemsInventory             = []string{"items.product.inventory", "items.raw-material.inventory"}
-	ItemsApproval              = []string{"items.product.approval", "items.raw-material.approval"}
-	ItemsReports               = []string{"items.reports"}
-	ItemsProduction            = []string{"items.product.production", "items.raw-material.production"}
-	ItemsProductMaster         = []string{"items.product.master"}
-	ItemsRawMaterialMaster     = []string{"items.raw-material.master"}
-	ItemsGeneralMaster         = []string{"items.general.master"}
-	ItemsProductPurchasing     = []string{"items.product.purchasing"}
-	ItemsRawMaterialPurchasing = []string{"items.raw-material.purchasing"}
-	ItemsGeneralPurchasing     = []string{"items.general.purchasing"}
-	ItemsProductInventory      = []string{"items.product.inventory"}
-	ItemsRawMaterialInventory  = []string{"items.raw-material.inventory"}
-	ItemsGeneralInventory      = []string{"items.general.inventory"}
-	ItemsPayables              = []string{"accounting.accounts-payable"}
-	Pos                        = []string{"pos"}
-	PosOperations              = []string{"pos.operations", "pos.cashier.central"}
-	PosMemberBills             = []string{"pos.operations.member-bills"}
-	PosCatalog                 = []string{"pos.catalog"}
-	PosKitchen                 = []string{"pos.kitchen"}
-	PosLoyalty                 = []string{"pos.loyalty"}
-	PosReports                 = []string{"pos.reports"}
-	PosSupervisors             = []string{"pos.settings.supervisors"}
-	PosCashier                 = []string{"pos.operations.cashier", "pos.operations.cashier-classic", "pos.operations.restaurant", "pos.cashier.central"}
-	Hris                       = []string{"hris"}
-	HrisKepegawaian            = []string{"hris.kepegawaian"}
-	HrisWorkforce              = []string{"hris.workforce"}
-	HrisCompensation           = []string{"hris.compensation"}
-	HrisPerformance            = []string{"hris.performance"}
-	HrisRecruitment            = []string{"hris.recruitment"}
-	Accounting                 = []string{"accounting"}
-	AccountingOverview         = []string{"accounting.dashboard.overview"}
-	AccountingCoa              = []string{"accounting.master.chart-of-accounts"}
-	AccountingAccountTypes     = []string{"accounting.master.account-types"}
-	AccountingJournalMappings  = []string{"accounting.master.journal-mappings"}
-	AccountingJournalEntries   = []string{"accounting.ledger.journal-entries"}
-	AccountingJournalHistory   = []string{"accounting.ledger.journal-history"}
-	AccountingGeneralLedger    = []string{"accounting.ledger.general-ledger"}
-	AccountingSubsidiary       = []string{"accounting.ledger.subsidiary"}
-	AccountingTrialBalance     = []string{"accounting.ledger.trial-balance"}
-	AccountingCashBank         = []string{"accounting.cash-bank.accounts"}
-	AccountingCashIn           = []string{"accounting.cash-bank.cash-in"}
-	AccountingCashOut          = []string{"accounting.cash-bank.cash-out"}
-	AccountingCashTransfer     = []string{"accounting.cash-bank.transfer"}
-	AccountingAr               = []string{"accounting.receivable.list"}
-	AccountingArInvoices       = []string{"accounting.receivable.invoices"}
-	AccountingArInvoicesB2b    = []string{"accounting.receivable.invoices-b2b"}
-	AccountingArReceipts       = []string{"accounting.receivable.receipts"}
-	AccountingArAging          = []string{"accounting.receivable.aging"}
-	AccountingAp               = []string{"accounting.accounts-payable.payable"}
-	AccountingApInvoices       = []string{"accounting.accounts-payable.invoices"}
-	AccountingApPayments       = []string{"accounting.accounts-payable.payments"}
-	AccountingApAging          = []string{"accounting.accounts-payable.aging"}
-	AccountingFiscalYears      = []string{"accounting.period.fiscal-years"}
-	AccountingBeginningBalance = []string{"accounting.period.beginning-balance"}
-	AccountingPeriods          = []string{"accounting.period.accounting-period"}
-	AccountingClosing          = []string{"accounting.period.closing"}
-	AccountingBalanceSheet     = []string{"accounting.reports.balance-sheet"}
-	AccountingIncomeStatement  = []string{"accounting.reports.income-statement"}
-	AccountingCashFlow         = []string{"accounting.reports.cash-flow"}
-	AccountingCoaItemReaders   = []string{"items.raw-material.master.materials"}
-	Crm                        = []string{"crm"}
-	CrmSettings                = []string{"crm.settings"}
-	CrmMembers                 = []string{"crm.members"}
-	CrmInbox                   = []string{"crm.members.inbox"}
-	CrmReviews                 = []string{"crm.members.reviews"}
-	CrmLoyalty                 = []string{"crm.loyalty"}
-	CrmReports                 = []string{"crm.reports"}
-	CrmPromo                   = []string{"crm.promo", "promo"}
-	CrmEngagement              = []string{"crm.engagement"}
-	CrmMemberReviews           = []string{"crm.members.member-reviews"}
-	CrmPartners                = []string{"crm.loyalty.partners"}
-	CrmDashboard               = []string{"crm.overview.dashboard"}
-	CrmMemberList              = []string{"crm.members.list"}
-	CrmMemberLookup            = []string{"crm.members.list", "crm.loyalty.rewards"}
-	CrmRewards                 = []string{"crm.loyalty.rewards"}
-	CrmRewardsRead             = []string{"crm.loyalty.rewards", "crm.members.list"}
-	CrmAvatars                 = []string{"crm.loyalty.avatars"}
-	CrmAvatarsRead             = []string{"crm.loyalty.avatars", "crm.members.list"}
-	CrmBadges                  = []string{"crm.badges"}
-	CrmWallpapers              = []string{"crm.wallpapers"}
-	CrmCollectibleUpload       = []string{"crm.loyalty.avatars", "crm.badges", "crm.wallpapers"}
-	CrmTiersRead               = []string{"crm.members.list", "crm.loyalty.rewards", "crm.loyalty.avatars", "crm.wallpapers", "crm.engagement.announcements", "crm.settings.config"}
-	CrmSettingsConfig          = []string{"crm.settings.config"}
-	CrmApprovalRules           = []string{"crm.settings.approvals"}
-	CrmWorkflows               = []string{"crm.settings.workflows"}
-	CrmScoring                 = []string{"crm.settings.scoring"}
-	CrmCustomFields            = []string{"crm.settings.custom-fields"}
-	CrmApprovalInbox           = []string{"sales-funnel.approvals"}
-	CrmAnnouncements           = []string{"crm.engagement.announcements"}
-	CrmChallenges              = []string{"crm.engagement.challenges"}
-	CrmCheckins                = []string{"crm.engagement.checkins"}
-	CrmEvents                  = []string{"crm.engagement.events"}
-	CrmInboxAnalyze            = []string{"crm.members.inbox", "crm.reports.overview"}
-	CrmCampaigns               = []string{"crm.campaigns"}
-	CrmSegments                = []string{"crm.marketing.segments"}
-	CrmSegmentsRead            = []string{"crm.marketing.segments", "crm.campaigns"}
-	CrmForms                   = []string{"crm.marketing.forms"}
-	CrmReportsOverview         = []string{"crm.reports.overview"}
-	CrmReportBuilder           = []string{"crm.reports.builder"}
-	CrmReportRun               = []string{"crm.reports.builder", "crm.marketing.attribution"}
-	CrmSavedReports            = []string{"crm.reports.builder", "crm.reports.dashboards", "crm.reports.schedules"}
-	CrmReportDashboards        = []string{"crm.reports.dashboards"}
-	CrmReportSchedules         = []string{"crm.reports.schedules"}
-	Settings                   = []string{"settings"}
-	SettingsUsers              = []string{"settings.users"}
-	SettingsRoles              = []string{"settings.roles"}
-	SettingsMenus              = []string{"settings.menus"}
-	SettingsBusiness           = []string{"settings.business"}
-	SettingsIntegrations       = []string{"settings.integrations"}
-	SettingsAppearance         = []string{"settings.appearance"}
-	SettingsPaymentGateways    = []string{"settings.payment-gateways"}
-	SettingsWaGateway          = []string{"settings.wa_gateway"}
-	SettingsAudit              = []string{"settings.audit"}
-	SettingsWaNotifications    = []string{"settings.wa_notifications"}
-	SettingsShipping           = []string{"settings.shipping"}
-	Shop                       = []string{"shop"}
-	ShopOrders                 = []string{"shop.orders"}
-	ShopSettings               = []string{"shop.settings"}
-	ShopWholesale              = []string{"shop.wholesale"}
-	ShopMarketplace            = []string{"shop.marketplace"}
-	Ticketing                  = []string{"ticketing"}
-	TicketingAdmin             = []string{"ticketing.settings", "ticketing.tickets", "ticketing.channel-manager", "ticketing.mapping"}
-	TicketingOperator          = []string{"ticketing.loket", "ticketing.gate", "ticketing.booking", "ticketing.gate_pass", "ticketing.passes"}
-	TicketingReports           = []string{"ticketing.reports"}
-	SalesFunnel                = []string{"sales-funnel"}
-	Promo                      = []string{"promo", "crm.promo"}
-	Dataroom                   = []string{"dataroom"}
-	Resort                     = []string{"resort"}
-	ResortFrontOffice          = []string{"resort.front-office"}
-	ResortReservations         = []string{"resort.reservations"}
-	ResortRooms                = []string{"resort.rooms"}
-	SalesFunnelLeads           = []string{"sales-funnel.leads"}
-	SalesFunnelPipeline        = []string{"sales-funnel.pipeline"}
-	SalesFunnelAccounts        = []string{"sales-funnel.accounts"}
-	SalesFunnelContacts        = []string{"sales-funnel.contacts"}
-	SalesFunnelFollowups       = []string{"sales-funnel.followups"}
-	SalesFunnelForecast        = []string{"sales-funnel.forecast"}
-	SalesFunnelReports         = []string{"sales-funnel.reports"}
-	SalesFunnelSettings        = []string{"sales-funnel.settings"}
-	SalesFunnelCrmOwnerPickers = []string{"crm.settings.workflows", "crm.settings.approvals", "crm.reports.schedules", "crm.marketing.forms"}
-	SalesFunnelCrmStagePickers = []string{"crm.settings.workflows"}
-	TicketingBooking           = []string{"ticketing.booking"}
-	TicketingLoket             = []string{"ticketing.loket"}
-	TicketingGate              = []string{"ticketing.gate"}
-	TicketingGatePass          = []string{"ticketing.gate_pass"}
-	TicketingPasses            = []string{"ticketing.passes"}
-	TicketingTickets           = []string{"ticketing.tickets"}
-	TicketingMapping           = []string{"ticketing.mapping"}
-	TicketingChannelManager    = []string{"ticketing.channel-manager"}
-	TicketingSettings          = []string{"ticketing.settings"}
-	TicketingPosTab            = []string{"pos.operations.cashier", "pos.operations.cashier-classic", "pos.operations.restaurant", "pos.cashier.central"}
-	PosWallet                  = []string{"pos.loyalty.wallet"}
-	GymExercises               = []string{"gym.exercises"}
-	GymRaces                   = []string{"gym.races"}
-	GymIncentives              = []string{"gym.incentives"}
-	GymPackages                = []string{"gym.packages"}
-	GymCredits                 = []string{"gym.credits"}
-	GymRules                   = []string{"gym.rules"}
-	GymScheduling              = []string{"gym.schedule", "gym.sessions", "gym.bookings", "gym.class-types", "gym.coaches"}
-	GymCheckin                 = []string{"gym.checkin", "gym.sessions"}
-	Gym                        = []string{"gym"}
-	GymCheckinPage             = []string{"gym.checkin"}
-	GymScheduleTemplates       = []string{"gym.schedule.templates"}
-	GymBranchPickers           = []string{"gym.schedule", "gym.sessions", "gym.coaches", "gym.checkin", "gym.gate-devices", "gym.coach-leave", "gym.credits", "gym.rules"}
-	GymSchedule                = []string{"gym.schedule"}
-	GymSessions                = []string{"gym.sessions"}
-	GymBookings                = []string{"gym.bookings"}
-	GymClassTypes              = []string{"gym.class-types"}
-	GymCoaches                 = []string{"gym.coaches"}
-	GymMembers                 = []string{"gym.members"}
-	GymReports                 = []string{"gym.reports"}
-	GymMyClasses               = []string{"gym.my-classes"}
-	GymCoachLeave              = []string{"gym.coach-leave"}
-	GymPt                      = []string{"gym.pt"}
-	GymAssessments             = []string{"gym.assessments"}
-	GymGateDevices             = []string{"gym.gate-devices"}
-	GymReferrals               = []string{"gym.referrals"}
-	Investor                   = []string{"investor"}
-	InvestorUpdates            = []string{"investor.updates"}
-	InvestorOverview           = []string{"investor.overview"}
-	InvestorPerformance        = []string{"investor.performance"}
-	InvestorProgress           = []string{"investor.progress"}
-	InvestorDocuments          = []string{"investor.documents"}
-	GymComplaints              = []string{"gym.complaints"}
-	Tasks                      = []string{"tasks"}
-	TasksTeam                  = []string{"tasks.team"}
-	TasksKpi                   = []string{"tasks.kpi"}
-	GymLoyalty                 = []string{"gym.loyalty"}
-	GymMemberFlags             = []string{"gym.member-flags"}
-	GymSop                     = []string{"gym.sop"}
-	GymAutomation              = []string{"gym.automation"}
-	GymNews                    = []string{"gym.news"}
-	HrisMaster                 = []string{"hris.master"}
-	HrisOrganization           = []string{"hris.organization"}
-	HrisInsights               = []string{"hris.insights"}
-	HrisEmployees              = []string{"hris.kepegawaian.users"}
-	HrisContracts              = []string{"hris.kepegawaian.contracts"}
-	HrisShifts                 = []string{"hris.kepegawaian.shifts"}
-	HrisHolidays               = []string{"hris.kepegawaian.holidays"}
-	HrisLoans                  = []string{"hris.kepegawaian.loans"}
-	HrisOvertime               = []string{"hris.kepegawaian.overtime"}
-	HrisAnnouncements          = []string{"hris.kepegawaian.announcements"}
-	HrisAttendance             = []string{"hris.workforce.attendance"}
-	HrisLeaves                 = []string{"hris.workforce.leaves"}
-	HrisOrgChart               = []string{"hris.organization.org-chart"}
-	HrisPayroll                = []string{"hris.compensation.payroll"}
-	HrisSalary                 = []string{"hris.compensation.salary"}
-	HrisKpiScorecard           = []string{"hris.performance.kpi-scorecard"}
-	HrisKpiConfig              = []string{"hris.performance.kpi-config"}
-	HrisFeedback360            = []string{"hris.performance.feedback-360"}
-	HrisCandidates             = []string{"hris.recruitment.candidates"}
-	HrisPipeline               = []string{"hris.recruitment.pipeline"}
-	HrisPsikotes               = []string{"hris.recruitment.psikotes"}
-	HrisTalentPool             = []string{"hris.recruitment.talent-pool"}
-	HrisJobPortal              = []string{"hris.recruitment.job-portal"}
-	HrisLiveMonitoring         = []string{"hris.recruitment.live-monitoring"}
-	HrisAnalytics              = []string{"hris.insights.analytics"}
-	HrisReports                = []string{"hris.insights.reports"}
-	HrisDepartments            = []string{"hris.master.departments"}
-	HrisPositions              = []string{"hris.master.positions"}
-	HrisEmploymentStatuses     = []string{"hris.master.employment-statuses"}
-	HrisPickerTicketing        = []string{"ticketing.settings"}
-	PosCatalogProducts         = []string{"pos.catalog.products"}
-	PosLoyaltySettings         = []string{"pos.loyalty.settings"}
-	SettingsBilling            = []string{"settings.billing"}
-	ItemsCatalog               = []string{"items", "pos.catalog"}
-	ItemsPr                    = []string{"items.general.purchasing.pr", "items.product.purchasing.pr", "items.raw-material.purchasing.pr"}
-	Site                       = []string{"site"}
-	SiteContent                = []string{"site.content"}
-	SiteArticles               = []string{"site.articles"}
-	SiteEvents                 = []string{"site.events"}
-	EventsCalendar             = []string{"events.calendar"}
-	EventsAdmin                = []string{"crm.engagement.events", "site.events"}
-	ItemsPrApproval            = []string{"items.general.purchasing.approval-pr", "items.product.approval.pr", "items.raw-material.approval.pr"}
+	Dashboard                   = []string{"dashboard"}
+	Ess                         = []string{"ess"}
+	Items                       = []string{"items"}
+	ItemsPurchasing             = []string{"items.product.purchasing", "items.raw-material.purchasing"}
+	ItemsInventory              = []string{"items.product.inventory", "items.raw-material.inventory"}
+	ItemsApproval               = []string{"items.product.approval", "items.raw-material.approval"}
+	ItemsReports                = []string{"items.reports"}
+	ItemsProduction             = []string{"items.product.production", "items.raw-material.production"}
+	ItemsProductMaster          = []string{"items.product.master"}
+	ItemsRawMaterialMaster      = []string{"items.raw-material.master"}
+	ItemsGeneralMaster          = []string{"items.general.master"}
+	ItemsProductPurchasing      = []string{"items.product.purchasing"}
+	ItemsRawMaterialPurchasing  = []string{"items.raw-material.purchasing"}
+	ItemsGeneralPurchasing      = []string{"items.general.purchasing"}
+	ItemsProductInventory       = []string{"items.product.inventory"}
+	ItemsRawMaterialInventory   = []string{"items.raw-material.inventory"}
+	ItemsGeneralInventory       = []string{"items.general.inventory"}
+	ItemsPayables               = []string{"accounting.accounts-payable"}
+	Pos                         = []string{"pos"}
+	PosOperations               = []string{"pos.operations", "pos.cashier.central"}
+	PosMemberBills              = []string{"pos.operations.member-bills"}
+	PosCatalog                  = []string{"pos.catalog"}
+	PosKitchen                  = []string{"pos.kitchen"}
+	PosLoyalty                  = []string{"pos.loyalty"}
+	PosReports                  = []string{"pos.reports"}
+	PosSupervisors              = []string{"pos.settings.supervisors"}
+	PosCashier                  = []string{"pos.operations.cashier", "pos.operations.cashier-classic", "pos.operations.restaurant", "pos.cashier.central"}
+	PosOrders                   = []string{"pos.operations.orders"}
+	PosTables                   = []string{"pos.operations.tables"}
+	PosReservation              = []string{"pos.operations.reservation"}
+	PosGofood                   = []string{"pos.operations.gofood"}
+	PosKds                      = []string{"pos.kitchen.kds"}
+	PosQueueBoard               = []string{"pos.kitchen.queue-board"}
+	PosPrintQueue               = []string{"pos.kitchen.print-queue"}
+	PosStockAlerts              = []string{"pos.catalog.stock-alerts"}
+	PosChannelPrices            = []string{"pos.catalog.channel-prices"}
+	PosTopup                    = []string{"pos.loyalty.topup"}
+	PosPaymentMethods           = []string{"pos.loyalty.payment-methods"}
+	PosUnlinkCard               = []string{"pos.loyalty.unlink-card"}
+	PosDashboard                = []string{"pos.reports.dashboard"}
+	PosReportProfit             = []string{"pos.reports.profit"}
+	PosReportRevenueComposition = []string{"pos.reports.revenue-composition"}
+	PosReportTransactions       = []string{"pos.reports.transactions"}
+	PosReportRushHour           = []string{"pos.reports.rush-hour"}
+	PosReportProductSales       = []string{"pos.reports.product-sales"}
+	PosReportVoids              = []string{"pos.reports.voids"}
+	PosReportPaymentMethods     = []string{"pos.reports.payment-methods"}
+	PosReportClosing            = []string{"pos.reports.closing"}
+	PromoCampaigns              = []string{"promo.campaigns"}
+	PromoOffers                 = []string{"promo.offers"}
+	Hris                        = []string{"hris"}
+	HrisKepegawaian             = []string{"hris.kepegawaian"}
+	HrisWorkforce               = []string{"hris.workforce"}
+	HrisCompensation            = []string{"hris.compensation"}
+	HrisPerformance             = []string{"hris.performance"}
+	HrisRecruitment             = []string{"hris.recruitment"}
+	Accounting                  = []string{"accounting"}
+	AccountingOverview          = []string{"accounting.dashboard.overview"}
+	AccountingCoa               = []string{"accounting.master.chart-of-accounts"}
+	AccountingAccountTypes      = []string{"accounting.master.account-types"}
+	AccountingJournalMappings   = []string{"accounting.master.journal-mappings"}
+	AccountingJournalEntries    = []string{"accounting.ledger.journal-entries"}
+	AccountingJournalHistory    = []string{"accounting.ledger.journal-history"}
+	AccountingGeneralLedger     = []string{"accounting.ledger.general-ledger"}
+	AccountingSubsidiary        = []string{"accounting.ledger.subsidiary"}
+	AccountingTrialBalance      = []string{"accounting.ledger.trial-balance"}
+	AccountingCashBank          = []string{"accounting.cash-bank.accounts"}
+	AccountingCashIn            = []string{"accounting.cash-bank.cash-in"}
+	AccountingCashOut           = []string{"accounting.cash-bank.cash-out"}
+	AccountingCashTransfer      = []string{"accounting.cash-bank.transfer"}
+	AccountingAr                = []string{"accounting.receivable.list"}
+	AccountingArInvoices        = []string{"accounting.receivable.invoices"}
+	AccountingArInvoicesB2b     = []string{"accounting.receivable.invoices-b2b"}
+	AccountingArReceipts        = []string{"accounting.receivable.receipts"}
+	AccountingArAging           = []string{"accounting.receivable.aging"}
+	AccountingAp                = []string{"accounting.accounts-payable.payable"}
+	AccountingApInvoices        = []string{"accounting.accounts-payable.invoices"}
+	AccountingApPayments        = []string{"accounting.accounts-payable.payments"}
+	AccountingApAging           = []string{"accounting.accounts-payable.aging"}
+	AccountingFiscalYears       = []string{"accounting.period.fiscal-years"}
+	AccountingBeginningBalance  = []string{"accounting.period.beginning-balance"}
+	AccountingPeriods           = []string{"accounting.period.accounting-period"}
+	AccountingClosing           = []string{"accounting.period.closing"}
+	AccountingBalanceSheet      = []string{"accounting.reports.balance-sheet"}
+	AccountingIncomeStatement   = []string{"accounting.reports.income-statement"}
+	AccountingCashFlow          = []string{"accounting.reports.cash-flow"}
+	AccountingCoaItemReaders    = []string{"items.raw-material.master.materials"}
+	Crm                         = []string{"crm"}
+	CrmSettings                 = []string{"crm.settings"}
+	CrmMembers                  = []string{"crm.members"}
+	CrmInbox                    = []string{"crm.members.inbox"}
+	CrmReviews                  = []string{"crm.members.reviews"}
+	CrmLoyalty                  = []string{"crm.loyalty"}
+	CrmReports                  = []string{"crm.reports"}
+	CrmPromo                    = []string{"crm.promo", "promo"}
+	CrmEngagement               = []string{"crm.engagement"}
+	CrmMemberReviews            = []string{"crm.members.member-reviews"}
+	CrmPartners                 = []string{"crm.loyalty.partners"}
+	CrmDashboard                = []string{"crm.overview.dashboard"}
+	CrmMemberList               = []string{"crm.members.list"}
+	CrmMemberLookup             = []string{"crm.members.list", "crm.loyalty.rewards"}
+	CrmRewards                  = []string{"crm.loyalty.rewards"}
+	CrmRewardsRead              = []string{"crm.loyalty.rewards", "crm.members.list"}
+	CrmAvatars                  = []string{"crm.loyalty.avatars"}
+	CrmAvatarsRead              = []string{"crm.loyalty.avatars", "crm.members.list"}
+	CrmBadges                   = []string{"crm.badges"}
+	CrmWallpapers               = []string{"crm.wallpapers"}
+	CrmCollectibleUpload        = []string{"crm.loyalty.avatars", "crm.badges", "crm.wallpapers"}
+	CrmTiersRead                = []string{"crm.members.list", "crm.loyalty.rewards", "crm.loyalty.avatars", "crm.wallpapers", "crm.engagement.announcements", "crm.settings.config"}
+	CrmSettingsConfig           = []string{"crm.settings.config"}
+	CrmApprovalRules            = []string{"crm.settings.approvals"}
+	CrmWorkflows                = []string{"crm.settings.workflows"}
+	CrmScoring                  = []string{"crm.settings.scoring"}
+	CrmCustomFields             = []string{"crm.settings.custom-fields"}
+	CrmApprovalInbox            = []string{"sales-funnel.approvals"}
+	CrmAnnouncements            = []string{"crm.engagement.announcements"}
+	CrmChallenges               = []string{"crm.engagement.challenges"}
+	CrmCheckins                 = []string{"crm.engagement.checkins"}
+	CrmEvents                   = []string{"crm.engagement.events"}
+	CrmInboxAnalyze             = []string{"crm.members.inbox", "crm.reports.overview"}
+	CrmCampaigns                = []string{"crm.campaigns"}
+	CrmSegments                 = []string{"crm.marketing.segments"}
+	CrmSegmentsRead             = []string{"crm.marketing.segments", "crm.campaigns"}
+	CrmForms                    = []string{"crm.marketing.forms"}
+	CrmReportsOverview          = []string{"crm.reports.overview"}
+	CrmReportBuilder            = []string{"crm.reports.builder"}
+	CrmReportRun                = []string{"crm.reports.builder", "crm.marketing.attribution"}
+	CrmSavedReports             = []string{"crm.reports.builder", "crm.reports.dashboards", "crm.reports.schedules"}
+	CrmReportDashboards         = []string{"crm.reports.dashboards"}
+	CrmReportSchedules          = []string{"crm.reports.schedules"}
+	Settings                    = []string{"settings"}
+	SettingsUsers               = []string{"settings.users"}
+	SettingsRoles               = []string{"settings.roles"}
+	SettingsMenus               = []string{"settings.menus"}
+	SettingsBusiness            = []string{"settings.business"}
+	SettingsIntegrations        = []string{"settings.integrations"}
+	SettingsAppearance          = []string{"settings.appearance"}
+	SettingsPaymentGateways     = []string{"settings.payment-gateways"}
+	SettingsWaGateway           = []string{"settings.wa_gateway"}
+	SettingsAudit               = []string{"settings.audit"}
+	SettingsWaNotifications     = []string{"settings.wa_notifications"}
+	SettingsShipping            = []string{"settings.shipping"}
+	Shop                        = []string{"shop"}
+	ShopOrders                  = []string{"shop.orders"}
+	ShopSettings                = []string{"shop.settings"}
+	ShopWholesale               = []string{"shop.wholesale"}
+	ShopMarketplace             = []string{"shop.marketplace"}
+	Ticketing                   = []string{"ticketing"}
+	TicketingAdmin              = []string{"ticketing.settings", "ticketing.tickets", "ticketing.channel-manager", "ticketing.mapping"}
+	TicketingOperator           = []string{"ticketing.loket", "ticketing.gate", "ticketing.booking", "ticketing.gate_pass", "ticketing.passes"}
+	TicketingReports            = []string{"ticketing.reports"}
+	SalesFunnel                 = []string{"sales-funnel"}
+	Promo                       = []string{"promo", "crm.promo"}
+	Dataroom                    = []string{"dataroom"}
+	Resort                      = []string{"resort"}
+	ResortFrontOffice           = []string{"resort.front-office"}
+	ResortReservations          = []string{"resort.reservations"}
+	ResortRooms                 = []string{"resort.rooms"}
+	SalesFunnelLeads            = []string{"sales-funnel.leads"}
+	SalesFunnelPipeline         = []string{"sales-funnel.pipeline"}
+	SalesFunnelAccounts         = []string{"sales-funnel.accounts"}
+	SalesFunnelContacts         = []string{"sales-funnel.contacts"}
+	SalesFunnelFollowups        = []string{"sales-funnel.followups"}
+	SalesFunnelForecast         = []string{"sales-funnel.forecast"}
+	SalesFunnelReports          = []string{"sales-funnel.reports"}
+	SalesFunnelSettings         = []string{"sales-funnel.settings"}
+	SalesFunnelCrmOwnerPickers  = []string{"crm.settings.workflows", "crm.settings.approvals", "crm.reports.schedules", "crm.marketing.forms"}
+	SalesFunnelCrmStagePickers  = []string{"crm.settings.workflows"}
+	TicketingBooking            = []string{"ticketing.booking"}
+	TicketingLoket              = []string{"ticketing.loket"}
+	TicketingGate               = []string{"ticketing.gate"}
+	TicketingGatePass           = []string{"ticketing.gate_pass"}
+	TicketingPasses             = []string{"ticketing.passes"}
+	TicketingTickets            = []string{"ticketing.tickets"}
+	TicketingMapping            = []string{"ticketing.mapping"}
+	TicketingChannelManager     = []string{"ticketing.channel-manager"}
+	TicketingSettings           = []string{"ticketing.settings"}
+	PosWallet                   = []string{"pos.loyalty.wallet"}
+	GymExercises                = []string{"gym.exercises"}
+	GymRaces                    = []string{"gym.races"}
+	GymIncentives               = []string{"gym.incentives"}
+	GymPackages                 = []string{"gym.packages"}
+	GymCredits                  = []string{"gym.credits"}
+	GymRules                    = []string{"gym.rules"}
+	GymScheduling               = []string{"gym.schedule", "gym.sessions", "gym.bookings", "gym.class-types", "gym.coaches"}
+	GymCheckin                  = []string{"gym.checkin", "gym.sessions"}
+	Gym                         = []string{"gym"}
+	GymCheckinPage              = []string{"gym.checkin"}
+	GymScheduleTemplates        = []string{"gym.schedule.templates"}
+	GymBranchPickers            = []string{"gym.schedule", "gym.sessions", "gym.coaches", "gym.checkin", "gym.gate-devices", "gym.coach-leave", "gym.credits", "gym.rules"}
+	GymSchedule                 = []string{"gym.schedule"}
+	GymSessions                 = []string{"gym.sessions"}
+	GymBookings                 = []string{"gym.bookings"}
+	GymClassTypes               = []string{"gym.class-types"}
+	GymCoaches                  = []string{"gym.coaches"}
+	GymMembers                  = []string{"gym.members"}
+	GymReports                  = []string{"gym.reports"}
+	GymMyClasses                = []string{"gym.my-classes"}
+	GymCoachLeave               = []string{"gym.coach-leave"}
+	GymPt                       = []string{"gym.pt"}
+	GymAssessments              = []string{"gym.assessments"}
+	GymGateDevices              = []string{"gym.gate-devices"}
+	GymReferrals                = []string{"gym.referrals"}
+	Investor                    = []string{"investor"}
+	InvestorUpdates             = []string{"investor.updates"}
+	InvestorOverview            = []string{"investor.overview"}
+	InvestorPerformance         = []string{"investor.performance"}
+	InvestorProgress            = []string{"investor.progress"}
+	InvestorDocuments           = []string{"investor.documents"}
+	GymComplaints               = []string{"gym.complaints"}
+	Tasks                       = []string{"tasks"}
+	TasksTeam                   = []string{"tasks.team"}
+	TasksKpi                    = []string{"tasks.kpi"}
+	GymLoyalty                  = []string{"gym.loyalty"}
+	GymMemberFlags              = []string{"gym.member-flags"}
+	GymSop                      = []string{"gym.sop"}
+	GymAutomation               = []string{"gym.automation"}
+	GymNews                     = []string{"gym.news"}
+	HrisMaster                  = []string{"hris.master"}
+	HrisOrganization            = []string{"hris.organization"}
+	HrisInsights                = []string{"hris.insights"}
+	HrisEmployees               = []string{"hris.kepegawaian.users"}
+	HrisContracts               = []string{"hris.kepegawaian.contracts"}
+	HrisShifts                  = []string{"hris.kepegawaian.shifts"}
+	HrisHolidays                = []string{"hris.kepegawaian.holidays"}
+	HrisLoans                   = []string{"hris.kepegawaian.loans"}
+	HrisOvertime                = []string{"hris.kepegawaian.overtime"}
+	HrisAnnouncements           = []string{"hris.kepegawaian.announcements"}
+	HrisAttendance              = []string{"hris.workforce.attendance"}
+	HrisLeaves                  = []string{"hris.workforce.leaves"}
+	HrisOrgChart                = []string{"hris.organization.org-chart"}
+	HrisPayroll                 = []string{"hris.compensation.payroll"}
+	HrisSalary                  = []string{"hris.compensation.salary"}
+	HrisKpiScorecard            = []string{"hris.performance.kpi-scorecard"}
+	HrisKpiConfig               = []string{"hris.performance.kpi-config"}
+	HrisFeedback360             = []string{"hris.performance.feedback-360"}
+	HrisCandidates              = []string{"hris.recruitment.candidates"}
+	HrisPipeline                = []string{"hris.recruitment.pipeline"}
+	HrisPsikotes                = []string{"hris.recruitment.psikotes"}
+	HrisTalentPool              = []string{"hris.recruitment.talent-pool"}
+	HrisJobPortal               = []string{"hris.recruitment.job-portal"}
+	HrisLiveMonitoring          = []string{"hris.recruitment.live-monitoring"}
+	HrisAnalytics               = []string{"hris.insights.analytics"}
+	HrisReports                 = []string{"hris.insights.reports"}
+	HrisDepartments             = []string{"hris.master.departments"}
+	HrisPositions               = []string{"hris.master.positions"}
+	HrisEmploymentStatuses      = []string{"hris.master.employment-statuses"}
+	HrisPickerTicketing         = []string{"ticketing.settings"}
+	PosCatalogProducts          = []string{"pos.catalog.products"}
+	PosLoyaltySettings          = []string{"pos.loyalty.settings"}
+	SettingsBilling             = []string{"settings.billing"}
+	ItemsCatalog                = []string{"items", "pos.catalog"}
+	ItemsPr                     = []string{"items.general.purchasing.pr", "items.product.purchasing.pr", "items.raw-material.purchasing.pr"}
+	Site                        = []string{"site"}
+	SiteContent                 = []string{"site.content"}
+	SiteArticles                = []string{"site.articles"}
+	SiteEvents                  = []string{"site.events"}
+	EventsCalendar              = []string{"events.calendar"}
+	EventsAdmin                 = []string{"crm.engagement.events", "site.events"}
+	ItemsPrApproval             = []string{"items.general.purchasing.approval-pr", "items.product.approval.pr", "items.raw-material.approval.pr"}
 )
 
 // ByKey maps the TS key (e.g. "gymPackages") to its prefixes.
 var ByKey = map[string][]string{
-	"dashboard":                  Dashboard,
-	"ess":                        Ess,
-	"items":                      Items,
-	"itemsPurchasing":            ItemsPurchasing,
-	"itemsInventory":             ItemsInventory,
-	"itemsApproval":              ItemsApproval,
-	"itemsReports":               ItemsReports,
-	"itemsProduction":            ItemsProduction,
-	"itemsProductMaster":         ItemsProductMaster,
-	"itemsRawMaterialMaster":     ItemsRawMaterialMaster,
-	"itemsGeneralMaster":         ItemsGeneralMaster,
-	"itemsProductPurchasing":     ItemsProductPurchasing,
-	"itemsRawMaterialPurchasing": ItemsRawMaterialPurchasing,
-	"itemsGeneralPurchasing":     ItemsGeneralPurchasing,
-	"itemsProductInventory":      ItemsProductInventory,
-	"itemsRawMaterialInventory":  ItemsRawMaterialInventory,
-	"itemsGeneralInventory":      ItemsGeneralInventory,
-	"itemsPayables":              ItemsPayables,
-	"pos":                        Pos,
-	"posOperations":              PosOperations,
-	"posMemberBills":             PosMemberBills,
-	"posCatalog":                 PosCatalog,
-	"posKitchen":                 PosKitchen,
-	"posLoyalty":                 PosLoyalty,
-	"posReports":                 PosReports,
-	"posSupervisors":             PosSupervisors,
-	"posCashier":                 PosCashier,
-	"hris":                       Hris,
-	"hrisKepegawaian":            HrisKepegawaian,
-	"hrisWorkforce":              HrisWorkforce,
-	"hrisCompensation":           HrisCompensation,
-	"hrisPerformance":            HrisPerformance,
-	"hrisRecruitment":            HrisRecruitment,
-	"accounting":                 Accounting,
-	"accountingOverview":         AccountingOverview,
-	"accountingCoa":              AccountingCoa,
-	"accountingAccountTypes":     AccountingAccountTypes,
-	"accountingJournalMappings":  AccountingJournalMappings,
-	"accountingJournalEntries":   AccountingJournalEntries,
-	"accountingJournalHistory":   AccountingJournalHistory,
-	"accountingGeneralLedger":    AccountingGeneralLedger,
-	"accountingSubsidiary":       AccountingSubsidiary,
-	"accountingTrialBalance":     AccountingTrialBalance,
-	"accountingCashBank":         AccountingCashBank,
-	"accountingCashIn":           AccountingCashIn,
-	"accountingCashOut":          AccountingCashOut,
-	"accountingCashTransfer":     AccountingCashTransfer,
-	"accountingAr":               AccountingAr,
-	"accountingArInvoices":       AccountingArInvoices,
-	"accountingArInvoicesB2b":    AccountingArInvoicesB2b,
-	"accountingArReceipts":       AccountingArReceipts,
-	"accountingArAging":          AccountingArAging,
-	"accountingAp":               AccountingAp,
-	"accountingApInvoices":       AccountingApInvoices,
-	"accountingApPayments":       AccountingApPayments,
-	"accountingApAging":          AccountingApAging,
-	"accountingFiscalYears":      AccountingFiscalYears,
-	"accountingBeginningBalance": AccountingBeginningBalance,
-	"accountingPeriods":          AccountingPeriods,
-	"accountingClosing":          AccountingClosing,
-	"accountingBalanceSheet":     AccountingBalanceSheet,
-	"accountingIncomeStatement":  AccountingIncomeStatement,
-	"accountingCashFlow":         AccountingCashFlow,
-	"accountingCoaItemReaders":   AccountingCoaItemReaders,
-	"crm":                        Crm,
-	"crmSettings":                CrmSettings,
-	"crmMembers":                 CrmMembers,
-	"crmInbox":                   CrmInbox,
-	"crmReviews":                 CrmReviews,
-	"crmLoyalty":                 CrmLoyalty,
-	"crmReports":                 CrmReports,
-	"crmPromo":                   CrmPromo,
-	"crmEngagement":              CrmEngagement,
-	"crmMemberReviews":           CrmMemberReviews,
-	"crmPartners":                CrmPartners,
-	"crmDashboard":               CrmDashboard,
-	"crmMemberList":              CrmMemberList,
-	"crmMemberLookup":            CrmMemberLookup,
-	"crmRewards":                 CrmRewards,
-	"crmRewardsRead":             CrmRewardsRead,
-	"crmAvatars":                 CrmAvatars,
-	"crmAvatarsRead":             CrmAvatarsRead,
-	"crmBadges":                  CrmBadges,
-	"crmWallpapers":              CrmWallpapers,
-	"crmCollectibleUpload":       CrmCollectibleUpload,
-	"crmTiersRead":               CrmTiersRead,
-	"crmSettingsConfig":          CrmSettingsConfig,
-	"crmApprovalRules":           CrmApprovalRules,
-	"crmWorkflows":               CrmWorkflows,
-	"crmScoring":                 CrmScoring,
-	"crmCustomFields":            CrmCustomFields,
-	"crmApprovalInbox":           CrmApprovalInbox,
-	"crmAnnouncements":           CrmAnnouncements,
-	"crmChallenges":              CrmChallenges,
-	"crmCheckins":                CrmCheckins,
-	"crmEvents":                  CrmEvents,
-	"crmInboxAnalyze":            CrmInboxAnalyze,
-	"crmCampaigns":               CrmCampaigns,
-	"crmSegments":                CrmSegments,
-	"crmSegmentsRead":            CrmSegmentsRead,
-	"crmForms":                   CrmForms,
-	"crmReportsOverview":         CrmReportsOverview,
-	"crmReportBuilder":           CrmReportBuilder,
-	"crmReportRun":               CrmReportRun,
-	"crmSavedReports":            CrmSavedReports,
-	"crmReportDashboards":        CrmReportDashboards,
-	"crmReportSchedules":         CrmReportSchedules,
-	"settings":                   Settings,
-	"settingsUsers":              SettingsUsers,
-	"settingsRoles":              SettingsRoles,
-	"settingsMenus":              SettingsMenus,
-	"settingsBusiness":           SettingsBusiness,
-	"settingsIntegrations":       SettingsIntegrations,
-	"settingsAppearance":         SettingsAppearance,
-	"settingsPaymentGateways":    SettingsPaymentGateways,
-	"settingsWaGateway":          SettingsWaGateway,
-	"settingsAudit":              SettingsAudit,
-	"settingsWaNotifications":    SettingsWaNotifications,
-	"settingsShipping":           SettingsShipping,
-	"shop":                       Shop,
-	"shopOrders":                 ShopOrders,
-	"shopSettings":               ShopSettings,
-	"shopWholesale":              ShopWholesale,
-	"shopMarketplace":            ShopMarketplace,
-	"ticketing":                  Ticketing,
-	"ticketingAdmin":             TicketingAdmin,
-	"ticketingOperator":          TicketingOperator,
-	"ticketingReports":           TicketingReports,
-	"salesFunnel":                SalesFunnel,
-	"promo":                      Promo,
-	"dataroom":                   Dataroom,
-	"resort":                     Resort,
-	"resortFrontOffice":          ResortFrontOffice,
-	"resortReservations":         ResortReservations,
-	"resortRooms":                ResortRooms,
-	"salesFunnelLeads":           SalesFunnelLeads,
-	"salesFunnelPipeline":        SalesFunnelPipeline,
-	"salesFunnelAccounts":        SalesFunnelAccounts,
-	"salesFunnelContacts":        SalesFunnelContacts,
-	"salesFunnelFollowups":       SalesFunnelFollowups,
-	"salesFunnelForecast":        SalesFunnelForecast,
-	"salesFunnelReports":         SalesFunnelReports,
-	"salesFunnelSettings":        SalesFunnelSettings,
-	"salesFunnelCrmOwnerPickers": SalesFunnelCrmOwnerPickers,
-	"salesFunnelCrmStagePickers": SalesFunnelCrmStagePickers,
-	"ticketingBooking":           TicketingBooking,
-	"ticketingLoket":             TicketingLoket,
-	"ticketingGate":              TicketingGate,
-	"ticketingGatePass":          TicketingGatePass,
-	"ticketingPasses":            TicketingPasses,
-	"ticketingTickets":           TicketingTickets,
-	"ticketingMapping":           TicketingMapping,
-	"ticketingChannelManager":    TicketingChannelManager,
-	"ticketingSettings":          TicketingSettings,
-	"ticketingPosTab":            TicketingPosTab,
-	"posWallet":                  PosWallet,
-	"gymExercises":               GymExercises,
-	"gymRaces":                   GymRaces,
-	"gymIncentives":              GymIncentives,
-	"gymPackages":                GymPackages,
-	"gymCredits":                 GymCredits,
-	"gymRules":                   GymRules,
-	"gymScheduling":              GymScheduling,
-	"gymCheckin":                 GymCheckin,
-	"gym":                        Gym,
-	"gymCheckinPage":             GymCheckinPage,
-	"gymScheduleTemplates":       GymScheduleTemplates,
-	"gymBranchPickers":           GymBranchPickers,
-	"gymSchedule":                GymSchedule,
-	"gymSessions":                GymSessions,
-	"gymBookings":                GymBookings,
-	"gymClassTypes":              GymClassTypes,
-	"gymCoaches":                 GymCoaches,
-	"gymMembers":                 GymMembers,
-	"gymReports":                 GymReports,
-	"gymMyClasses":               GymMyClasses,
-	"gymCoachLeave":              GymCoachLeave,
-	"gymPt":                      GymPt,
-	"gymAssessments":             GymAssessments,
-	"gymGateDevices":             GymGateDevices,
-	"gymReferrals":               GymReferrals,
-	"investor":                   Investor,
-	"investorUpdates":            InvestorUpdates,
-	"investorOverview":           InvestorOverview,
-	"investorPerformance":        InvestorPerformance,
-	"investorProgress":           InvestorProgress,
-	"investorDocuments":          InvestorDocuments,
-	"gymComplaints":              GymComplaints,
-	"tasks":                      Tasks,
-	"tasksTeam":                  TasksTeam,
-	"tasksKpi":                   TasksKpi,
-	"gymLoyalty":                 GymLoyalty,
-	"gymMemberFlags":             GymMemberFlags,
-	"gymSop":                     GymSop,
-	"gymAutomation":              GymAutomation,
-	"gymNews":                    GymNews,
-	"hrisMaster":                 HrisMaster,
-	"hrisOrganization":           HrisOrganization,
-	"hrisInsights":               HrisInsights,
-	"hrisEmployees":              HrisEmployees,
-	"hrisContracts":              HrisContracts,
-	"hrisShifts":                 HrisShifts,
-	"hrisHolidays":               HrisHolidays,
-	"hrisLoans":                  HrisLoans,
-	"hrisOvertime":               HrisOvertime,
-	"hrisAnnouncements":          HrisAnnouncements,
-	"hrisAttendance":             HrisAttendance,
-	"hrisLeaves":                 HrisLeaves,
-	"hrisOrgChart":               HrisOrgChart,
-	"hrisPayroll":                HrisPayroll,
-	"hrisSalary":                 HrisSalary,
-	"hrisKpiScorecard":           HrisKpiScorecard,
-	"hrisKpiConfig":              HrisKpiConfig,
-	"hrisFeedback360":            HrisFeedback360,
-	"hrisCandidates":             HrisCandidates,
-	"hrisPipeline":               HrisPipeline,
-	"hrisPsikotes":               HrisPsikotes,
-	"hrisTalentPool":             HrisTalentPool,
-	"hrisJobPortal":              HrisJobPortal,
-	"hrisLiveMonitoring":         HrisLiveMonitoring,
-	"hrisAnalytics":              HrisAnalytics,
-	"hrisReports":                HrisReports,
-	"hrisDepartments":            HrisDepartments,
-	"hrisPositions":              HrisPositions,
-	"hrisEmploymentStatuses":     HrisEmploymentStatuses,
-	"hrisPickerTicketing":        HrisPickerTicketing,
-	"posCatalogProducts":         PosCatalogProducts,
-	"posLoyaltySettings":         PosLoyaltySettings,
-	"settingsBilling":            SettingsBilling,
-	"itemsCatalog":               ItemsCatalog,
-	"itemsPr":                    ItemsPr,
-	"site":                       Site,
-	"siteContent":                SiteContent,
-	"siteArticles":               SiteArticles,
-	"siteEvents":                 SiteEvents,
-	"eventsCalendar":             EventsCalendar,
-	"eventsAdmin":                EventsAdmin,
-	"itemsPrApproval":            ItemsPrApproval,
+	"dashboard":                   Dashboard,
+	"ess":                         Ess,
+	"items":                       Items,
+	"itemsPurchasing":             ItemsPurchasing,
+	"itemsInventory":              ItemsInventory,
+	"itemsApproval":               ItemsApproval,
+	"itemsReports":                ItemsReports,
+	"itemsProduction":             ItemsProduction,
+	"itemsProductMaster":          ItemsProductMaster,
+	"itemsRawMaterialMaster":      ItemsRawMaterialMaster,
+	"itemsGeneralMaster":          ItemsGeneralMaster,
+	"itemsProductPurchasing":      ItemsProductPurchasing,
+	"itemsRawMaterialPurchasing":  ItemsRawMaterialPurchasing,
+	"itemsGeneralPurchasing":      ItemsGeneralPurchasing,
+	"itemsProductInventory":       ItemsProductInventory,
+	"itemsRawMaterialInventory":   ItemsRawMaterialInventory,
+	"itemsGeneralInventory":       ItemsGeneralInventory,
+	"itemsPayables":               ItemsPayables,
+	"pos":                         Pos,
+	"posOperations":               PosOperations,
+	"posMemberBills":              PosMemberBills,
+	"posCatalog":                  PosCatalog,
+	"posKitchen":                  PosKitchen,
+	"posLoyalty":                  PosLoyalty,
+	"posReports":                  PosReports,
+	"posSupervisors":              PosSupervisors,
+	"posCashier":                  PosCashier,
+	"posOrders":                   PosOrders,
+	"posTables":                   PosTables,
+	"posReservation":              PosReservation,
+	"posGofood":                   PosGofood,
+	"posKds":                      PosKds,
+	"posQueueBoard":               PosQueueBoard,
+	"posPrintQueue":               PosPrintQueue,
+	"posStockAlerts":              PosStockAlerts,
+	"posChannelPrices":            PosChannelPrices,
+	"posTopup":                    PosTopup,
+	"posPaymentMethods":           PosPaymentMethods,
+	"posUnlinkCard":               PosUnlinkCard,
+	"posDashboard":                PosDashboard,
+	"posReportProfit":             PosReportProfit,
+	"posReportRevenueComposition": PosReportRevenueComposition,
+	"posReportTransactions":       PosReportTransactions,
+	"posReportRushHour":           PosReportRushHour,
+	"posReportProductSales":       PosReportProductSales,
+	"posReportVoids":              PosReportVoids,
+	"posReportPaymentMethods":     PosReportPaymentMethods,
+	"posReportClosing":            PosReportClosing,
+	"promoCampaigns":              PromoCampaigns,
+	"promoOffers":                 PromoOffers,
+	"hris":                        Hris,
+	"hrisKepegawaian":             HrisKepegawaian,
+	"hrisWorkforce":               HrisWorkforce,
+	"hrisCompensation":            HrisCompensation,
+	"hrisPerformance":             HrisPerformance,
+	"hrisRecruitment":             HrisRecruitment,
+	"accounting":                  Accounting,
+	"accountingOverview":          AccountingOverview,
+	"accountingCoa":               AccountingCoa,
+	"accountingAccountTypes":      AccountingAccountTypes,
+	"accountingJournalMappings":   AccountingJournalMappings,
+	"accountingJournalEntries":    AccountingJournalEntries,
+	"accountingJournalHistory":    AccountingJournalHistory,
+	"accountingGeneralLedger":     AccountingGeneralLedger,
+	"accountingSubsidiary":        AccountingSubsidiary,
+	"accountingTrialBalance":      AccountingTrialBalance,
+	"accountingCashBank":          AccountingCashBank,
+	"accountingCashIn":            AccountingCashIn,
+	"accountingCashOut":           AccountingCashOut,
+	"accountingCashTransfer":      AccountingCashTransfer,
+	"accountingAr":                AccountingAr,
+	"accountingArInvoices":        AccountingArInvoices,
+	"accountingArInvoicesB2b":     AccountingArInvoicesB2b,
+	"accountingArReceipts":        AccountingArReceipts,
+	"accountingArAging":           AccountingArAging,
+	"accountingAp":                AccountingAp,
+	"accountingApInvoices":        AccountingApInvoices,
+	"accountingApPayments":        AccountingApPayments,
+	"accountingApAging":           AccountingApAging,
+	"accountingFiscalYears":       AccountingFiscalYears,
+	"accountingBeginningBalance":  AccountingBeginningBalance,
+	"accountingPeriods":           AccountingPeriods,
+	"accountingClosing":           AccountingClosing,
+	"accountingBalanceSheet":      AccountingBalanceSheet,
+	"accountingIncomeStatement":   AccountingIncomeStatement,
+	"accountingCashFlow":          AccountingCashFlow,
+	"accountingCoaItemReaders":    AccountingCoaItemReaders,
+	"crm":                         Crm,
+	"crmSettings":                 CrmSettings,
+	"crmMembers":                  CrmMembers,
+	"crmInbox":                    CrmInbox,
+	"crmReviews":                  CrmReviews,
+	"crmLoyalty":                  CrmLoyalty,
+	"crmReports":                  CrmReports,
+	"crmPromo":                    CrmPromo,
+	"crmEngagement":               CrmEngagement,
+	"crmMemberReviews":            CrmMemberReviews,
+	"crmPartners":                 CrmPartners,
+	"crmDashboard":                CrmDashboard,
+	"crmMemberList":               CrmMemberList,
+	"crmMemberLookup":             CrmMemberLookup,
+	"crmRewards":                  CrmRewards,
+	"crmRewardsRead":              CrmRewardsRead,
+	"crmAvatars":                  CrmAvatars,
+	"crmAvatarsRead":              CrmAvatarsRead,
+	"crmBadges":                   CrmBadges,
+	"crmWallpapers":               CrmWallpapers,
+	"crmCollectibleUpload":        CrmCollectibleUpload,
+	"crmTiersRead":                CrmTiersRead,
+	"crmSettingsConfig":           CrmSettingsConfig,
+	"crmApprovalRules":            CrmApprovalRules,
+	"crmWorkflows":                CrmWorkflows,
+	"crmScoring":                  CrmScoring,
+	"crmCustomFields":             CrmCustomFields,
+	"crmApprovalInbox":            CrmApprovalInbox,
+	"crmAnnouncements":            CrmAnnouncements,
+	"crmChallenges":               CrmChallenges,
+	"crmCheckins":                 CrmCheckins,
+	"crmEvents":                   CrmEvents,
+	"crmInboxAnalyze":             CrmInboxAnalyze,
+	"crmCampaigns":                CrmCampaigns,
+	"crmSegments":                 CrmSegments,
+	"crmSegmentsRead":             CrmSegmentsRead,
+	"crmForms":                    CrmForms,
+	"crmReportsOverview":          CrmReportsOverview,
+	"crmReportBuilder":            CrmReportBuilder,
+	"crmReportRun":                CrmReportRun,
+	"crmSavedReports":             CrmSavedReports,
+	"crmReportDashboards":         CrmReportDashboards,
+	"crmReportSchedules":          CrmReportSchedules,
+	"settings":                    Settings,
+	"settingsUsers":               SettingsUsers,
+	"settingsRoles":               SettingsRoles,
+	"settingsMenus":               SettingsMenus,
+	"settingsBusiness":            SettingsBusiness,
+	"settingsIntegrations":        SettingsIntegrations,
+	"settingsAppearance":          SettingsAppearance,
+	"settingsPaymentGateways":     SettingsPaymentGateways,
+	"settingsWaGateway":           SettingsWaGateway,
+	"settingsAudit":               SettingsAudit,
+	"settingsWaNotifications":     SettingsWaNotifications,
+	"settingsShipping":            SettingsShipping,
+	"shop":                        Shop,
+	"shopOrders":                  ShopOrders,
+	"shopSettings":                ShopSettings,
+	"shopWholesale":               ShopWholesale,
+	"shopMarketplace":             ShopMarketplace,
+	"ticketing":                   Ticketing,
+	"ticketingAdmin":              TicketingAdmin,
+	"ticketingOperator":           TicketingOperator,
+	"ticketingReports":            TicketingReports,
+	"salesFunnel":                 SalesFunnel,
+	"promo":                       Promo,
+	"dataroom":                    Dataroom,
+	"resort":                      Resort,
+	"resortFrontOffice":           ResortFrontOffice,
+	"resortReservations":          ResortReservations,
+	"resortRooms":                 ResortRooms,
+	"salesFunnelLeads":            SalesFunnelLeads,
+	"salesFunnelPipeline":         SalesFunnelPipeline,
+	"salesFunnelAccounts":         SalesFunnelAccounts,
+	"salesFunnelContacts":         SalesFunnelContacts,
+	"salesFunnelFollowups":        SalesFunnelFollowups,
+	"salesFunnelForecast":         SalesFunnelForecast,
+	"salesFunnelReports":          SalesFunnelReports,
+	"salesFunnelSettings":         SalesFunnelSettings,
+	"salesFunnelCrmOwnerPickers":  SalesFunnelCrmOwnerPickers,
+	"salesFunnelCrmStagePickers":  SalesFunnelCrmStagePickers,
+	"ticketingBooking":            TicketingBooking,
+	"ticketingLoket":              TicketingLoket,
+	"ticketingGate":               TicketingGate,
+	"ticketingGatePass":           TicketingGatePass,
+	"ticketingPasses":             TicketingPasses,
+	"ticketingTickets":            TicketingTickets,
+	"ticketingMapping":            TicketingMapping,
+	"ticketingChannelManager":     TicketingChannelManager,
+	"ticketingSettings":           TicketingSettings,
+	"posWallet":                   PosWallet,
+	"gymExercises":                GymExercises,
+	"gymRaces":                    GymRaces,
+	"gymIncentives":               GymIncentives,
+	"gymPackages":                 GymPackages,
+	"gymCredits":                  GymCredits,
+	"gymRules":                    GymRules,
+	"gymScheduling":               GymScheduling,
+	"gymCheckin":                  GymCheckin,
+	"gym":                         Gym,
+	"gymCheckinPage":              GymCheckinPage,
+	"gymScheduleTemplates":        GymScheduleTemplates,
+	"gymBranchPickers":            GymBranchPickers,
+	"gymSchedule":                 GymSchedule,
+	"gymSessions":                 GymSessions,
+	"gymBookings":                 GymBookings,
+	"gymClassTypes":               GymClassTypes,
+	"gymCoaches":                  GymCoaches,
+	"gymMembers":                  GymMembers,
+	"gymReports":                  GymReports,
+	"gymMyClasses":                GymMyClasses,
+	"gymCoachLeave":               GymCoachLeave,
+	"gymPt":                       GymPt,
+	"gymAssessments":              GymAssessments,
+	"gymGateDevices":              GymGateDevices,
+	"gymReferrals":                GymReferrals,
+	"investor":                    Investor,
+	"investorUpdates":             InvestorUpdates,
+	"investorOverview":            InvestorOverview,
+	"investorPerformance":         InvestorPerformance,
+	"investorProgress":            InvestorProgress,
+	"investorDocuments":           InvestorDocuments,
+	"gymComplaints":               GymComplaints,
+	"tasks":                       Tasks,
+	"tasksTeam":                   TasksTeam,
+	"tasksKpi":                    TasksKpi,
+	"gymLoyalty":                  GymLoyalty,
+	"gymMemberFlags":              GymMemberFlags,
+	"gymSop":                      GymSop,
+	"gymAutomation":               GymAutomation,
+	"gymNews":                     GymNews,
+	"hrisMaster":                  HrisMaster,
+	"hrisOrganization":            HrisOrganization,
+	"hrisInsights":                HrisInsights,
+	"hrisEmployees":               HrisEmployees,
+	"hrisContracts":               HrisContracts,
+	"hrisShifts":                  HrisShifts,
+	"hrisHolidays":                HrisHolidays,
+	"hrisLoans":                   HrisLoans,
+	"hrisOvertime":                HrisOvertime,
+	"hrisAnnouncements":           HrisAnnouncements,
+	"hrisAttendance":              HrisAttendance,
+	"hrisLeaves":                  HrisLeaves,
+	"hrisOrgChart":                HrisOrgChart,
+	"hrisPayroll":                 HrisPayroll,
+	"hrisSalary":                  HrisSalary,
+	"hrisKpiScorecard":            HrisKpiScorecard,
+	"hrisKpiConfig":               HrisKpiConfig,
+	"hrisFeedback360":             HrisFeedback360,
+	"hrisCandidates":              HrisCandidates,
+	"hrisPipeline":                HrisPipeline,
+	"hrisPsikotes":                HrisPsikotes,
+	"hrisTalentPool":              HrisTalentPool,
+	"hrisJobPortal":               HrisJobPortal,
+	"hrisLiveMonitoring":          HrisLiveMonitoring,
+	"hrisAnalytics":               HrisAnalytics,
+	"hrisReports":                 HrisReports,
+	"hrisDepartments":             HrisDepartments,
+	"hrisPositions":               HrisPositions,
+	"hrisEmploymentStatuses":      HrisEmploymentStatuses,
+	"hrisPickerTicketing":         HrisPickerTicketing,
+	"posCatalogProducts":          PosCatalogProducts,
+	"posLoyaltySettings":          PosLoyaltySettings,
+	"settingsBilling":             SettingsBilling,
+	"itemsCatalog":                ItemsCatalog,
+	"itemsPr":                     ItemsPr,
+	"site":                        Site,
+	"siteContent":                 SiteContent,
+	"siteArticles":                SiteArticles,
+	"siteEvents":                  SiteEvents,
+	"eventsCalendar":              EventsCalendar,
+	"eventsAdmin":                 EventsAdmin,
+	"itemsPrApproval":             ItemsPrApproval,
 }

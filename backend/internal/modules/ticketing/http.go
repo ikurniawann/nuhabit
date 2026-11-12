@@ -66,7 +66,7 @@ func (h *handler) Routes() []module.Route {
 		r("GET /api/ticketing/season-passes/pass-options", passes, h.passOptions),
 		r("POST /api/ticketing/season-passes/{id}/renew", passes, h.renewSeasonPass),
 
-		r("POST /api/ticketing/tab/check", iam.TicketingPosTab, h.tabCheck),
+		r("POST /api/ticketing/tab/check", iam.PosCashier, h.tabCheck),
 		r("GET /api/ticketing/tab/stats", loket, h.tabStats),
 		r("GET /api/ticketing/occupancy", slices.Concat(booking, settings, reports), h.occupancy),
 		r("GET /api/ticketing/reports", reports, h.report),

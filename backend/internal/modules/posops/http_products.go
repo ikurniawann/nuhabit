@@ -39,7 +39,7 @@ func (h *Handler) caller(r *http.Request, u *auth.User) Caller {
 }
 
 func (h *Handler) listProducts(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.PosCatalog...)
+	user, err := h.auth.RequireMenuPrefix(r, menusProducts...)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (h *Handler) listProducts(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) createProduct(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.PosCatalog...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.PosCatalogProducts...); err != nil {
 		return err
 	}
 	body, err := destructured(r, "sku")
@@ -71,7 +71,7 @@ func (h *Handler) createProduct(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) syncPurchasing(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.PosCatalog...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.PosCatalogProducts...); err != nil {
 		return err
 	}
 	body, err := objectBody(r, "purchasing_product_ids")
@@ -101,7 +101,7 @@ func (h *Handler) updateProduct(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) listSkus(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, iam.PosCatalogProducts, "Authentication required"); err != nil {
 		return err
 	}
 	skus, err := h.svc.ListSkus(r.Context(), r.PathValue("id"))

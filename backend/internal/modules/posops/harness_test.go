@@ -52,7 +52,7 @@ func newHarness(t *testing.T, menus map[string][]string) *harness {
 	t.Helper()
 	deps := testutil.Deps(t, nil)
 	if menus == nil {
-		menus = map[string][]string{"pos.operations": nil}
+		menus = allPosMenus()
 	}
 	staff := testutil.CreateStaff(t, testutil.StaffOptions{Menus: menus})
 	tx := testutil.Tx(t)
@@ -167,4 +167,16 @@ func obj(v any) map[string]any {
 func mustJSON(v any) []byte {
 	b, _ := json.Marshal(v)
 	return b
+}
+
+// allPosMenus grants every POS page the module's routes serve.
+func allPosMenus() map[string][]string {
+	menus := map[string][]string{}
+	for _, code := range []string{"pos.operations.cashier", "pos.operations.orders", "pos.operations.tables",
+		"pos.operations.reservation", "pos.catalog.stock-alerts", "pos.reports.dashboard", "pos.reports.profit",
+		"pos.reports.revenue-composition", "pos.reports.transactions", "pos.reports.rush-hour",
+		"pos.reports.product-sales", "pos.reports.voids", "pos.reports.payment-methods", "pos.reports.closing"} {
+		menus[code] = nil
+	}
+	return menus
 }

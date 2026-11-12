@@ -16,7 +16,6 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
-	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -63,7 +62,7 @@ func (h *Handler) Routes() []module.Route {
 // passLookup matches a scanned pass QR token, pass code or wristband UID and
 // returns the member discount when the pass is active and in its window.
 func (h *Handler) passLookup(w http.ResponseWriter, r *http.Request) error {
-	if _, err := kit.PosUser(h.auth, r); err != nil {
+	if _, err := kit.PosUser(h.auth, r, kit.Cashier); err != nil {
 		return err
 	}
 	raw := validate.JSTrim(r.URL.Query().Get("code"))
@@ -89,7 +88,7 @@ type memberQrData struct {
 // check-in for the same member. The order goes ahead whatever the gym
 // decides, and a failed check-in only leaves `gym` null.
 func (h *Handler) memberQr(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.PosOperations...)
+	user, err := h.auth.RequireMenuPrefix(r, kit.Cashier...)
 	if err != nil {
 		return err
 	}

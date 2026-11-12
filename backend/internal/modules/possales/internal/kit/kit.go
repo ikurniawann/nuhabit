@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -19,11 +20,12 @@ import (
 	"nuhabit/backend/internal/platform/ratelimit"
 )
 
-// PosUser mirrors getPosSession: a staff session with a grant under the "pos"
-// menu prefix. A missing session or a missing grant are both 401
-// "Authentication required" (the TS helper swallows 401/403 into null).
-func PosUser(a *auth.Service, r *http.Request) (*auth.User, error) {
-	u, err := a.RequireMenuPrefix(r, iam.Pos...)
+// PosUser mirrors getPosSession: a staff session with a grant on one of the
+// menus whose pages call the route. A missing session or a missing grant are
+// both 401 "Authentication required" (the TS helper swallows 401/403 into
+// null).
+func PosUser(a *auth.Service, r *http.Request, menus []string) (*auth.User, error) {
+	u, err := a.RequireMenuPrefix(r, menus...)
 	if err != nil {
 		var he *httpx.Error
 		if errors.As(err, &he) && (he.Status == http.StatusUnauthorized || he.Status == http.StatusForbidden) {
@@ -33,6 +35,20 @@ func PosUser(a *auth.Service, r *http.Request) (*auth.User, error) {
 	}
 	return u, nil
 }
+
+// Menu sets: the leaf menus whose pages call a route.
+var (
+	// Cashier is the cashier pages (tablet, classic, restaurant, central).
+	Cashier = iam.PosCashier
+	// Orders is the Orders page (void, owner comp).
+	Orders = iam.PosOrders
+	// CashierOrOrders adds the Orders page (open bills, self-orders).
+	CashierOrOrders = slices.Concat(iam.PosCashier, iam.PosOrders)
+	// OrderDetail adds the report pages that open a transaction.
+	OrderDetail = slices.Concat(iam.PosCashier, iam.PosOrders, iam.PosReportTransactions, iam.PosReportVoids)
+	// Kitchen is the KDS page and the queue TV board, which reads it.
+	Kitchen = slices.Concat(iam.PosKds, iam.PosQueueBoard)
+)
 
 // Fail writes `{ success:false, error:msg }` with status.
 func Fail(w http.ResponseWriter, status int, msg string) error {

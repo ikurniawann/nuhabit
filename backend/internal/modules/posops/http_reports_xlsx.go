@@ -8,6 +8,7 @@ import (
 	"regexp"
 
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/xlsx"
 )
@@ -31,7 +32,7 @@ func writeXlsx(w http.ResponseWriter, body []byte, filename string, noStore bool
 }
 
 func (h *Handler) productSalesReport(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Authentication required")
+	user, err := h.requirePos(r, iam.PosReportProductSales, "Authentication required")
 	if err != nil {
 		return err
 	}
@@ -51,7 +52,7 @@ func (h *Handler) productSalesReport(w http.ResponseWriter, r *http.Request) err
 }
 
 func (h *Handler) transactionReport(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Authentication required")
+	user, err := h.requirePos(r, iam.PosReportTransactions, "Authentication required")
 	if err != nil {
 		return err
 	}
@@ -88,7 +89,7 @@ func stallLabel(selected *string, options []stallOption) string {
 // rushHourExport mirrors GET /api/pos/reports/rush-hour/export: four
 // sheets, with the share of the range_from..range_to hours.
 func (h *Handler) rushHourExport(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Authentication required")
+	user, err := h.requirePos(r, iam.PosReportRushHour, "Authentication required")
 	if err != nil {
 		return err
 	}
@@ -198,7 +199,7 @@ func reportFailure(err error, failed func(error) (int, string)) *Fail {
 // &date_to[&warehouse_id]: the report as its route returns it (same
 // filters and access), shaped into a styled workbook.
 func (h *Handler) exportReport(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Authentication required")
+	user, err := h.requirePos(r, menusReportExport, "Authentication required")
 	if err != nil {
 		return err
 	}
@@ -207,6 +208,11 @@ func (h *Handler) exportReport(w http.ResponseWriter, r *http.Request) error {
 	exp, ok := reportExports[key]
 	if !ok {
 		return fail(http.StatusBadRequest, "Laporan tidak dikenal")
+	}
+	if ok, err := h.auth.HasMenuPrefix(r.Context(), user, "pos.reports."+key); err != nil {
+		return err
+	} else if !ok {
+		return httpx.Forbidden("Insufficient permissions")
 	}
 	from, to := q.Get("date_from"), q.Get("date_to")
 	if msg := validateReportRange(from, to); msg != "" {

@@ -82,7 +82,7 @@ func posStaff(t *testing.T, menu string) *testutil.Staff {
 
 func TestPassLookup(t *testing.T) {
 	// Accounts first: their cleanup must run after the fixture rolls back.
-	cashier := posStaff(t, "pos.operations")
+	cashier := posStaff(t, "pos.operations.cashier")
 	outsider := posStaff(t, "gym.packages")
 	f := newFixture(t, Ports{})
 	get := func(code string) *http.Request {
@@ -171,7 +171,7 @@ func (g *fakeGym) CheckInAtPos(_ context.Context, _ database.DB, customerID, sca
 func TestMemberQr(t *testing.T) {
 	noBooking := "no_booking"
 	gym := &fakeGym{res: &GymCheckInResult{Decision: "denied", Reason: &noBooking, Message: "Tidak ada booking kelas"}}
-	cashier := posStaff(t, "pos.operations")
+	cashier := posStaff(t, "pos.operations.cashier")
 	reportsOnly := posStaff(t, "pos.reports")
 	member := testutil.CreateMember(t)
 	f := newFixture(t, Ports{Gym: gym})

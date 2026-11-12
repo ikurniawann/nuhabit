@@ -18,7 +18,7 @@ func (h *Handler) customerRoutes() []module.Route {
 func always(msg string) func(error) string { return func(error) string { return msg } }
 
 func (h *Handler) listCustomers(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, menusCustomers, "Authentication required"); err != nil {
 		return err
 	}
 	f := customerFilter{Search: queryParam(r, "search"), Phone: queryParam(r, "phone"), Tier: queryParam(r, "tier")}
@@ -31,7 +31,7 @@ func (h *Handler) listCustomers(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) saveCustomer(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Authentication required")
+	user, err := h.requirePos(r, menusCustomers, "Authentication required")
 	if err != nil {
 		return err
 	}

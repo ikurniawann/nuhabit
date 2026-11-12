@@ -9,7 +9,6 @@ import (
 	"nuhabit/backend/internal/modules/posops/domain"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/httpx"
-	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -144,10 +143,11 @@ func fixed(fallback string) func(error) string {
 
 /* ── Guards ──────────────────────────────────────────────────────────── */
 
-// posUser mirrors getPosSession: the user with a pos.* grant, or nil when
-// the session is missing or lacks the grant (the route answers 401 itself).
-func (h *Handler) posUser(r *http.Request) (*auth.User, error) {
-	u, err := h.auth.RequireMenuPrefix(r, iam.Pos...)
+// posUser mirrors getPosSession: the user with a grant on one of menus, or
+// nil when the session is missing or lacks the grant (the route answers 401
+// itself).
+func (h *Handler) posUser(r *http.Request, menus []string) (*auth.User, error) {
+	u, err := h.auth.RequireMenuPrefix(r, menus...)
 	var he *httpx.Error
 	if errors.As(err, &he) && (he.Status == http.StatusUnauthorized || he.Status == http.StatusForbidden) {
 		return nil, nil
@@ -156,8 +156,8 @@ func (h *Handler) posUser(r *http.Request) (*auth.User, error) {
 }
 
 // requirePos returns the user, or the route's own 401 body.
-func (h *Handler) requirePos(r *http.Request, msg string) (*auth.User, error) {
-	u, err := h.posUser(r)
+func (h *Handler) requirePos(r *http.Request, menus []string, msg string) (*auth.User, error) {
+	u, err := h.posUser(r, menus)
 	if err != nil {
 		return nil, err
 	}

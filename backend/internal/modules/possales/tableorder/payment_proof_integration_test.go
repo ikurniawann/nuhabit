@@ -110,7 +110,7 @@ func TestPaymentProofUploadAndView(t *testing.T) {
 	e.expect(httptest.NewRequest(http.MethodGet, posPath, nil), 401, "Authentication required")
 	noPos := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"crm": nil}})
 	e.expect(testutil.AsStaff(httptest.NewRequest(http.MethodGet, posPath, nil), noPos), 401, "Authentication required")
-	cashier := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos": nil}})
+	cashier := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.operations.cashier": nil}})
 	pos := e.serve(testutil.AsStaff(httptest.NewRequest(http.MethodGet, posPath, nil), cashier))
 	if pos.Code != 200 || !bytes.Equal(pos.Body.Bytes(), pngBytes) || pos.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("pos view: %d %s", pos.Code, pos.Body.String())

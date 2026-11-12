@@ -18,7 +18,6 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
-	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
@@ -70,10 +69,10 @@ type Kit struct {
 /* ── guards ──────────────────────────────────────────────────────────── */
 
 // PosUser mirrors getPosSession / requirePosSession: a staff user with a
-// POS menu grant. A 401 or 403 from the guard both become 401
-// "Authentication required".
-func (k *Kit) PosUser(r *http.Request) (*auth.User, error) {
-	u, err := k.Auth.RequireMenuPrefix(r, iam.Pos...)
+// grant on one of the menus whose pages call the route. A 401 or 403 from
+// the guard both become 401 "Authentication required".
+func (k *Kit) PosUser(r *http.Request, menus []string) (*auth.User, error) {
+	u, err := k.Auth.RequireMenuPrefix(r, menus...)
 	var e *httpx.Error
 	if errors.As(err, &e) && (e.Status == http.StatusUnauthorized || e.Status == http.StatusForbidden) {
 		return nil, httpx.Unauthorized("Authentication required")
@@ -119,11 +118,11 @@ type PromoContext struct {
 // VenueNotConfigured is the 400 of requirePromoContext.
 const VenueNotConfigured = "Venue belum dikonfigurasi — set default_company_id/default_branch_id di CRM Settings atau lengkapi scope bisnis user"
 
-// PromoContext mirrors requirePromoContext: the promo menu, then the venue
-// from the user's business scope (importBusinessIds) with the CRM default
-// venue filling the gaps (resolveTicketingVenue).
-func (k *Kit) PromoContext(r *http.Request) (*PromoContext, error) {
-	u, err := k.Auth.RequireMenuPrefix(r, iam.Promo...)
+// PromoContext mirrors requirePromoContext: one of the promo menus, then the
+// venue from the user's business scope (importBusinessIds) with the CRM
+// default venue filling the gaps (resolveTicketingVenue).
+func (k *Kit) PromoContext(r *http.Request, menus []string) (*PromoContext, error) {
+	u, err := k.Auth.RequireMenuPrefix(r, menus...)
 	if err != nil {
 		return nil, err
 	}

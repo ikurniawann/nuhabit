@@ -3,6 +3,7 @@ package posops
 import (
 	"net/http"
 
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -28,7 +29,7 @@ func destructured(r *http.Request, first string) (any, error) {
 }
 
 func (h *Handler) listReservations(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, menusReservations, "Authentication required"); err != nil {
 		return err
 	}
 	f := reservationFilter{Date: queryParam(r, "date")}
@@ -46,7 +47,7 @@ func (h *Handler) listReservations(w http.ResponseWriter, r *http.Request) error
 }
 
 func (h *Handler) createReservation(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, iam.PosReservation, "Authentication required"); err != nil {
 		return err
 	}
 	body, err := destructured(r, "table_id")
@@ -61,7 +62,7 @@ func (h *Handler) createReservation(w http.ResponseWriter, r *http.Request) erro
 }
 
 func (h *Handler) updateReservation(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, iam.PosReservation, "Authentication required"); err != nil {
 		return err
 	}
 	body, err := destructured(r, "status")
@@ -76,7 +77,7 @@ func (h *Handler) updateReservation(w http.ResponseWriter, r *http.Request) erro
 }
 
 func (h *Handler) seatReservation(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Authentication required")
+	user, err := h.requirePos(r, menusReservations, "Authentication required")
 	if err != nil {
 		return err
 	}

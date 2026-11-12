@@ -8,6 +8,7 @@ import (
 	"nuhabit/backend/internal/modules/storedvalue/kit"
 	"nuhabit/backend/internal/modules/storedvalue/promo/domain"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -27,32 +28,36 @@ type idBody struct {
 // the gift card routes).
 func Routes(k *kit.Kit, svc *Service) []module.Route {
 	h := &handler{kit: k, svc: svc}
-	route := func(pattern string, fn func(http.ResponseWriter, *http.Request, venue, *kit.PromoContext) error) module.Route {
+	route := func(pattern string, menus []string, fn func(http.ResponseWriter, *http.Request, venue, *kit.PromoContext) error) module.Route {
 		return module.Route{Pattern: pattern, Handler: kit.API(func(w http.ResponseWriter, r *http.Request) error {
-			ctx, err := k.PromoContext(r)
+			ctx, err := k.PromoContext(r, menus)
 			if err != nil {
 				return err
 			}
 			return fn(w, r, venue{companyID: ctx.CompanyID, branchID: ctx.BranchID}, ctx)
 		})}
 	}
+	// The CRM Campaigns page lists promo campaigns; the campaign and offer
+	// forms both pick products from the catalog.
+	campaignList := slices.Concat(iam.PromoCampaigns, iam.CrmCampaigns)
+	catalog := slices.Concat(iam.PromoCampaigns, iam.PromoOffers)
 	return []module.Route{
-		route("GET /api/promo/campaigns", h.listCampaigns),
-		route("POST /api/promo/campaigns", h.createCampaign),
-		route("PATCH /api/promo/campaigns/{id}", h.updateCampaign),
-		route("GET /api/promo/campaigns/{id}/codes", h.listCodes),
-		route("POST /api/promo/campaigns/{id}/codes", h.createCodes),
-		route("PATCH /api/promo/campaigns/{id}/codes", h.syncCodes),
-		route("GET /api/promo/campaigns/{id}/redemptions", h.listRedemptions),
-		route("GET /api/promo/catalog", h.catalog),
+		route("GET /api/promo/campaigns", campaignList, h.listCampaigns),
+		route("POST /api/promo/campaigns", iam.PromoCampaigns, h.createCampaign),
+		route("PATCH /api/promo/campaigns/{id}", iam.PromoCampaigns, h.updateCampaign),
+		route("GET /api/promo/campaigns/{id}/codes", iam.PromoCampaigns, h.listCodes),
+		route("POST /api/promo/campaigns/{id}/codes", iam.PromoCampaigns, h.createCodes),
+		route("PATCH /api/promo/campaigns/{id}/codes", iam.PromoCampaigns, h.syncCodes),
+		route("GET /api/promo/campaigns/{id}/redemptions", iam.PromoCampaigns, h.listRedemptions),
+		route("GET /api/promo/catalog", catalog, h.catalog),
 		{Pattern: "GET /api/promo/gym-packages", Handler: kit.API(h.gymPackages)},
-		route("PATCH /api/promo/codes/{id}", h.updateCode),
-		route("DELETE /api/promo/codes/{id}", h.deleteCode),
-		route("GET /api/promo/offers", h.listOffers),
-		route("POST /api/promo/offers", h.createOffer),
-		route("GET /api/promo/offers/{id}", h.getOffer),
-		route("PATCH /api/promo/offers/{id}", h.updateOffer),
-		route("DELETE /api/promo/offers/{id}", h.deleteOffer),
+		route("PATCH /api/promo/codes/{id}", iam.PromoCampaigns, h.updateCode),
+		route("DELETE /api/promo/codes/{id}", iam.PromoCampaigns, h.deleteCode),
+		route("GET /api/promo/offers", iam.PromoOffers, h.listOffers),
+		route("POST /api/promo/offers", iam.PromoOffers, h.createOffer),
+		route("GET /api/promo/offers/{id}", iam.PromoOffers, h.getOffer),
+		route("PATCH /api/promo/offers/{id}", iam.PromoOffers, h.updateOffer),
+		route("DELETE /api/promo/offers/{id}", iam.PromoOffers, h.deleteOffer),
 	}
 }
 

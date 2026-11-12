@@ -14,7 +14,7 @@ import (
 // sendReceiptWa is POST /api/pos/orders/{id}/send-wa: the digital receipt,
 // rebuilt from the database, sent by WhatsApp.
 func (h *Handler) sendReceiptWa(w http.ResponseWriter, r *http.Request) error {
-	user, err := kit.PosUser(h.auth, r)
+	user, err := kit.PosUser(h.auth, r, kit.Cashier)
 	if err != nil {
 		return err
 	}

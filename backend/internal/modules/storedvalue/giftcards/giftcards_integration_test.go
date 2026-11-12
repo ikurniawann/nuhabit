@@ -83,8 +83,8 @@ func setup(t *testing.T) *env {
 	deps := testutil.Deps(t, nil)
 	e := &env{t: t, ctx: context.Background(), settings: fakeSettings{}, catalog: fakeCatalog{},
 		now: time.Date(2026, 10, 4, 5, 0, 0, 0, time.UTC)}
-	e.pos = testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos": nil}})
-	e.promo = testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"crm.promo": nil}})
+	e.pos = testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.operations.cashier": nil, "pos.loyalty.topup": nil}})
+	e.promo = testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"promo.campaigns": nil}})
 	// Fixtures first: their cleanup must run after the rollback, or a
 	// DELETE would wait on rows this transaction still holds.
 	e.member = testutil.CreateMember(t)

@@ -16,6 +16,7 @@ import (
 	"nuhabit/backend/internal/modules/storedvalue/kit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -67,7 +68,7 @@ func jsParseInt(s string) (int, bool) {
 // GET /api/pos/topup?customer_id=&limit= — a member's wallet history, or
 // the latest top-ups without customer_id.
 func (h *Handler) topupHistory(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.kit.PosUser(r); err != nil {
+	if _, err := h.kit.PosUser(r, iam.PosTopup); err != nil {
 		return err
 	}
 	q := r.URL.Query()
@@ -181,7 +182,7 @@ func supervisorRejection(a SupervisorApproval) error {
 // POST /api/pos/topup — cash, card and FOC credit at once; QRIS creates a
 // dynamic QR and a pending row.
 func (h *Handler) createTopup(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.kit.PosUser(r)
+	u, err := h.kit.PosUser(r, iam.PosTopup)
 	if err != nil {
 		return err
 	}
@@ -426,7 +427,7 @@ func (h *Handler) loadStarTopup(ctx context.Context, id string) (*starRow, error
 
 // POST /api/pos/topup/{id}/cancel — cancel a pending QRIS top-up.
 func (h *Handler) cancelTopup(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.kit.PosUser(r)
+	u, err := h.kit.PosUser(r, iam.PosTopup)
 	if err != nil {
 		return err
 	}
@@ -485,7 +486,7 @@ func creditedFrom(id string, o ReconcileOutcome, qrURL *string) creditedView {
 
 // POST /api/pos/topup/{id}/reconcile — the cashier's "check payment".
 func (h *Handler) reconcileTopup(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.kit.PosUser(r); err != nil {
+	if _, err := h.kit.PosUser(r, iam.PosTopup); err != nil {
 		return err
 	}
 	id := r.PathValue("id")
@@ -519,7 +520,7 @@ func (h *Handler) reconcileTopup(w http.ResponseWriter, r *http.Request) error {
 // GET /api/pos/topup/{id}/status — poll a QRIS top-up; a pending one is
 // reconciled with Xendit on every poll.
 func (h *Handler) topupStatus(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.kit.PosUser(r); err != nil {
+	if _, err := h.kit.PosUser(r, iam.PosTopup); err != nil {
 		return err
 	}
 	id := r.PathValue("id")
@@ -569,7 +570,7 @@ func (h *Handler) topupStatus(w http.ResponseWriter, r *http.Request) error {
 // POST /api/pos/topup/{id}/send-wa { phone? } — WhatsApp receipt of a
 // successful top-up, to the member's number by default.
 func (h *Handler) sendTopupWa(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.kit.PosUser(r)
+	u, err := h.kit.PosUser(r, iam.PosTopup)
 	if err != nil {
 		return err
 	}

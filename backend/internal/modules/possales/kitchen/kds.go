@@ -14,7 +14,6 @@ import (
 	"nuhabit/backend/internal/modules/possales/internal/kit"
 	"nuhabit/backend/internal/modules/possales/kitchen/domain"
 	"nuhabit/backend/internal/platform/httpx"
-	"nuhabit/backend/internal/platform/iam"
 )
 
 var uuidPattern = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
@@ -33,7 +32,7 @@ const kdsSelect = `SELECT id, order_number, queue_number, checkout_id, warehouse
 // listKDS is GET /api/pos/kds: open kitchen tickets (pos_orders, never
 // checkouts) with their F&B items, filtered by station, stall and date.
 func (h *Handler) listKDS(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.PosKitchen...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, kit.Kitchen...); err != nil {
 		return err
 	}
 	q := r.URL.Query()

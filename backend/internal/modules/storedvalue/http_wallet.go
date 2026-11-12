@@ -198,7 +198,7 @@ func (h *Handler) walletMembers(w http.ResponseWriter, r *http.Request) error {
 // cashier's branch; otherwise the wallet admin's full list.
 func (h *Handler) walletPackages(w http.ResponseWriter, r *http.Request) error {
 	if r.URL.Query().Get("scope") == "cashier" {
-		u, err := h.kit.Auth.RequireMenuPrefix(r, iam.Pos...)
+		u, err := h.kit.Auth.RequireMenuPrefix(r, iam.PosTopup...)
 		if err != nil {
 			return err
 		}

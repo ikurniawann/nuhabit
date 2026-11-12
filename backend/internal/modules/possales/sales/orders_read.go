@@ -72,7 +72,7 @@ func (h *Handler) parseOrderListFilters(r *http.Request) (orderListFilters, erro
 }
 
 func (h *Handler) listOrders(w http.ResponseWriter, r *http.Request) error {
-	if _, err := kit.PosUser(h.auth, r); err != nil {
+	if _, err := kit.PosUser(h.auth, r, kit.CashierOrOrders); err != nil {
 		return err
 	}
 	f, err := h.parseOrderListFilters(r)
@@ -272,9 +272,12 @@ func isV1to5UUID(s string) bool {
 	return s[14] >= '1' && s[14] <= '5'
 }
 
-// getOrder is GET /api/pos/orders/{id}. The TS route has no POS guard; the
-// gateway still requires a session.
+// getOrder is GET /api/pos/orders/{id}, for the pages that open a
+// transaction.
 func (h *Handler) getOrder(w http.ResponseWriter, r *http.Request) error {
+	if _, err := kit.PosUser(h.auth, r, kit.OrderDetail); err != nil {
+		return err
+	}
 	ctx := r.Context()
 	id := r.PathValue("id")
 	detail, err := jsrow.QueryOne(ctx, h.db, `SELECT *, `+embedCustomerFull+`, `+embedItems+` FROM "pos"."pos_orders" WHERE "id" = $1`, id)

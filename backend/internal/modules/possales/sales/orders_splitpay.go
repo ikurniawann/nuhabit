@@ -18,7 +18,7 @@ import (
 
 // paySplit is POST /api/pos/orders/{id}/splits/{splitId}/pay.
 func (h *Handler) paySplit(w http.ResponseWriter, r *http.Request) error {
-	user, err := kit.PosUser(h.auth, r)
+	user, err := kit.PosUser(h.auth, r, kit.Cashier)
 	if err != nil {
 		return err
 	}

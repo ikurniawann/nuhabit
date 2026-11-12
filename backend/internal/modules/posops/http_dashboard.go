@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -16,7 +17,7 @@ func (h *Handler) dashboardRoutes() []module.Route {
 // dashboard is GET /api/pos/dashboard?period=today|week|month|custom
 // [&date_from&date_to]: POS statistics in WIB.
 func (h *Handler) dashboard(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, iam.PosDashboard, "Authentication required"); err != nil {
 		return err
 	}
 	q := r.URL.Query()

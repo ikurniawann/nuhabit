@@ -49,7 +49,8 @@ func setup(t *testing.T) *env {
 	now := func() time.Time { return time.Now() }
 	deps := testutil.Deps(t, now)
 	staff := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{
-		"pos.cashier": {"read", "create", "update"}, "pos.cashier.central": nil, "pos.kitchen": nil, "pos.settings.supervisors": nil,
+		"pos.cashier": {"read", "create", "update"}, "pos.cashier.central": nil, "pos.operations.cashier": nil,
+		"pos.operations.orders": nil, "pos.kitchen.kds": nil, "pos.settings.supervisors": nil,
 	}})
 	ctx := context.Background()
 	spv := testutil.CreateStaff(t, testutil.StaffOptions{Role: "pos_supervisor", FullName: "Spv Dua"})

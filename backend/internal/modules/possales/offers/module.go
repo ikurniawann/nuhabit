@@ -83,7 +83,7 @@ type promoRejected struct {
 // only: the order creation is the final word. The code is either an offer
 // unlock code (kind "offer") or a promo campaign code (kind "promo").
 func (h *Handler) promoCheck(w http.ResponseWriter, r *http.Request) error {
-	user, err := kit.PosUser(h.auth, r)
+	user, err := kit.PosUser(h.auth, r, kit.Cashier)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ type offerRule struct {
 // discount preview. `?customer_id=` fills the member usage so per-member
 // caps match the server. Unlock codes are never sent.
 func (h *Handler) offerRules(w http.ResponseWriter, r *http.Request) error {
-	if _, err := kit.PosUser(h.auth, r); err != nil {
+	if _, err := kit.PosUser(h.auth, r, kit.Cashier); err != nil {
 		return err
 	}
 	companyID, branchID, ok := h.venue(r)

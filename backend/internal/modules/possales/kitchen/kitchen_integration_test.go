@@ -89,7 +89,7 @@ func (f *fixture) item(orderID, name, station, kitchenStatus, notes, variants st
 }
 
 func kitchenStaff(t *testing.T) testutil.Staff {
-	return testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.kitchen": nil}})
+	return testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.kitchen.kds": nil}})
 }
 
 const window = "date_from=2091-01-01T00:00:00Z&date_to=2091-01-02T00:00:00Z"
@@ -212,10 +212,14 @@ func TestPrintJobs(t *testing.T) {
 		if code != 400 || body != `{"success":false,"error":"order_id is required"}` {
 			t.Fatalf("missing order_id: %d %s", code, body)
 		}
-		cashier := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.cashier": nil}})
-		code, _ = f.do(testutil.Request("GET", "/api/pos/print-jobs?limit=1", nil), &cashier)
+		printQueue := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.kitchen.print-queue": nil}})
+		code, _ = f.do(testutil.Request("GET", "/api/pos/print-jobs?limit=1", nil), &printQueue)
 		if code != 200 {
-			t.Fatalf("POS session: %d", code)
+			t.Fatalf("print queue session: %d", code)
+		}
+		kds := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.kitchen.kds": nil}})
+		if code, _ = f.do(testutil.Request("GET", "/api/pos/print-jobs?limit=1", nil), &kds); code != 401 {
+			t.Fatalf("KDS-only session: %d", code)
 		}
 	})
 

@@ -73,7 +73,7 @@ func reusedQrisData(qr map[string]any, storedQR, storedRef string, amount float6
 
 // createQris is POST /api/pos/qris.
 func (h *Handler) createQris(w http.ResponseWriter, r *http.Request) error {
-	user, err := kit.PosUser(h.auth, r)
+	user, err := kit.PosUser(h.auth, r, kit.Cashier)
 	if err != nil {
 		return err
 	}
@@ -287,7 +287,7 @@ func firstNonEmpty(vals ...*string) any {
 
 // qrisStatus is GET /api/pos/qris/{id}/status.
 func (h *Handler) qrisStatus(w http.ResponseWriter, r *http.Request) error {
-	if _, err := kit.PosUser(h.auth, r); err != nil {
+	if _, err := kit.PosUser(h.auth, r, kit.Cashier); err != nil {
 		return err
 	}
 	ctx := r.Context()

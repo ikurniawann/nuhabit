@@ -23,7 +23,7 @@ import (
 // an open bill (cash/QRIS/card, ARK Coin, NFC Tab, gift card, FOC and owner
 // comp).
 func (h *Handler) patchOrder(w http.ResponseWriter, r *http.Request) error {
-	user, err := kit.PosUser(h.auth, r)
+	user, err := kit.PosUser(h.auth, r, kit.CashierOrOrders)
 	if err != nil {
 		return err
 	}

@@ -60,7 +60,7 @@ func releaseTableIfIdle(ctx context.Context, tx pgx.Tx, tableID, exceptOrderID s
 /* ── POST /api/pos/orders/{id}/merge ─────────────────────────────────── */
 
 func (h *Handler) mergeOrders(w http.ResponseWriter, r *http.Request) error {
-	user, err := kit.PosUser(h.auth, r)
+	user, err := kit.PosUser(h.auth, r, kit.Cashier)
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func (h *Handler) mergeUseCase(r *http.Request, user *auth.User) (*response, err
 /* ── POST /api/pos/orders/{id}/transfer-items ────────────────────────── */
 
 func (h *Handler) transferItems(w http.ResponseWriter, r *http.Request) error {
-	user, err := kit.PosUser(h.auth, r)
+	user, err := kit.PosUser(h.auth, r, kit.Cashier)
 	if err != nil {
 		return err
 	}

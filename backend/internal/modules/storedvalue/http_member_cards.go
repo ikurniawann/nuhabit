@@ -7,6 +7,7 @@ import (
 	"nuhabit/backend/internal/modules/storedvalue/domain"
 	"nuhabit/backend/internal/modules/storedvalue/kit"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -28,7 +29,7 @@ func (h *Handler) memberCardRoutes() []module.Route {
 var strictUUID = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 func (h *Handler) memberCards(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.kit.PosUser(r); err != nil {
+	if _, err := h.kit.PosUser(r, iam.PosUnlinkCard); err != nil {
 		return err
 	}
 	q := r.URL.Query()
@@ -40,7 +41,7 @@ func (h *Handler) memberCards(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) unlinkCard(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.kit.PosUser(r)
+	u, err := h.kit.PosUser(r, iam.PosUnlinkCard)
 	if err != nil {
 		return err
 	}
@@ -66,7 +67,7 @@ func (h *Handler) unlinkCard(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) requestCardRefund(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.kit.PosUser(r)
+	u, err := h.kit.PosUser(r, iam.PosUnlinkCard)
 	if err != nil {
 		return err
 	}
@@ -93,7 +94,7 @@ func (h *Handler) requestCardRefund(w http.ResponseWriter, r *http.Request) erro
 }
 
 func (h *Handler) cancelRefund(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.kit.PosUser(r)
+	u, err := h.kit.PosUser(r, iam.PosUnlinkCard)
 	if err != nil {
 		return err
 	}
@@ -119,7 +120,7 @@ func (h *Handler) cancelRefund(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) completeRefund(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.kit.PosUser(r)
+	u, err := h.kit.PosUser(r, iam.PosUnlinkCard)
 	if err != nil {
 		return err
 	}

@@ -18,7 +18,7 @@ import (
 // openBill is POST /api/pos/orders/open-bill: an unpaid bill (stall order or
 // central checkout) that the kitchen can already see.
 func (h *Handler) openBill(w http.ResponseWriter, r *http.Request) error {
-	user, err := kit.PosUser(h.auth, r)
+	user, err := kit.PosUser(h.auth, r, kit.Cashier)
 	if err != nil {
 		return err
 	}

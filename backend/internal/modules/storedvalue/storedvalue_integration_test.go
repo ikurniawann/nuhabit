@@ -163,7 +163,8 @@ func newEnv(t *testing.T) *env {
 	e := &env{t: t, ctx: context.Background(), wa: &fakeWhatsApp{foc: make(chan FocTopupNotice, 4)}, gateway: &fakeGateway{}, orders: &fakeOrders{}}
 	e.admin = testutil.CreateStaff(t, testutil.StaffOptions{FullName: "Rina", Menus: map[string][]string{"pos.loyalty.wallet": nil}})
 	e.cashier = testutil.CreateStaff(t, testutil.StaffOptions{FullName: "Arip", Menus: map[string][]string{
-		"pos": nil, "pos.operations.member-bills": {"read", "create"}}})
+		"pos.loyalty.topup": nil, "pos.loyalty.unlink-card": nil, "pos.operations.cashier": nil,
+		"pos.operations.member-bills": {"read", "create"}}})
 	e.member = testutil.CreateMember(t)
 	e.dir = &fakeDir{}
 	e.tx = testutil.Tx(t)

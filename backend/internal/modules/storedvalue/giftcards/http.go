@@ -10,6 +10,7 @@ import (
 	"nuhabit/backend/internal/modules/storedvalue/giftcards/domain"
 	"nuhabit/backend/internal/modules/storedvalue/kit"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -44,7 +45,7 @@ const invalidCodeFormat = "Format kode gift card tidak valid"
 // posCheck is POST /api/pos/gift-card-check: an indicative balance check,
 // rate limited per cashier because a code is money to whoever holds it.
 func (h *handler) posCheck(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.k.PosUser(r)
+	u, err := h.k.PosUser(r, iam.PosCashier)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func (h *handler) posCheck(w http.ResponseWriter, r *http.Request) error {
 // posReload is POST /api/pos/gift-card-reload: top up a typed or scanned
 // code, the payment recorded on the ledger.
 func (h *handler) posReload(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.k.PosUser(r)
+	u, err := h.k.PosUser(r, iam.PosTopup)
 	if err != nil {
 		return err
 	}
@@ -114,7 +115,7 @@ func (h *handler) posReload(w http.ResponseWriter, r *http.Request) error {
 /* ── promo back office ───────────────────────────────────────────────── */
 
 func (h *handler) promo(r *http.Request) (*kit.PromoContext, Scope, error) {
-	pc, err := h.k.PromoContext(r)
+	pc, err := h.k.PromoContext(r, iam.PromoCampaigns)
 	if err != nil {
 		return nil, Scope{}, err
 	}

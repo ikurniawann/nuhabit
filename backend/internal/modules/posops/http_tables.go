@@ -3,6 +3,7 @@ package posops
 import (
 	"net/http"
 
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -19,7 +20,7 @@ func (h *Handler) tableRoutes() []module.Route {
 }
 
 func (h *Handler) tableBoard(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.requirePos(r, "Authentication required")
+	user, err := h.requirePos(r, menusTableBoard, "Authentication required")
 	if err != nil {
 		return err
 	}
@@ -31,7 +32,7 @@ func (h *Handler) tableBoard(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) createTable(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, iam.PosTables, "Authentication required"); err != nil {
 		return err
 	}
 	body, err := objectBody(r, "table_number")
@@ -46,7 +47,7 @@ func (h *Handler) createTable(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) updateTable(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, iam.PosTables, "Authentication required"); err != nil {
 		return err
 	}
 	body, err := objectBody(r, "table_number")
@@ -61,7 +62,7 @@ func (h *Handler) updateTable(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) deleteTable(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, iam.PosTables, "Authentication required"); err != nil {
 		return err
 	}
 	if err := h.svc.DeactivateTable(r.Context(), r.PathValue("id")); err != nil {
@@ -71,7 +72,7 @@ func (h *Handler) deleteTable(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) moveTable(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.requirePos(r, "Authentication required"); err != nil {
+	if _, err := h.requirePos(r, iam.PosTables, "Authentication required"); err != nil {
 		return err
 	}
 	body, err := jsonBody(r)
