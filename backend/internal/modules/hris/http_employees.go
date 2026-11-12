@@ -13,12 +13,15 @@ import (
 )
 
 // employeeRecordManagers is EMPLOYEE_RECORD_MANAGERS (full records incl.
-// bank account, NPWP, KTP).
-var employeeRecordManagers = slices.Concat(iam.HrisKepegawaian, iam.SettingsUsers)
+// bank account, NPWP, KTP): the Karyawan pages and Settings → Users, which
+// share the users feature.
+var employeeRecordManagers = slices.Concat(iam.HrisEmployees, iam.SettingsUsers)
 
-// employeeDirectoryReaders is EMPLOYEE_DIRECTORY_READERS (no personal data).
-var employeeDirectoryReaders = slices.Concat(employeeRecordManagers, iam.HrisWorkforce,
-	iam.HrisCompensation, iam.HrisOrganization, iam.Ticketing)
+// employeeDirectoryReaders is EMPLOYEE_DIRECTORY_READERS (no personal data):
+// every page with an employee picker or list.
+var employeeDirectoryReaders = slices.Concat(employeeRecordManagers,
+	iam.HrisLoans, iam.HrisOvertime, iam.HrisAttendance, iam.HrisLeaves, iam.HrisSalary,
+	iam.HrisOrgChart, iam.HrisFeedback360, iam.HrisPickerTicketing)
 
 // zodEmail is zod v4's z.string().email() pattern.
 var zodEmail = regexp.MustCompile(`^(?:[A-Za-z0-9_'+\-]+(?:\.[A-Za-z0-9_'+\-]+)*)@(?:[A-Za-z0-9](?:[A-Za-z0-9\-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$`)
@@ -432,10 +435,11 @@ func (h handlers) recruitmentDocuments(w http.ResponseWriter, r *http.Request, _
 
 /* ── Shift pattern ───────────────────────────────────────────────────── */
 
-// shiftManager is authorizeShiftManager: HR menus pass with the user's
-// name; otherwise the signed-in employee must be the direct manager.
+// shiftManager is authorizeShiftManager: the Karyawan menu (profile shift
+// tab) passes with the user's name; otherwise the signed-in employee must be
+// the direct manager.
 func (h handlers) shiftManager(r *http.Request, targetID string) (string, error) {
-	if u, err := h.auth.RequireMenuPrefix(r, slices.Concat(iam.HrisKepegawaian, iam.HrisWorkforce)...); err == nil {
+	if u, err := h.auth.RequireMenuPrefix(r, iam.HrisEmployees...); err == nil {
 		return u.FullName, nil
 	} else if _, isAPI := err.(*httpx.Error); !isAPI {
 		return "", err

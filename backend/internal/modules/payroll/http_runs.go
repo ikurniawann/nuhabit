@@ -21,7 +21,7 @@ var nullish = validate.Rule{Optional: true, Nullable: true}
 
 // GET /api/hris/payroll?year&status
 func (h *handler) listRuns(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisPayroll...); err != nil {
 		return err
 	}
 	q := queryForm(r)
@@ -40,7 +40,7 @@ func (h *handler) listRuns(w http.ResponseWriter, r *http.Request) error {
 
 // POST /api/hris/payroll { period_month, period_year, run_name? }
 func (h *handler) createRun(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...)
+	u, err := h.auth.RequireMenuPrefix(r, iam.HrisPayroll...)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func (h *handler) createRun(w http.ResponseWriter, r *http.Request) error {
 
 // GET /api/hris/payroll/{id}
 func (h *handler) getRun(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisPayroll...); err != nil {
 		return err
 	}
 	row, err := h.svc.getRun(r.Context(), r.PathValue("id"))
@@ -76,7 +76,7 @@ func (h *handler) getRun(w http.ResponseWriter, r *http.Request) error {
 
 // PUT /api/hris/payroll/{id} { status?, notes? }
 func (h *handler) updateRun(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...)
+	u, err := h.auth.RequireMenuPrefix(r, iam.HrisPayroll...)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (h *handler) updateRun(w http.ResponseWriter, r *http.Request) error {
 
 // DELETE /api/hris/payroll/{id}
 func (h *handler) deleteRun(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...)
+	u, err := h.auth.RequireMenuPrefix(r, iam.HrisPayroll...)
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func (h *handler) deleteRun(w http.ResponseWriter, r *http.Request) error {
 
 // POST /api/hris/payroll/{id}/calculate { include_thr? }
 func (h *handler) calculateRun(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisPayroll...); err != nil {
 		return err
 	}
 	f := readOptionalJSON(r)

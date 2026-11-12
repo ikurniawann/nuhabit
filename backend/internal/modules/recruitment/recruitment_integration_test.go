@@ -33,7 +33,9 @@ type harness struct {
 func newHarness(t *testing.T) *harness {
 	t.Helper()
 	deps := testutil.Deps(t, nil)
-	grants := map[string][]string{"hris.recruitment": nil, "hris.master": nil}
+	grants := map[string][]string{"hris.recruitment.candidates": nil, "hris.recruitment.pipeline": nil,
+		"hris.recruitment.psikotes": nil, "hris.recruitment.job-portal": nil, "hris.recruitment.live-monitoring": nil,
+		"hris.master.positions": nil}
 	h := &harness{
 		t:     t,
 		hr:    testutil.CreateStaff(t, testutil.StaffOptions{Role: "hrd", FullName: "Rina HR", Menus: grants}),

@@ -30,8 +30,8 @@ type viewActor struct {
 	Zone *time.Location
 	// TeamAll (HR, or menu tasks.team) sees every department's board.
 	TeamAll bool
-	// KpiAll (HR, tasks.kpi or hris.performance) reads every department's
-	// KPI view and every employee's contributions.
+	// KpiAll (HR, tasks.kpi or hris.performance.kpi-scorecard) reads every
+	// department's KPI view and every employee's contributions.
 	KpiAll bool
 }
 
@@ -68,7 +68,7 @@ func (h *handler) viewActor(ctx context.Context, u *auth.User) (*viewActor, erro
 		return nil, err
 	}
 	v.TeamAll = a.IsHR || iam.HasGrantedAction(granted, iam.TasksTeam, "read")
-	v.KpiAll = v.TeamAll || iam.HasGrantedAction(granted, iam.TasksKpi, "read") || iam.HasGrantedAction(granted, iam.HrisPerformance, "read")
+	v.KpiAll = v.TeamAll || iam.HasGrantedAction(granted, iam.TasksKpi, "read") || iam.HasGrantedAction(granted, iam.HrisKpiScorecard, "read")
 	return v, nil
 }
 

@@ -12,7 +12,7 @@ var LoanManageRoles = []string{"super_admin", "admin", "hrd", "finance_staff"}
 var PayslipFullRoles = []string{"super_admin", "hrd", "finance_staff"}
 
 // PayrollSettingsWriteRoles may change statutory rates (on top of the
-// hris.compensation grant).
+// hris.compensation.payroll grant).
 var PayrollSettingsWriteRoles = []string{"super_admin", "hrd"}
 
 // IsHR reports whether role is one of HRRoles.

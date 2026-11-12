@@ -482,8 +482,6 @@ func (h handlers) report(w http.ResponseWriter, r *http.Request, _ *auth.User) e
 
 /* ── Master data ─────────────────────────────────────────────────────── */
 
-var masterReaders = slices.Concat(iam.Hris, iam.SettingsUsers)
-
 // masterBody is validateBody: a body that is not JSON is a 500 (the TS lets
 // the SyntaxError through), schema failures are "Validation failed".
 func masterBody(r *http.Request) (*validate.Form, error) {
@@ -528,8 +526,10 @@ func parsePosition(f *validate.Form) masterInput {
 }
 
 // masterRoutes builds the GET/POST and PUT/DELETE handlers of one master
-// table.
+// table. readers are the menus whose pages list the table (its own page plus
+// the pickers), editors the table's own menu.
 type masterKind struct {
+	readers, editors []string
 	parse            func(*validate.Form) masterInput
 	list             func(h handlers, r *http.Request) (any, error)
 	save             func(h handlers, r *http.Request, id *string, in masterInput) (*Row, error)
@@ -539,7 +539,7 @@ type masterKind struct {
 }
 
 func (h handlers) masterList(k masterKind) http.Handler {
-	return h.withMenu(masterReaders, func(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
+	return h.withMenu(k.readers, func(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
 		rows, err := k.list(h, r)
 		if err != nil {
 			return err
@@ -549,7 +549,7 @@ func (h handlers) masterList(k masterKind) http.Handler {
 }
 
 func (h handlers) masterSave(k masterKind, withID bool) http.Handler {
-	return h.withMenu(iam.HrisMaster, func(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
+	return h.withMenu(k.editors, func(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
 		var id *string
 		if withID {
 			v, err := requireUUID(r.PathValue("id"), "ID tidak valid")
@@ -578,7 +578,7 @@ func (h handlers) masterSave(k masterKind, withID bool) http.Handler {
 }
 
 func (h handlers) masterDelete(k masterKind) http.Handler {
-	return h.withMenu(iam.HrisMaster, func(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
+	return h.withMenu(k.editors, func(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
 		id, err := requireUUID(r.PathValue("id"), "ID tidak valid")
 		if err != nil {
 			return err
@@ -592,8 +592,10 @@ func (h handlers) masterDelete(k masterKind) http.Handler {
 
 var (
 	departmentsKind = masterKind{
-		parse: parseDepartment,
-		list:  func(h handlers, r *http.Request) (any, error) { return h.svc.MasterDepartments(r.Context()) },
+		readers: slices.Concat(iam.HrisDepartments, iam.HrisPositions, iam.HrisJobPortal, iam.HrisOrgChart, employeeRecordManagers),
+		editors: iam.HrisDepartments,
+		parse:   parseDepartment,
+		list:    func(h handlers, r *http.Request) (any, error) { return h.svc.MasterDepartments(r.Context()) },
 		save: func(h handlers, r *http.Request, id *string, in masterInput) (*Row, error) {
 			return h.svc.SaveDepartment(r.Context(), id, in)
 		},
@@ -601,8 +603,10 @@ var (
 		created: "Departemen berhasil ditambahkan", updated: "Departemen berhasil diupdate", deleted: "Departemen berhasil dihapus",
 	}
 	statusesKind = masterKind{
-		parse: parseEmploymentStatus,
-		list:  func(h handlers, r *http.Request) (any, error) { return h.svc.EmploymentStatuses(r.Context()) },
+		readers: slices.Concat(iam.HrisEmploymentStatuses, employeeRecordManagers),
+		editors: iam.HrisEmploymentStatuses,
+		parse:   parseEmploymentStatus,
+		list:    func(h handlers, r *http.Request) (any, error) { return h.svc.EmploymentStatuses(r.Context()) },
 		save: func(h handlers, r *http.Request, id *string, in masterInput) (*Row, error) {
 			return h.svc.SaveEmploymentStatus(r.Context(), id, in)
 		},
@@ -613,8 +617,10 @@ var (
 		deleted: "Status kepegawaian berhasil dihapus",
 	}
 	positionsKind = masterKind{
-		parse: parsePosition,
-		list:  func(h handlers, r *http.Request) (any, error) { return h.svc.Positions(r.Context(), nil) },
+		readers: positionReaders,
+		editors: iam.HrisPositions,
+		parse:   parsePosition,
+		list:    func(h handlers, r *http.Request) (any, error) { return h.svc.Positions(r.Context(), nil) },
 		save: func(h handlers, r *http.Request, id *string, in masterInput) (*Row, error) {
 			return h.svc.SavePosition(r.Context(), id, in)
 		},
@@ -623,9 +629,11 @@ var (
 	}
 )
 
-/* ── Onboarding / offboarding ────────────────────────────────────────── */
+// positionReaders is the Jabatan page and the pickers on Job Portal and the
+// employee form.
+var positionReaders = slices.Concat(iam.HrisPositions, iam.HrisJobPortal, employeeRecordManagers)
 
-var checklistReaders = slices.Concat(employeeRecordManagers, iam.HrisRecruitment)
+/* ── Onboarding / offboarding ────────────────────────────────────────── */
 
 var onboardingCategories = []string{"admin", "it", "hr", "manager", "general"}
 
@@ -642,7 +650,7 @@ func parseOnboardingTask(f *validate.Form) onboardingTask {
 
 func (h handlers) listOnboarding(w http.ResponseWriter, r *http.Request) error {
 	employeeID := r.PathValue("employee_id")
-	if err := h.requireEmployeeAccess(r, employeeID, checklistReaders); err != nil {
+	if err := h.requireEmployeeAccess(r, employeeID, employeeRecordManagers); err != nil {
 		return err
 	}
 	f := queryForm(r)
@@ -698,7 +706,7 @@ func (h handlers) putOnboarding(w http.ResponseWriter, r *http.Request, a *Actor
 
 func (h handlers) listOffboarding(w http.ResponseWriter, r *http.Request) error {
 	employeeID := r.PathValue("employee_id")
-	if err := h.requireEmployeeAccess(r, employeeID, checklistReaders); err != nil {
+	if err := h.requireEmployeeAccess(r, employeeID, employeeRecordManagers); err != nil {
 		return err
 	}
 	rows, err := h.svc.Offboarding(r.Context(), employeeID)

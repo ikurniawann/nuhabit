@@ -2,6 +2,7 @@ package recruitment
 
 import (
 	"net/http"
+	"slices"
 	"strconv"
 
 	"nuhabit/backend/internal/modules/recruitment/domain"
@@ -21,11 +22,19 @@ type handler struct {
 	guard Guard
 }
 
+// recruiters are the Kandidat and Pipeline menus, whose pages share the
+// candidate detail panels (screening, psikotes, interview, offer, files).
+var recruiters = slices.Concat(iam.HrisCandidates, iam.HrisPipeline)
+
 // Routes lists the JSON routes; the file, PDF and AI routes are in files.go.
 func (h *handler) Routes() []module.Route {
-	rec := iam.HrisRecruitment
+	rec := recruiters
+	pool := slices.Concat(rec, iam.HrisTalentPool)
+	psikotes := iam.HrisPsikotes
+	live := iam.HrisLiveMonitoring
+	jobs := iam.HrisJobPortal
 	return []module.Route{
-		{Pattern: "GET /api/candidates", Handler: h.staff(rec, h.listCandidates)},
+		{Pattern: "GET /api/candidates", Handler: h.staff(pool, h.listCandidates)},
 		{Pattern: "POST /api/candidates", Handler: h.staff(rec, h.createCandidate)},
 		{Pattern: "GET /api/candidates/{id}", Handler: h.staff(rec, h.getCandidate)},
 		{Pattern: "PUT /api/candidates/{id}", Handler: h.staff(rec, h.updateCandidate)},
@@ -33,7 +42,7 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "POST /api/candidates/{id}/notes", Handler: h.staff(rec, h.addNote)},
 		{Pattern: "GET /api/candidates/{id}/activities", Handler: h.staff(rec, h.listActivities)},
 		{Pattern: "POST /api/candidates/{id}/activities", Handler: h.staff(rec, h.logTemplate)},
-		{Pattern: "POST /api/candidates/{id}/stage", Handler: h.staff(rec, h.moveStage)},
+		{Pattern: "POST /api/candidates/{id}/stage", Handler: h.staff(pool, h.moveStage)},
 		{Pattern: "GET /api/candidates/{id}/screening", Handler: h.staff(rec, h.getScreening)},
 		{Pattern: "PUT /api/candidates/{id}/screening", Handler: h.staff(rec, h.saveScreening)},
 		{Pattern: "GET /api/candidates/{id}/psikotes", Handler: h.staff(rec, h.psikotesPanel)},
@@ -44,12 +53,12 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "GET /api/candidates/{id}/offers", Handler: h.staff(rec, h.offerPanel)},
 		{Pattern: "POST /api/candidates/{id}/offers", Handler: h.staff(rec, h.createOffer)},
 
-		{Pattern: "GET /api/psikotes/instruments", Handler: h.staff(rec, h.listInstruments)},
-		{Pattern: "PUT /api/psikotes/instruments/{id}", Handler: h.staff(rec, h.updateInstrument)},
-		{Pattern: "GET /api/psikotes/instruments/{id}/questions", Handler: h.staff(rec, h.listQuestions)},
-		{Pattern: "POST /api/psikotes/instruments/{id}/questions", Handler: h.staff(rec, h.createQuestion)},
-		{Pattern: "PUT /api/psikotes/questions/{id}", Handler: h.staff(rec, h.updateQuestion)},
-		{Pattern: "DELETE /api/psikotes/questions/{id}", Handler: h.staff(rec, h.deleteQuestion)},
+		{Pattern: "GET /api/psikotes/instruments", Handler: h.staff(slices.Concat(rec, psikotes), h.listInstruments)},
+		{Pattern: "PUT /api/psikotes/instruments/{id}", Handler: h.staff(psikotes, h.updateInstrument)},
+		{Pattern: "GET /api/psikotes/instruments/{id}/questions", Handler: h.staff(psikotes, h.listQuestions)},
+		{Pattern: "POST /api/psikotes/instruments/{id}/questions", Handler: h.staff(psikotes, h.createQuestion)},
+		{Pattern: "PUT /api/psikotes/questions/{id}", Handler: h.staff(psikotes, h.updateQuestion)},
+		{Pattern: "DELETE /api/psikotes/questions/{id}", Handler: h.staff(psikotes, h.deleteQuestion)},
 		{Pattern: "GET /api/psikotes/session-tests/{id}/answers", Handler: h.staff(rec, h.answerDetail)},
 		{Pattern: "PUT /api/psikotes/session-tests/{id}/review", Handler: h.staff(rec, h.reviewTest)},
 		{Pattern: "GET /api/psikotes/sessions/{id}/proctor-events", Handler: h.staff(rec, h.proctorEvents("psikotes"))},
@@ -76,21 +85,21 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "POST /api/offer/session/{token}/respond", Handler: httpx.Handle(h.respondOffer)},
 		{Pattern: "PUT /api/offers/{id}/response", Handler: http.HandlerFunc(h.manualOfferResponse)},
 
-		{Pattern: "GET /api/recruitment/live-monitoring", Handler: h.staff(rec, h.liveSessions)},
-		{Pattern: "GET /api/recruitment/live-monitoring/{type}/{id}/chat", Handler: h.staff(rec, h.liveChat)},
-		{Pattern: "POST /api/recruitment/live-monitoring/{type}/{id}/chat", Handler: h.staff(rec, h.livePostChat)},
-		{Pattern: "GET /api/recruitment/live-monitoring/{type}/{id}/frame", Handler: h.staff(rec, h.liveFrame)},
-		{Pattern: "POST /api/recruitment/live-monitoring/{type}/{id}/webrtc", Handler: h.staff(rec, h.livePutOffer)},
-		{Pattern: "GET /api/recruitment/live-monitoring/{type}/{id}/webrtc", Handler: h.staff(rec, h.liveAnswer)},
+		{Pattern: "GET /api/recruitment/live-monitoring", Handler: h.staff(live, h.liveSessions)},
+		{Pattern: "GET /api/recruitment/live-monitoring/{type}/{id}/chat", Handler: h.staff(live, h.liveChat)},
+		{Pattern: "POST /api/recruitment/live-monitoring/{type}/{id}/chat", Handler: h.staff(live, h.livePostChat)},
+		{Pattern: "GET /api/recruitment/live-monitoring/{type}/{id}/frame", Handler: h.staff(live, h.liveFrame)},
+		{Pattern: "POST /api/recruitment/live-monitoring/{type}/{id}/webrtc", Handler: h.staff(live, h.livePutOffer)},
+		{Pattern: "GET /api/recruitment/live-monitoring/{type}/{id}/webrtc", Handler: h.staff(live, h.liveAnswer)},
 
-		{Pattern: "GET /api/hris/job-openings", Handler: h.staff(rec, h.listJobOpenings)},
-		{Pattern: "POST /api/hris/job-openings", Handler: h.staff(rec, h.createJobOpening)},
-		{Pattern: "PATCH /api/hris/job-openings/{id}", Handler: h.staff(rec, h.updateJobOpening)},
-		{Pattern: "DELETE /api/hris/job-openings/{id}", Handler: h.staff(rec, h.deleteJobOpening)},
+		{Pattern: "GET /api/hris/job-openings", Handler: h.staff(jobs, h.listJobOpenings)},
+		{Pattern: "POST /api/hris/job-openings", Handler: h.staff(jobs, h.createJobOpening)},
+		{Pattern: "PATCH /api/hris/job-openings/{id}", Handler: h.staff(jobs, h.updateJobOpening)},
+		{Pattern: "DELETE /api/hris/job-openings/{id}", Handler: h.staff(jobs, h.deleteJobOpening)},
 		{Pattern: "POST /api/hris/promote", Handler: h.staff(rec, h.promote)},
 		{Pattern: "GET /api/job-openings/public", Handler: http.HandlerFunc(h.publicJobOpenings)},
-		{Pattern: "GET /api/positions", Handler: h.staff(iam.Hris, h.listPositions)},
-		{Pattern: "POST /api/positions", Handler: h.staff(iam.HrisMaster, h.createPosition)},
+		{Pattern: "GET /api/positions", Handler: h.staff(slices.Concat(iam.HrisPositions, jobs), h.listPositions)},
+		{Pattern: "POST /api/positions", Handler: h.staff(iam.HrisPositions, h.createPosition)},
 	}
 }
 

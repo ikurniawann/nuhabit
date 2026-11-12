@@ -202,7 +202,7 @@ func (h *handler) approverID(r *http.Request, notFound string) (string, error) {
 }
 
 func (h *handler) requireFeedbackAdmin(r *http.Request) error {
-	_, err := h.auth.RequireMenuPrefix(r, iam.HrisFeedbackAdmin...)
+	_, err := h.auth.RequireMenuPrefix(r, iam.HrisFeedback360...)
 	return err
 }
 

@@ -188,7 +188,7 @@ func (s *service) deactivateSalary(ctx context.Context, id string) error {
 
 // GET /api/hris/employee-salary[?employee_id=]
 func (h *handler) listSalaries(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisSalary...); err != nil {
 		return err
 	}
 	rows, err := h.svc.listSalaries(r.Context(), r.URL.Query().Get("employee_id"))
@@ -200,7 +200,7 @@ func (h *handler) listSalaries(w http.ResponseWriter, r *http.Request) error {
 
 // POST /api/hris/employee-salary
 func (h *handler) createSalary(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisSalary...); err != nil {
 		return err
 	}
 	f, err := readJSON(r, "")
@@ -228,7 +228,7 @@ func (h *handler) createSalary(w http.ResponseWriter, r *http.Request) error {
 
 // GET /api/hris/employee-salary/{id}
 func (h *handler) getSalary(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisSalary...); err != nil {
 		return err
 	}
 	row, err := h.svc.getSalary(r.Context(), r.PathValue("id"))
@@ -240,7 +240,7 @@ func (h *handler) getSalary(w http.ResponseWriter, r *http.Request) error {
 
 // PUT /api/hris/employee-salary/{id}
 func (h *handler) updateSalary(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisSalary...); err != nil {
 		return err
 	}
 	const msg = "Data salary tidak valid"
@@ -268,7 +268,7 @@ func (h *handler) updateSalary(w http.ResponseWriter, r *http.Request) error {
 
 // DELETE /api/hris/employee-salary/{id}
 func (h *handler) deleteSalary(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisSalary...); err != nil {
 		return err
 	}
 	if err := h.svc.deactivateSalary(r.Context(), r.PathValue("id")); err != nil {

@@ -177,7 +177,7 @@ func (h *handler) listPayslips(w http.ResponseWriter, r *http.Request) error {
 
 // POST /api/hris/payslips/notify { payroll_detail_id }
 func (h *handler) notifyPayslip(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...)
+	u, err := h.auth.RequireMenuPrefix(r, iam.HrisPayroll...)
 	if err != nil {
 		return err
 	}

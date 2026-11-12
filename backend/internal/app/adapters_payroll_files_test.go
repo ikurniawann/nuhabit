@@ -118,7 +118,7 @@ func TestPayslipPDFRoute(t *testing.T) {
 
 func TestKPISnapshotRoute(t *testing.T) {
 	staff, scalar, serve := payrollFilesSetup(t,
-		testutil.StaffOptions{Role: "hrd", Menus: map[string][]string{"hris.performance": nil}},
+		testutil.StaffOptions{Role: "hrd", Menus: map[string][]string{"hris.performance.kpi-scorecard": nil}},
 		testutil.StaffOptions{Role: "pos", Menus: map[string][]string{"go_test_none": nil}},
 		testutil.StaffOptions{Role: "pos", Menus: map[string][]string{"go_test_none": nil}})
 	hr, outsider, worker := &staff[0], &staff[1], &staff[2]

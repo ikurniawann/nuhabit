@@ -91,10 +91,10 @@ func (h handlers) importRoutes() []module.Route {
 		}
 	}
 	return []module.Route{
-		{Pattern: "GET /api/master/departments/import/template", Handler: h.withCreate(iam.HrisMaster, template(departmentSpec))},
-		{Pattern: "POST /api/master/departments/import", Handler: h.withCreate(iam.HrisMaster, h.runImport(departmentSpec, (*Service).importDepartment))},
-		{Pattern: "GET /api/master/positions/import/template", Handler: h.withCreate(iam.HrisMaster, template(positionSpec))},
-		{Pattern: "POST /api/master/positions/import", Handler: h.withCreate(iam.HrisMaster, h.runImport(positionSpec, (*Service).importPosition))},
+		{Pattern: "GET /api/master/departments/import/template", Handler: h.withCreate(iam.HrisDepartments, template(departmentSpec))},
+		{Pattern: "POST /api/master/departments/import", Handler: h.withCreate(iam.HrisDepartments, h.runImport(departmentSpec, (*Service).importDepartment))},
+		{Pattern: "GET /api/master/positions/import/template", Handler: h.withCreate(iam.HrisPositions, template(positionSpec))},
+		{Pattern: "POST /api/master/positions/import", Handler: h.withCreate(iam.HrisPositions, h.runImport(positionSpec, (*Service).importPosition))},
 		{Pattern: "GET /api/hris/employees/import/template", Handler: h.withCreate(employeeRecordManagers, template(employeeSpec))},
 		{Pattern: "POST /api/hris/employees/import", Handler: h.withCreate(employeeRecordManagers, h.runImport(employeeSpec, (*Service).importEmployee))},
 	}

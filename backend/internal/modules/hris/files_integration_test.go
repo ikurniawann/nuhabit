@@ -197,7 +197,7 @@ func TestClockInOut(t *testing.T) {
 
 func TestAttendanceExport(t *testing.T) {
 	h, _ := newFileHarness(t)
-	hr, _ := h.staff("hrd", []string{"hris.workforce"}, true)
+	hr, _ := h.staff("hrd", workforceMenus, true)
 	staff, _ := h.staff("pos", nil, true)
 	dept := h.department("Dapur Ekspor")
 	_, worker := h.staff("pos", nil, true, emp{name: "Nanda Ekspor", dept: &dept})
@@ -264,7 +264,7 @@ func TestAttendanceExport(t *testing.T) {
 
 func TestLeaveAttachmentsAndCovers(t *testing.T) {
 	h, dir := newFileHarness(t)
-	hr, _ := h.staff("hrd", []string{"hris.kepegawaian"}, true)
+	hr, _ := h.staff("hrd", kepegawaianMenus, true)
 	staff, own := h.staff("pos", nil, true)
 	other, _ := h.staff("pos", nil, true)
 	unlinked, _ := h.staff("pos", nil, false)
@@ -342,7 +342,7 @@ func multipartBody(t *testing.T, field, name string, data []byte) (*bytes.Buffer
 
 func TestContractDocuments(t *testing.T) {
 	h, dir := newFileHarness(t)
-	hr, _ := h.staff("hrd", []string{"hris.kepegawaian"}, true)
+	hr, _ := h.staff("hrd", kepegawaianMenus, true)
 	staff, _ := h.staff("pos", nil, true)
 	_, worker := h.staff("pos", nil, true, emp{name: "Budi Santoso"})
 	number := "GO-" + testutil.RandomHex(3) + "/PKWT/VII/2026"

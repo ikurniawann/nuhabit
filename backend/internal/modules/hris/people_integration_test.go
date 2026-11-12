@@ -7,7 +7,7 @@ import (
 
 func TestContractLifecycle(t *testing.T) {
 	h := newHarness(t)
-	hr, _ := h.staff("hrd", []string{menuKepegawaian}, false)
+	hr, _ := h.staff("hrd", kepegawaianMenus, false)
 	e := h.employee(emp{status: "contract", name: "Kontrak Test"})
 	draft := func(body map[string]any) string {
 		c := h.do(&hr, "POST", "/api/hris/employees/"+e+"/contracts", body)
@@ -54,7 +54,7 @@ func TestContractLifecycle(t *testing.T) {
 
 func TestOnboardingOffboarding(t *testing.T) {
 	h := newHarness(t)
-	hr, hrID := h.staff("hrd", []string{menuKepegawaian}, true)
+	hr, hrID := h.staff("hrd", kepegawaianMenus, true)
 	staff, own := h.staff("pos", nil, true)
 
 	list := h.do(&staff, "GET", "/api/hris/onboarding/"+own, nil)
@@ -138,7 +138,7 @@ func TestSelfService(t *testing.T) {
 	}
 
 	// Announcements.
-	hr, _ := h.staff("hrd", []string{menuKepegawaian}, true)
+	hr, _ := h.staff("hrd", kepegawaianMenus, true)
 	expect(t, h.do(&hr, "POST", "/api/hris/announcements", map[string]any{"title": " "}), 400, "Validasi gagal")
 	expect(t, h.do(&hr, "POST", "/api/hris/announcements", map[string]any{"title": "Video", "video_url": "https://evil.test/v"}), 400,
 		"URL video harus YouTube atau Vimeo yang valid")
@@ -202,7 +202,7 @@ func TestLogbookReportsMaster(t *testing.T) {
 	h := newHarness(t)
 	dept := h.department("Logbook Dept")
 	other := h.department("Logbook Lain")
-	hr, _ := h.staff("hrd", []string{"hris.insights", "hris.master"}, true)
+	hr, _ := h.staff("hrd", []string{"hris.insights.reports", "hris.master.departments", "hris.master.positions", "hris.master.employment-statuses"}, true)
 	staff, _ := h.staff("pos", nil, true, emp{dept: &dept})
 
 	me := h.do(&staff, "GET", "/api/hris/logbook?resource=me", nil)

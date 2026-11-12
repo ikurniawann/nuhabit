@@ -6,9 +6,12 @@ import (
 	"testing"
 )
 
-const (
-	menuKepegawaian = "hris.kepegawaian"
-	menuWorkforce   = "hris.workforce"
+// The leaf menus of HRIS → Kepegawaian and → Kehadiran & Cuti: API guards
+// check one sub-module each.
+var (
+	kepegawaianMenus = []string{"hris.kepegawaian.users", "hris.kepegawaian.contracts", "hris.kepegawaian.shifts",
+		"hris.kepegawaian.holidays", "hris.kepegawaian.loans", "hris.kepegawaian.overtime", "hris.kepegawaian.announcements"}
+	workforceMenus = []string{"hris.workforce.attendance", "hris.workforce.leaves"}
 )
 
 func TestEmployeeGuards(t *testing.T) {
@@ -27,7 +30,7 @@ func TestEmployeeGuards(t *testing.T) {
 
 func TestEmployeeDirectoryAndCRUD(t *testing.T) {
 	h := newHarness(t)
-	hr, _ := h.staff("hrd", []string{menuKepegawaian}, false)
+	hr, _ := h.staff("hrd", kepegawaianMenus, false)
 	dept := h.department("Bar Test")
 	boss := h.employee(emp{name: "Bos Test", dept: &dept})
 
@@ -111,7 +114,7 @@ func TestEmployeeDirectoryAndCRUD(t *testing.T) {
 
 func TestEmployeeDocumentsAndHistory(t *testing.T) {
 	h := newHarness(t)
-	hr, _ := h.staff("hrd", []string{menuKepegawaian}, false)
+	hr, _ := h.staff("hrd", kepegawaianMenus, false)
 	self, own := h.staff("pos", nil, true)
 
 	expect(t, h.do(&hr, "GET", "/api/hris/employees/documents", nil), 400, "employee_id diperlukan")
@@ -158,7 +161,7 @@ func TestEmployeeDocumentsAndHistory(t *testing.T) {
 
 func TestEmployeeTabs(t *testing.T) {
 	h := newHarness(t)
-	hr, _ := h.staff("hrd", []string{menuKepegawaian}, false)
+	hr, _ := h.staff("hrd", kepegawaianMenus, false)
 	boss, bossID := h.staff("pos", nil, true)
 	report := h.employee(emp{boss: &bossID, join: "2026-02-01"})
 	shift := h.scalar(`INSERT INTO hris.shifts (name, start_time, end_time) VALUES ('Pagi Test', '08:00', '16:00') RETURNING id::text`)
@@ -210,7 +213,7 @@ func TestEmployeeTabs(t *testing.T) {
 
 func TestEmployeeContracts(t *testing.T) {
 	h := newHarness(t)
-	hr, _ := h.staff("hrd", []string{menuKepegawaian}, false)
+	hr, _ := h.staff("hrd", kepegawaianMenus, false)
 	e := h.employee(emp{status: "contract"})
 	base := "/api/hris/employees/" + e + "/contracts"
 

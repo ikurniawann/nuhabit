@@ -96,7 +96,7 @@ func (s *service) createTarget(ctx context.Context, userID string, in targetInpu
 
 // GET /api/hris/kpi/targets
 func (h *handler) listTargets(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisPerformance...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisKpiScorecard...); err != nil {
 		return err
 	}
 	rows, err := h.svc.listTargets(r.Context())
@@ -111,7 +111,7 @@ const periodInvalid = "Periode tidak valid"
 
 // POST /api/hris/kpi/targets
 func (h *handler) createTarget(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.auth.RequireMenuPrefix(r, iam.HrisPerformance...)
+	u, err := h.auth.RequireMenuPrefix(r, iam.HrisKpiScorecard...)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (h *handler) createTarget(w http.ResponseWriter, r *http.Request) error {
 
 // DELETE /api/hris/kpi/targets?id=
 func (h *handler) deleteTarget(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisPerformance...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisKpiScorecard...); err != nil {
 		return err
 	}
 	q := queryForm(r)
@@ -371,7 +371,7 @@ const actionRequired = "action (finalize|reopen) dan scorecard_id wajib"
 
 // PATCH /api/hris/kpi/scorecards { action, scorecard_id }
 func (h *handler) patchScorecard(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.auth.RequireMenuPrefix(r, iam.HrisPerformance...)
+	u, err := h.auth.RequireMenuPrefix(r, iam.HrisKpiScorecard...)
 	if err != nil {
 		return err
 	}
@@ -625,7 +625,7 @@ func (s *service) recommendations(ctx context.Context, ids []string) (*obj, erro
 
 // GET /api/hris/kpi/recommendation?employee_ids=a,b,c
 func (h *handler) kpiRecommendation(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisPerformance...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisContracts...); err != nil {
 		return err
 	}
 	var ids []string
@@ -654,9 +654,9 @@ func (h *handler) kpiRecommendation(w http.ResponseWriter, r *http.Request) erro
 
 /* ── department configuration ────────────────────────────────────────── */
 
-// requireKPIManager is requireKpiManager: the hris grant plus a KPI role.
+// requireKPIManager is requireKpiManager: the KPI config menu plus a KPI role.
 func (h *handler) requireKPIManager(r *http.Request) (string, error) {
-	u, err := h.auth.RequireMenuPrefix(r, iam.Hris...)
+	u, err := h.auth.RequireMenuPrefix(r, iam.HrisKpiConfig...)
 	if err != nil {
 		return "", err
 	}

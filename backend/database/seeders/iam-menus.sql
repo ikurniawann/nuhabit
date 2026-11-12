@@ -388,4 +388,6 @@ WHERE deleted_at IS NULL
     'events', 'events.calendar',
     -- Production module (19 Oct 2026): WIP and batch cost pages.
     'items.product.production.wip', 'items.product.production.batches',
-    'items.raw-material.production.wip', 'items.raw-material.production.batches');
+    'items.raw-material.production.wip', 'items.raw-material.production.batches',
+    -- Feedback 360 (1 Nov 2026): HR admin page and the ESS form.
+    'hris.performance.feedback-360', 'ess.feedback-360');

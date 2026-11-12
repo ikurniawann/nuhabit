@@ -192,12 +192,14 @@ func setup(t *testing.T) *env {
 	t.Helper()
 	deps := testutil.Deps(t, func() time.Time { return fixedNow })
 	hr := testutil.CreateStaff(t, testutil.StaffOptions{Role: "hrd", Menus: map[string][]string{
-		"hris.compensation": nil, "hris.performance": nil, "hris.performance.kpi-config": nil,
+		"hris.compensation.payroll": nil, "hris.compensation.salary": nil, "hris.kepegawaian.loans": nil,
+		"hris.kepegawaian.contracts": nil, "hris.performance.kpi-scorecard": nil, "hris.performance.kpi-config": nil,
+		"hris.performance.feedback-360": nil,
 	}})
 	admin := testutil.CreateStaff(t, testutil.StaffOptions{Role: "super_admin", Menus: map[string][]string{
-		"hris.compensation": nil,
+		"hris.compensation.payroll": nil, "hris.compensation.salary": nil, "hris.kepegawaian.loans": nil,
 	}})
-	staff := testutil.CreateStaff(t, testutil.StaffOptions{Role: "pos", Menus: map[string][]string{"hris.workforce": nil}})
+	staff := testutil.CreateStaff(t, testutil.StaffOptions{Role: "pos", Menus: map[string][]string{"hris.workforce.attendance": nil}})
 	ctx := context.Background()
 	tx, err := deps.DB.Begin(ctx)
 	if err != nil {
@@ -563,7 +565,7 @@ func TestPayrollSettings(t *testing.T) {
 	if rec := e.raw(&e.hr, "GET", "/api/hris/payroll-settings", nil); !strings.Contains(rec.Body.String(), `"tax_year":2026`) {
 		t.Fatalf("default year %s", rec.Body.String())
 	}
-	admin := testutil.CreateStaff(t, testutil.StaffOptions{Role: "admin", Menus: map[string][]string{"hris.compensation": nil}})
+	admin := testutil.CreateStaff(t, testutil.StaffOptions{Role: "admin", Menus: map[string][]string{"hris.compensation.payroll": nil}})
 	wantErr(t, e.call(&admin, "PUT", "/api/hris/payroll-settings", map[string]any{"settings": map[string]any{}}, 403),
 		"Hanya super admin dan HRD yang boleh mengubah pengaturan payroll")
 	wantErr(t, e.call(&e.hr, "PUT", "/api/hris/payroll-settings", map[string]any{}, 400), "Tidak ada perubahan yang dikirim")

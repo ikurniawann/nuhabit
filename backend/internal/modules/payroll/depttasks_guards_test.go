@@ -41,7 +41,7 @@ func TestTaskRouteGrants(t *testing.T) {
 		"GET /api/hris/dept-tasks/items":                                   read,
 		"GET /api/hris/dept-tasks/monitor":                                 read,
 		"GET /api/hris/dept-tasks/kpi":                                     "read tasks | read tasks.team | read tasks.kpi",
-		"GET /api/hris/dept-tasks/kpi/contributions":                       "read tasks | read tasks.kpi | read hris.performance",
+		"GET /api/hris/dept-tasks/kpi/contributions":                       "read tasks | read tasks.kpi | read hris.performance.kpi-scorecard",
 		"GET /api/hris/dept-tasks/occurrences/{id}":                        read,
 		"POST /api/hris/dept-tasks/occurrences/{id}/attachments":           write,
 		"GET /api/hris/dept-tasks/occurrences/{id}/attachments/{attId}":    read,

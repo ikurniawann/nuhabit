@@ -4,6 +4,6 @@ import { OvertimePage } from "@/features/hris/overtime";
 
 // HRIS → Kepegawaian → Lembur: approval pengajuan + penugasan perusahaan.
 export default async function HrisOvertimePage() {
-  await requireIamPage(IAM.hrisKepegawaian);
+  await requireIamPage(IAM.hrisOvertime);
   return <OvertimePage />;
 }

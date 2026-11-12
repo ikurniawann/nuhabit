@@ -52,9 +52,9 @@ func (c call) rowMessage(i int) string {
 // and email, and a re-import leaves everything unchanged.
 func TestImportOrganisation(t *testing.T) {
 	h := newHarness(t)
-	admin, _ := h.staff("admin", []string{"hris.master", "hris.kepegawaian"}, false)
+	admin, _ := h.staff("admin", append([]string{"hris.master.departments", "hris.master.positions"}, kepegawaianMenus...), false)
 	login := testutil.CreateStaff(t, testutil.StaffOptions{})
-	reader, _ := h.staff("pos", []string{"hris.workforce"}, false)
+	reader, _ := h.staff("pos", workforceMenus, false)
 	sfx := strings.ToUpper(testutil.RandomHex(3))
 
 	departments := "kode,nama,deskripsi,aktif\n" +

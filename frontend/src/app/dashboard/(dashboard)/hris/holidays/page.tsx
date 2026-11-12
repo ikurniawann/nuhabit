@@ -3,6 +3,6 @@ import { IAM } from "@/lib/iam/prefixes";
 import { HolidaysPage } from "@/features/hris/holidays";
 
 export default async function HrisHolidaysPage() {
-  await requireIamPage(IAM.hrisWorkforce);
+  await requireIamPage(IAM.hrisHolidays);
   return <HolidaysPage />;
 }

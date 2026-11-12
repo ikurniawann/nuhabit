@@ -3,6 +3,6 @@ import { IAM } from "@/lib/iam/prefixes";
 import { ShiftsPage } from "@/features/hris/shifts";
 
 export default async function HrisShiftsPage() {
-  await requireIamPage(IAM.hrisKepegawaian);
+  await requireIamPage(IAM.hrisShifts);
   return <ShiftsPage />;
 }

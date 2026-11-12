@@ -11,7 +11,6 @@ import (
 )
 
 func (h handlers) routes() []module.Route {
-	kepegawaian := iam.HrisKepegawaian
 	r := func(pattern string, handler http.Handler) module.Route {
 		return module.Route{Pattern: pattern, Handler: handler}
 	}
@@ -20,7 +19,7 @@ func (h handlers) routes() []module.Route {
 		r("GET /api/hris/employees", h.withMenu(employeeDirectoryReaders, h.listEmployees)),
 		r("POST /api/hris/employees", h.withMenu(employeeRecordManagers, h.createEmployee)),
 		r("GET /api/hris/employees/documents", handle(h.listEmployeeDocuments)),
-		r("POST /api/hris/employees/documents", h.withMenu(kepegawaian, h.createEmployeeDocument)),
+		r("POST /api/hris/employees/documents", h.withMenu(iam.HrisEmployees, h.createEmployeeDocument)),
 		r("GET /api/hris/employees/{id}", handle(h.getEmployee)),
 		r("PUT /api/hris/employees/{id}", h.withMenu(employeeRecordManagers, h.updateEmployee)),
 		r("DELETE /api/hris/employees/{id}", h.withMenu(employeeRecordManagers, h.deleteEmployee)),
@@ -41,7 +40,7 @@ func (h handlers) routes() []module.Route {
 		r("GET /api/hris/leaves", h.withActor(h.listLeaves)),
 		r("POST /api/hris/leaves", h.withActor(h.createLeave)),
 		r("POST /api/hris/leaves/approve", h.withActor(h.decideLeave)),
-		r("GET /api/hris/leaves/export", h.withMenu(iam.HrisWorkforce, h.exportLeaves)),
+		r("GET /api/hris/leaves/export", h.withMenu(iam.HrisLeaves, h.exportLeaves)),
 		r("GET /api/hris/leaves/{id}", h.withActor(h.getLeave)),
 		r("PUT /api/hris/leaves/{id}", h.withActor(h.updateLeave)),
 		r("DELETE /api/hris/leaves/{id}", h.withActor(h.deleteLeave)),
@@ -50,30 +49,30 @@ func (h handlers) routes() []module.Route {
 
 		// shifts and overtime
 		r("GET /api/hris/shifts", h.withActor(h.listShifts)),
-		r("POST /api/hris/shifts", h.withMenu(kepegawaian, h.createShift)),
-		r("PATCH /api/hris/shifts/{id}", h.withMenu(kepegawaian, h.updateShift)),
-		r("DELETE /api/hris/shifts/{id}", h.withMenu(kepegawaian, h.deleteShift)),
+		r("POST /api/hris/shifts", h.withMenu(iam.HrisShifts, h.createShift)),
+		r("PATCH /api/hris/shifts/{id}", h.withMenu(iam.HrisShifts, h.updateShift)),
+		r("DELETE /api/hris/shifts/{id}", h.withMenu(iam.HrisShifts, h.deleteShift)),
 		r("GET /api/hris/overtime", h.withActor(h.listOvertime)),
 		r("POST /api/hris/overtime", h.withActor(h.createOvertime)),
 		r("POST /api/hris/overtime/decide", h.withActor(h.decideOvertime)),
 
 		// holidays
 		r("GET /api/hris/holidays", h.withUser(h.listHolidays)),
-		r("POST /api/hris/holidays", h.withMenu(kepegawaian, h.createHoliday)),
-		r("GET /api/hris/holidays/import", h.withMenu(kepegawaian, h.previewHolidayImport)),
-		r("POST /api/hris/holidays/import", h.withMenu(kepegawaian, h.importHolidays)),
-		r("PATCH /api/hris/holidays/{id}", h.withMenu(kepegawaian, h.updateHoliday)),
-		r("DELETE /api/hris/holidays/{id}", h.withMenu(kepegawaian, h.deleteHoliday)),
+		r("POST /api/hris/holidays", h.withMenu(iam.HrisHolidays, h.createHoliday)),
+		r("GET /api/hris/holidays/import", h.withMenu(iam.HrisHolidays, h.previewHolidayImport)),
+		r("POST /api/hris/holidays/import", h.withMenu(iam.HrisHolidays, h.importHolidays)),
+		r("PATCH /api/hris/holidays/{id}", h.withMenu(iam.HrisHolidays, h.updateHoliday)),
+		r("DELETE /api/hris/holidays/{id}", h.withMenu(iam.HrisHolidays, h.deleteHoliday)),
 
 		// contracts (document PDF and signed scans: fileRoutes)
-		r("GET /api/hris/contracts", h.withMenu(kepegawaian, h.listContracts)),
-		r("GET /api/hris/contracts/expiring", h.withMenu(kepegawaian, h.expiringContracts)),
-		r("PATCH /api/hris/contracts/{id}", h.withMenu(kepegawaian, h.patchContract)),
-		r("DELETE /api/hris/contracts/{id}", h.withMenu(kepegawaian, h.deleteContract)),
+		r("GET /api/hris/contracts", h.withMenu(iam.HrisContracts, h.listContracts)),
+		r("GET /api/hris/contracts/expiring", h.withMenu(slices.Concat(iam.HrisContracts, iam.HrisEmployees), h.expiringContracts)),
+		r("PATCH /api/hris/contracts/{id}", h.withMenu(iam.HrisEmployees, h.patchContract)),
+		r("DELETE /api/hris/contracts/{id}", h.withMenu(iam.HrisEmployees, h.deleteContract)),
 
 		// records
 		r("GET /api/hris/employment-history", handle(h.listEmploymentHistory)),
-		r("POST /api/hris/employment-history", h.withMenu(kepegawaian, h.createEmploymentHistory)),
+		r("POST /api/hris/employment-history", h.withMenu(iam.HrisEmployees, h.createEmploymentHistory)),
 		r("GET /api/hris/departments", h.withUser(h.listDepartmentsBrief)),
 		r("GET /api/hris/onboarding/{employee_id}", handle(h.listOnboarding)),
 		r("POST /api/hris/onboarding/{employee_id}", h.withActor(h.postOnboarding)),
@@ -88,13 +87,13 @@ func (h handlers) routes() []module.Route {
 		r("GET /api/hris/me/team", h.withActor(h.team)),
 
 		// announcements (cover upload and files: fileRoutes)
-		r("GET /api/hris/announcements", h.withMenu(kepegawaian, h.listAnnouncements)),
-		r("POST /api/hris/announcements", h.withMenu(kepegawaian, h.createAnnouncement)),
+		r("GET /api/hris/announcements", h.withMenu(iam.HrisAnnouncements, h.listAnnouncements)),
+		r("POST /api/hris/announcements", h.withMenu(iam.HrisAnnouncements, h.createAnnouncement)),
 		r("GET /api/hris/announcements/feed", h.withActor(h.announcementFeed)),
 		r("GET /api/hris/announcements/unread-count", http.HandlerFunc(h.unreadAnnouncements)),
 		r("GET /api/hris/announcements/{id}", h.withActor(h.getAnnouncement)),
-		r("PATCH /api/hris/announcements/{id}", h.withMenu(kepegawaian, h.updateAnnouncement)),
-		r("DELETE /api/hris/announcements/{id}", h.withMenu(kepegawaian, h.deleteAnnouncement)),
+		r("PATCH /api/hris/announcements/{id}", h.withMenu(iam.HrisAnnouncements, h.updateAnnouncement)),
+		r("DELETE /api/hris/announcements/{id}", h.withMenu(iam.HrisAnnouncements, h.deleteAnnouncement)),
 		r("POST /api/hris/announcements/{id}/read", handle(h.readAnnouncement)),
 
 		// notifications, badges, logbook, report
@@ -106,7 +105,7 @@ func (h handlers) routes() []module.Route {
 		r("POST /api/hris/logbook", h.withLogbook(h.postLogbook)),
 		r("PATCH /api/hris/logbook", h.withLogbook(h.patchLogbook)),
 		r("DELETE /api/hris/logbook", h.withLogbook(h.deleteLogbook)),
-		r("GET /api/hris/reports", h.withMenu(iam.HrisInsights, h.report)),
+		r("GET /api/hris/reports", h.withMenu(iam.HrisReports, h.report)),
 
 		// master data
 		r("GET /api/master/departments", h.masterList(departmentsKind)),
@@ -128,22 +127,22 @@ func (h handlers) routes() []module.Route {
 // documents/{doc_id} first (a static segment wins in Next), then the
 // profile tabs.
 func (h handlers) employeeSubroutes() http.Handler {
-	kepegawaian := iam.HrisKepegawaian
+	employees := iam.HrisEmployees
 	table := map[string]map[string]http.Handler{
 		"contracts": {
-			http.MethodGet:  h.withMenu(kepegawaian, h.listEmployeeContracts),
-			http.MethodPost: h.withMenu(kepegawaian, h.createEmployeeContract),
+			http.MethodGet:  h.withMenu(employees, h.listEmployeeContracts),
+			http.MethodPost: h.withMenu(employees, h.createEmployeeContract),
 		},
 		"lifecycle":             {http.MethodGet: handle(h.employeeLifecycle)},
-		"recruitment-documents": {http.MethodGet: h.withMenu(kepegawaian, h.recruitmentDocuments)},
+		"recruitment-documents": {http.MethodGet: h.withMenu(employees, h.recruitmentDocuments)},
 		"shifts": {
 			http.MethodGet: handle(h.employeeShifts),
 			http.MethodPut: handle(h.saveEmployeeShifts),
 		},
 	}
 	documents := map[string]http.Handler{
-		http.MethodPatch:  h.withMenu(kepegawaian, h.patchEmployeeDocument),
-		http.MethodDelete: h.withMenu(kepegawaian, h.deleteEmployeeDocument),
+		http.MethodPatch:  h.withMenu(employees, h.patchEmployeeDocument),
+		http.MethodDelete: h.withMenu(employees, h.deleteEmployeeDocument),
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		methods := table[r.PathValue("sub")]

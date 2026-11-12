@@ -160,16 +160,40 @@ export const IAM = {
   hrisOrganization: ["hris.organization"],
   /** HRIS → Insights (analitik rekrutmen, laporan HR). */
   hrisInsights: ["hris.insights"],
-  /**
-   * Pengelola Feedback 360° (siklus, penugasan, persetujuan, hasil). Sengaja
-   * tanpa hris.performance.review dan .dept-tasks yang juga di-grant ke role
-   * employee (ESS).
+  /*
+   * HRIS per sub-modul: satu key per menu daun. Guard API HRIS memakai key ini
+   * agar role dengan satu sub-modul tidak bisa memanggil API sub-modul lain.
    */
-  hrisFeedbackAdmin: [
-    "hris.performance.feedback-360",
-    "hris.performance.kpi-scorecard",
-    "hris.performance.kpi-config",
-  ],
+  /** Kepegawaian → Karyawan (/dashboard/employees: profil, dokumen, kontrak, riwayat). */
+  hrisEmployees: ["hris.kepegawaian.users"],
+  hrisContracts: ["hris.kepegawaian.contracts"],
+  hrisShifts: ["hris.kepegawaian.shifts"],
+  hrisHolidays: ["hris.kepegawaian.holidays"],
+  hrisLoans: ["hris.kepegawaian.loans"],
+  hrisOvertime: ["hris.kepegawaian.overtime"],
+  hrisAnnouncements: ["hris.kepegawaian.announcements"],
+  hrisAttendance: ["hris.workforce.attendance"],
+  hrisLeaves: ["hris.workforce.leaves"],
+  hrisOrgChart: ["hris.organization.org-chart"],
+  hrisPayroll: ["hris.compensation.payroll"],
+  hrisSalary: ["hris.compensation.salary"],
+  hrisKpiScorecard: ["hris.performance.kpi-scorecard"],
+  hrisKpiConfig: ["hris.performance.kpi-config"],
+  /** Pengelola Feedback 360° (siklus, penugasan, persetujuan, hasil). */
+  hrisFeedback360: ["hris.performance.feedback-360"],
+  hrisCandidates: ["hris.recruitment.candidates"],
+  hrisPipeline: ["hris.recruitment.pipeline"],
+  hrisPsikotes: ["hris.recruitment.psikotes"],
+  hrisTalentPool: ["hris.recruitment.talent-pool"],
+  hrisJobPortal: ["hris.recruitment.job-portal"],
+  hrisLiveMonitoring: ["hris.recruitment.live-monitoring"],
+  hrisAnalytics: ["hris.insights.analytics"],
+  hrisReports: ["hris.insights.reports"],
+  hrisDepartments: ["hris.master.departments"],
+  hrisPositions: ["hris.master.positions"],
+  hrisEmploymentStatuses: ["hris.master.employment-statuses"],
+  /** Ticketing → Pengaturan memakai pemilih karyawan HRIS (staff pass). */
+  hrisPickerTicketing: ["ticketing.settings"],
   /** Tulis katalog produk POS (PATCH produk, SKU merchandise). */
   posCatalogProducts: ["pos.catalog.products"],
   /** Tulis pengaturan ARK & XP (kurs ARK, preset top-up). */

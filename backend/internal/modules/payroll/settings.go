@@ -276,7 +276,7 @@ func (s *service) saveSettings(ctx context.Context, in *settingsInput) (any, err
 
 // GET /api/hris/payroll-settings?tax_year=2026
 func (h *handler) getSettings(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisPayroll...); err != nil {
 		return err
 	}
 	q := queryForm(r)
@@ -297,7 +297,7 @@ func (h *handler) getSettings(w http.ResponseWriter, r *http.Request) error {
 
 // PUT /api/hris/payroll-settings { settings?, tax_config? }
 func (h *handler) putSettings(w http.ResponseWriter, r *http.Request) error {
-	u, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...)
+	u, err := h.auth.RequireMenuPrefix(r, iam.HrisPayroll...)
 	if err != nil {
 		return err
 	}

@@ -69,7 +69,7 @@ func TestAttendance(t *testing.T) {
 
 func TestLeaves(t *testing.T) {
 	h := newHarness(t)
-	hr, _ := h.staff("hrd", []string{menuWorkforce}, true)
+	hr, _ := h.staff("hrd", workforceMenus, true)
 	boss, bossID := h.staff("pos", nil, true, emp{name: "Atasan Cuti", phone: "0812 3456 7890"})
 	staff, own := h.staff("pos", nil, true, emp{name: "Pemohon Cuti"})
 	h.exec(`UPDATE hris.employees SET reporting_to = $2 WHERE id = $1`, own, bossID)
@@ -155,7 +155,7 @@ func TestLeaves(t *testing.T) {
 
 func TestOvertimeAndShifts(t *testing.T) {
 	h := newHarness(t)
-	hr, _ := h.staff("hrd", []string{menuKepegawaian}, true)
+	hr, _ := h.staff("hrd", kepegawaianMenus, true)
 	boss, bossID := h.staff("pos", nil, true)
 	staff, own := h.staff("pos", nil, true)
 	h.exec(`UPDATE hris.employees SET reporting_to = $2 WHERE id = $1`, own, bossID)
@@ -212,7 +212,7 @@ func TestOvertimeAndShifts(t *testing.T) {
 
 func TestHolidays(t *testing.T) {
 	h := newHarness(t)
-	hr, _ := h.staff("hrd", []string{menuKepegawaian}, false)
+	hr, _ := h.staff("hrd", kepegawaianMenus, false)
 	staff, _ := h.staff("pos", nil, false)
 
 	created := h.do(&hr, "POST", "/api/hris/holidays", map[string]any{"holiday_date": "2031-08-17", "name": " HUT RI ", "status": "draft"})
@@ -265,7 +265,7 @@ func TestHolidays(t *testing.T) {
 // workforce-route.test.
 func TestSchemaMessages(t *testing.T) {
 	h := newHarness(t)
-	hr, _ := h.staff("hrd", []string{menuKepegawaian}, false)
+	hr, _ := h.staff("hrd", kepegawaianMenus, false)
 	e := h.employee(emp{})
 
 	expect(t, h.do(&hr, "POST", "/api/hris/shifts", map[string]any{"name": "Pagi", "start_time": "8", "end_time": "16:00"}), 400,

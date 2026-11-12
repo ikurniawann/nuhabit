@@ -99,7 +99,7 @@ type snapshotSummary struct {
 // POST /api/hris/kpi/snapshot { period_month?, period_year? }: defaults to
 // the current month.
 func (h *handler) kpiSnapshot(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisPerformance...); err != nil {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisKpiScorecard...); err != nil {
 		return err
 	}
 	f := readOptionalJSON(r)

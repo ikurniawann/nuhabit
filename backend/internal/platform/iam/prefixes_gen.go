@@ -105,7 +105,33 @@ var (
 	HrisMaster                 = []string{"hris.master"}
 	HrisOrganization           = []string{"hris.organization"}
 	HrisInsights               = []string{"hris.insights"}
-	HrisFeedbackAdmin          = []string{"hris.performance.feedback-360", "hris.performance.kpi-scorecard", "hris.performance.kpi-config"}
+	HrisEmployees              = []string{"hris.kepegawaian.users"}
+	HrisContracts              = []string{"hris.kepegawaian.contracts"}
+	HrisShifts                 = []string{"hris.kepegawaian.shifts"}
+	HrisHolidays               = []string{"hris.kepegawaian.holidays"}
+	HrisLoans                  = []string{"hris.kepegawaian.loans"}
+	HrisOvertime               = []string{"hris.kepegawaian.overtime"}
+	HrisAnnouncements          = []string{"hris.kepegawaian.announcements"}
+	HrisAttendance             = []string{"hris.workforce.attendance"}
+	HrisLeaves                 = []string{"hris.workforce.leaves"}
+	HrisOrgChart               = []string{"hris.organization.org-chart"}
+	HrisPayroll                = []string{"hris.compensation.payroll"}
+	HrisSalary                 = []string{"hris.compensation.salary"}
+	HrisKpiScorecard           = []string{"hris.performance.kpi-scorecard"}
+	HrisKpiConfig              = []string{"hris.performance.kpi-config"}
+	HrisFeedback360            = []string{"hris.performance.feedback-360"}
+	HrisCandidates             = []string{"hris.recruitment.candidates"}
+	HrisPipeline               = []string{"hris.recruitment.pipeline"}
+	HrisPsikotes               = []string{"hris.recruitment.psikotes"}
+	HrisTalentPool             = []string{"hris.recruitment.talent-pool"}
+	HrisJobPortal              = []string{"hris.recruitment.job-portal"}
+	HrisLiveMonitoring         = []string{"hris.recruitment.live-monitoring"}
+	HrisAnalytics              = []string{"hris.insights.analytics"}
+	HrisReports                = []string{"hris.insights.reports"}
+	HrisDepartments            = []string{"hris.master.departments"}
+	HrisPositions              = []string{"hris.master.positions"}
+	HrisEmploymentStatuses     = []string{"hris.master.employment-statuses"}
+	HrisPickerTicketing        = []string{"ticketing.settings"}
 	PosCatalogProducts         = []string{"pos.catalog.products"}
 	PosLoyaltySettings         = []string{"pos.loyalty.settings"}
 	SettingsBilling            = []string{"settings.billing"}
@@ -221,7 +247,33 @@ var ByKey = map[string][]string{
 	"hrisMaster":                 HrisMaster,
 	"hrisOrganization":           HrisOrganization,
 	"hrisInsights":               HrisInsights,
-	"hrisFeedbackAdmin":          HrisFeedbackAdmin,
+	"hrisEmployees":              HrisEmployees,
+	"hrisContracts":              HrisContracts,
+	"hrisShifts":                 HrisShifts,
+	"hrisHolidays":               HrisHolidays,
+	"hrisLoans":                  HrisLoans,
+	"hrisOvertime":               HrisOvertime,
+	"hrisAnnouncements":          HrisAnnouncements,
+	"hrisAttendance":             HrisAttendance,
+	"hrisLeaves":                 HrisLeaves,
+	"hrisOrgChart":               HrisOrgChart,
+	"hrisPayroll":                HrisPayroll,
+	"hrisSalary":                 HrisSalary,
+	"hrisKpiScorecard":           HrisKpiScorecard,
+	"hrisKpiConfig":              HrisKpiConfig,
+	"hrisFeedback360":            HrisFeedback360,
+	"hrisCandidates":             HrisCandidates,
+	"hrisPipeline":               HrisPipeline,
+	"hrisPsikotes":               HrisPsikotes,
+	"hrisTalentPool":             HrisTalentPool,
+	"hrisJobPortal":              HrisJobPortal,
+	"hrisLiveMonitoring":         HrisLiveMonitoring,
+	"hrisAnalytics":              HrisAnalytics,
+	"hrisReports":                HrisReports,
+	"hrisDepartments":            HrisDepartments,
+	"hrisPositions":              HrisPositions,
+	"hrisEmploymentStatuses":     HrisEmploymentStatuses,
+	"hrisPickerTicketing":        HrisPickerTicketing,
 	"posCatalogProducts":         PosCatalogProducts,
 	"posLoyaltySettings":         PosLoyaltySettings,
 	"settingsBilling":            SettingsBilling,

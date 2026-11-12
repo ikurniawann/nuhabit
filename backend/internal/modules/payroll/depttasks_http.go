@@ -31,7 +31,7 @@ func (h *handler) taskRoutes() []module.Route {
 		staff("GET /api/hris/dept-tasks/items", h.taskItems, read...),
 		staff("GET /api/hris/dept-tasks/monitor", h.taskMonitor, read...),
 		staff("GET /api/hris/dept-tasks/kpi", h.kpiTasks, iam.Can("read", own), iam.Can("read", team), iam.Can("read", kpi)),
-		staff("GET /api/hris/dept-tasks/kpi/contributions", h.taskContributions, iam.Can("read", own), iam.Can("read", kpi), iam.Can("read", iam.HrisPerformance)),
+		staff("GET /api/hris/dept-tasks/kpi/contributions", h.taskContributions, iam.Can("read", own), iam.Can("read", kpi), iam.Can("read", iam.HrisKpiScorecard)),
 		staff("GET /api/hris/dept-tasks/occurrences/{id}", h.occurrenceDetail, read...),
 		staff("POST /api/hris/dept-tasks/occurrences/{id}/attachments", h.uploadAttachment, write...),
 		staff("GET /api/hris/dept-tasks/occurrences/{id}/attachments/{attId}", h.downloadAttachment, read...),

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -68,9 +69,10 @@ func assistantMemoryDir(getenv func(string) string) string {
 	return filepath.Join(storage.Dir(getenv), "assistant-memory")
 }
 
-// recruitmentReaders are the dashboard readers: the recruitment team and
-// HR insight readers (directors).
-var recruitmentReaders = append(append([]string{}, iam.HrisRecruitment...), iam.HrisInsights...)
+// recruitmentReaders read the recruitment dashboard (/dashboard/rekrutmen,
+// which has no menu of its own): the Kandidat and Pipeline menus and the
+// recruitment analytics menu.
+var recruitmentReaders = slices.Concat(iam.HrisCandidates, iam.HrisPipeline, iam.HrisAnalytics)
 
 func (m mod) Routes() []module.Route {
 	s := m.s

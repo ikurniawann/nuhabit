@@ -8,7 +8,6 @@ import (
 
 	"nuhabit/backend/internal/modules/recruitment/domain"
 	"nuhabit/backend/internal/platform/httpx"
-	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -267,7 +266,7 @@ func (h *handler) respondOffer(w http.ResponseWriter, r *http.Request) error {
 // keep the ApiError body.
 func (h *handler) manualOfferResponse(w http.ResponseWriter, r *http.Request) {
 	fail := func(status int, msg string) { _ = reply(w, status, "error", msg) }
-	u, err := h.guard.RequireMenuPrefix(r, iam.HrisRecruitment...)
+	u, err := h.guard.RequireMenuPrefix(r, recruiters...)
 	if err != nil {
 		var appErr *httpx.Error
 		if errors.As(err, &appErr) {

@@ -21,22 +21,22 @@ import (
 // attendance export, leave attachments, announcement covers and contract
 // documents.
 func (h handlers) fileRoutes() []module.Route {
-	kepegawaian := iam.HrisKepegawaian
+	employees := iam.HrisEmployees
 	r := func(pattern string, handler http.Handler) module.Route {
 		return module.Route{Pattern: pattern, Handler: handler}
 	}
 	return []module.Route{
 		r("POST /api/hris/attendance", h.withActor(h.clockAttendance)),
-		r("GET /api/hris/attendance/export", h.withMenu(iam.HrisWorkforce, h.exportAttendance)),
+		r("GET /api/hris/attendance/export", h.withMenu(iam.HrisAttendance, h.exportAttendance)),
 		r("GET /api/hris/attendance/photo/{path...}", h.withActor(h.attendancePhoto)),
 		r("POST /api/hris/leaves/attachment", h.withActor(h.uploadLeaveAttachment)),
 		r("GET /api/hris/leaves/attachment/{path...}", h.withActor(h.leaveAttachment)),
-		r("POST /api/hris/announcements/cover", h.withMenu(kepegawaian, h.uploadCover)),
+		r("POST /api/hris/announcements/cover", h.withMenu(iam.HrisAnnouncements, h.uploadCover)),
 		r("GET /api/hris/announcements/cover/{path...}", h.withActor(h.coverFile)),
-		r("GET /api/hris/contracts/{id}/document", h.withMenu(kepegawaian, h.contractDocument)),
-		r("GET /api/hris/contracts/{id}/signed-document", h.withMenu(kepegawaian, h.signedDocument)),
-		r("POST /api/hris/contracts/{id}/signed-document", h.withMenu(kepegawaian, h.uploadSignedDocument)),
-		r("DELETE /api/hris/contracts/{id}/signed-document", h.withMenu(kepegawaian, h.deleteSignedDocument)),
+		r("GET /api/hris/contracts/{id}/document", h.withMenu(employees, h.contractDocument)),
+		r("GET /api/hris/contracts/{id}/signed-document", h.withMenu(employees, h.signedDocument)),
+		r("POST /api/hris/contracts/{id}/signed-document", h.withMenu(employees, h.uploadSignedDocument)),
+		r("DELETE /api/hris/contracts/{id}/signed-document", h.withMenu(employees, h.deleteSignedDocument)),
 	}
 }
 

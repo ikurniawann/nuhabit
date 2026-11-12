@@ -4,6 +4,6 @@ import { AnnouncementsPage } from "@/features/hris/announcements";
 
 // HRIS → Kepegawaian → Pengumuman: CMS pengumuman perusahaan.
 export default async function HrisPengumumanPage() {
-  await requireIamPage(IAM.hrisKepegawaian);
+  await requireIamPage(IAM.hrisAnnouncements);
   return <AnnouncementsPage />;
 }

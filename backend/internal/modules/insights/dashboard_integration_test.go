@@ -41,7 +41,7 @@ func seedRecruitment(h *harness) recruitmentData {
 
 func TestRecruitmentDashboardGuards(t *testing.T) {
 	none := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{}})
-	recruiter := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"hris.recruitment": nil}})
+	recruiter := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"hris.recruitment.pipeline": nil}})
 	h := newTxHarness(t)
 	for _, path := range []string{"/api/dashboard/attention", "/api/dashboard/funnel", "/api/dashboard/sources", "/api/dashboard/stats", "/api/dashboard/weekly", "/api/analytics/brands"} {
 		c := h.get(path, none)
@@ -65,7 +65,7 @@ func TestRecruitmentDashboardGuards(t *testing.T) {
 }
 
 func TestRecruitmentDashboard(t *testing.T) {
-	s := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"hris.insights": nil}})
+	s := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"hris.insights.analytics": nil}})
 	h := newTxHarness(t)
 	d := seedRecruitment(h)
 	q := "?brand_id=" + d.brand
