@@ -222,7 +222,7 @@ func TestRecordsService(t *testing.T) {
 	if err := rec.SetLeadScore(ctx, e.tx, leadID, 42, `[{"rule":"x","points":42}]`); err != nil {
 		t.Fatal(err)
 	}
-	super := e.staff("super_admin", "sales-funnel")
+	super := e.staff("super_admin", funnelMenus...)
 	if err := rec.SetOwner(ctx, e.tx, "deal", dealID, super.UserID); err != nil {
 		t.Fatal(err)
 	}

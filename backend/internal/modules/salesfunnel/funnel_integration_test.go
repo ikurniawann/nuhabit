@@ -15,9 +15,9 @@ func TestGuards(t *testing.T) {
 	e.expect(e.do(nil, "GET", "/api/sales-funnel/leads", nil), 401, "Authentication required")
 	nomenu := e.staff("admin", "dashboard")
 	e.expect(e.do(&nomenu, "GET", "/api/sales-funnel/leads", nil), 403, "Insufficient permissions")
-	unscoped := testutil.CreateStaff(t, testutil.StaffOptions{Role: "admin", Menus: map[string][]string{"sales-funnel": {"read"}}})
+	unscoped := testutil.CreateStaff(t, testutil.StaffOptions{Role: "admin", Menus: map[string][]string{"sales-funnel.leads": {"read"}}})
 	e.expect(e.do(&unscoped, "GET", "/api/sales-funnel/leads", nil), 403, "Scope bisnis user belum dikonfigurasi — hubungi admin")
-	cashier := e.staff("pos", "sales-funnel")
+	cashier := e.staff("pos", funnelMenus...)
 	e.expect(e.do(&cashier, "POST", "/api/sales-funnel/pipelines", map[string]any{}), 403, "Hanya admin/super admin yang boleh membuat pipeline")
 	e.expect(e.do(&cashier, "GET", "/api/sales-funnel/recipes?product_id=x", nil), 403, "Insufficient permissions")
 	r := e.do(&cashier, "POST", "/api/sales-funnel/leads", "{bad")
@@ -160,7 +160,7 @@ func TestDealLifecycle(t *testing.T) {
 	// deal team
 	e.expect(e.do(&s, "POST", "/api/sales-funnel/deals/"+dealID+"/members", map[string]any{"user_id": s.UserID}), 400,
 		"Penanggung jawab harus user ber-role sales atau super admin")
-	super := e.staff("super_admin", "sales-funnel")
+	super := e.staff("super_admin", funnelMenus...)
 	r = e.do(&s, "POST", "/api/sales-funnel/deals/"+dealID+"/members", map[string]any{"user_id": super.UserID, "split_percent": 40})
 	e.expect(r, 201, "Anggota tim ditambahkan")
 	memberID := r.data()["id"].(string)
@@ -322,7 +322,7 @@ func TestAccountsAndContacts(t *testing.T) {
 
 func TestPipelinesAndCatalog(t *testing.T) {
 	e := newEnv(t)
-	admin := e.staff("admin", "sales-funnel")
+	admin := e.staff("admin", funnelMenus...)
 	code := "go-" + testutil.RandomHex(4)
 	r := e.do(&admin, "POST", "/api/sales-funnel/pipelines", map[string]any{"name": "B2B Test", "code": code, "stages": []any{}})
 	e.expect(r, 400, "Validation failed")
@@ -346,7 +346,7 @@ func TestPipelinesAndCatalog(t *testing.T) {
 	}
 	won := e.scalar(`SELECT id::text FROM crm.crm_sales_stages WHERE pipeline_id = $1 AND is_won`, pipelineID).(string)
 	e.expect(e.do(&admin, "PATCH", "/api/sales-funnel/stages/"+won, map[string]any{"is_active": false}), 403, "Insufficient permissions")
-	super := e.staff("super_admin", "sales-funnel")
+	super := e.staff("super_admin", funnelMenus...)
 	e.expect(e.do(&super, "PATCH", "/api/sales-funnel/stages/"+won, map[string]any{"is_active": false}), 400, "Tahap Menang/Kalah tidak boleh dinonaktifkan")
 	r = e.do(&admin, "PATCH", "/api/sales-funnel/pipelines/"+pipelineID, map[string]any{"is_active": false})
 	e.expect(r, 200, "Pipeline diperbarui")

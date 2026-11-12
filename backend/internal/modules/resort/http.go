@@ -2,6 +2,7 @@ package resort
 
 import (
 	"net/http"
+	"slices"
 	"time"
 
 	"nuhabit/backend/internal/modules/resort/domain"
@@ -27,44 +28,48 @@ type handler struct {
 
 type venueFunc func(w http.ResponseWriter, r *http.Request, v Venue) error
 
-// Routes lists every /api/resort route.
+// Routes lists every /api/resort route, each guarded by the sub-modules
+// whose dashboard pages call it.
 func (h *handler) Routes() []module.Route {
-	read := func(pattern string, fn venueFunc) module.Route {
-		return module.Route{Pattern: pattern, Handler: h.venue("", fn)}
+	fo, res, rooms := iam.ResortFrontOffice, iam.ResortReservations, iam.ResortRooms
+	resOrFO := slices.Concat(res, fo)
+	read := func(pattern string, menus []string, fn venueFunc) module.Route {
+		return module.Route{Pattern: pattern, Handler: h.venue("", menus, fn)}
 	}
-	act := func(pattern, action string, fn venueFunc) module.Route {
-		return module.Route{Pattern: pattern, Handler: h.venue(action, fn)}
+	act := func(pattern, action string, menus []string, fn venueFunc) module.Route {
+		return module.Route{Pattern: pattern, Handler: h.venue(action, menus, fn)}
 	}
 	return []module.Route{
-		read("GET /api/resort/availability", h.availability),
-		read("GET /api/resort/front-office", h.frontOffice),
-		read("GET /api/resort/reservations", h.listReservations),
-		act("POST /api/resort/reservations", "create", h.createReservation),
-		read("GET /api/resort/reservations/{id}", h.reservationDetail),
-		act("PATCH /api/resort/reservations/{id}", "update", h.updateReservation),
-		act("POST /api/resort/reservations/{id}/charges", "update", h.addCharge),
-		act("POST /api/resort/reservations/{id}/status", "update", h.changeStatus),
-		read("GET /api/resort/room-types", h.listRoomTypes),
-		act("POST /api/resort/room-types", "create", h.createRoomType),
-		act("PATCH /api/resort/room-types/{id}", "update", h.updateRoomType),
-		act("DELETE /api/resort/room-types/{id}", "delete", h.removeRoomType),
-		read("GET /api/resort/rooms", h.listRooms),
-		act("POST /api/resort/rooms", "create", h.createRoom),
-		act("PATCH /api/resort/rooms/{id}", "update", h.updateRoom),
-		act("DELETE /api/resort/rooms/{id}", "delete", h.removeRoom),
+		read("GET /api/resort/availability", res, h.availability),
+		read("GET /api/resort/front-office", fo, h.frontOffice),
+		read("GET /api/resort/reservations", res, h.listReservations),
+		act("POST /api/resort/reservations", "create", res, h.createReservation),
+		read("GET /api/resort/reservations/{id}", resOrFO, h.reservationDetail),
+		act("PATCH /api/resort/reservations/{id}", "update", res, h.updateReservation),
+		act("POST /api/resort/reservations/{id}/charges", "update", resOrFO, h.addCharge),
+		act("POST /api/resort/reservations/{id}/status", "update", resOrFO, h.changeStatus),
+		read("GET /api/resort/room-types", rooms, h.listRoomTypes),
+		act("POST /api/resort/room-types", "create", rooms, h.createRoomType),
+		act("PATCH /api/resort/room-types/{id}", "update", rooms, h.updateRoomType),
+		act("DELETE /api/resort/room-types/{id}", "delete", rooms, h.removeRoomType),
+		read("GET /api/resort/rooms", slices.Concat(rooms, res, fo), h.listRooms),
+		act("POST /api/resort/rooms", "create", rooms, h.createRoom),
+		act("PATCH /api/resort/rooms/{id}", "update", slices.Concat(rooms, fo), h.updateRoom),
+		act("DELETE /api/resort/rooms/{id}", "delete", rooms, h.removeRoom),
 	}
 }
 
-// venue is requireResortContext: the IAM guard (menu prefix, or the action
-// when one is given), then the venue; an unresolved venue is 409.
-func (h *handler) venue(action string, fn venueFunc) http.Handler {
+// venue is requireResortContext: the IAM guard (a menu of the route's
+// sub-modules, holding the action when one is given), then the venue; an
+// unresolved venue is 409.
+func (h *handler) venue(action string, menus []string, fn venueFunc) http.Handler {
 	return httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
 		var u *auth.User
 		var err error
 		if action == "" {
-			u, err = h.guard.RequireMenuPrefix(r, iam.Resort...)
+			u, err = h.guard.RequireMenuPrefix(r, menus...)
 		} else {
-			u, err = h.guard.RequireMenuAction(r, action, iam.Resort...)
+			u, err = h.guard.RequireMenuAction(r, action, menus...)
 		}
 		if err != nil {
 			return err

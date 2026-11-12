@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
 
 	"nuhabit/backend/internal/modules/ticketing/domain"
@@ -30,77 +31,81 @@ type handler struct {
 	now     func() time.Time
 }
 
-// Routes lists every /api/ticketing route.
+// Routes lists every /api/ticketing route, each guarded by the sub-modules
+// whose dashboard pages call it. Voiding a charge stays with the reports
+// menu, as before: the loket shows the button but only supervisors pass.
 func (h *handler) Routes() []module.Route {
-	admin, op, reports := iam.TicketingAdmin, iam.TicketingOperator, iam.TicketingReports
+	booking, loket, gate, gatePass := iam.TicketingBooking, iam.TicketingLoket, iam.TicketingGate, iam.TicketingGatePass
+	passes, tickets, mapping := iam.TicketingPasses, iam.TicketingTickets, iam.TicketingMapping
+	channels, settings, reports := iam.TicketingChannelManager, iam.TicketingSettings, iam.TicketingReports
 	r := func(pattern string, menus []string, fn venueFunc) module.Route {
 		return module.Route{Pattern: pattern, Handler: h.venue(menus, fn)}
 	}
 	return []module.Route{
-		r("GET /api/ticketing/bookings", op, h.listBookings),
-		r("GET /api/ticketing/bookings/lookup", op, h.lookupBooking),
-		r("GET /api/ticketing/bookings/{id}", op, h.bookingDetail),
-		r("PATCH /api/ticketing/bookings/{id}", admin, h.updateBookingNotes),
-		r("POST /api/ticketing/bookings/{id}/cancel", admin, h.cancelBooking),
-		r("POST /api/ticketing/bookings/{id}/redeem", op, h.redeemBooking),
-		r("POST /api/ticketing/bookings/{id}/resend-wa", op, h.resendBookingWa),
+		r("GET /api/ticketing/bookings", booking, h.listBookings),
+		r("GET /api/ticketing/bookings/lookup", loket, h.lookupBooking),
+		r("GET /api/ticketing/bookings/{id}", booking, h.bookingDetail),
+		r("PATCH /api/ticketing/bookings/{id}", booking, h.updateBookingNotes),
+		r("POST /api/ticketing/bookings/{id}/cancel", booking, h.cancelBooking),
+		r("POST /api/ticketing/bookings/{id}/redeem", loket, h.redeemBooking),
+		r("POST /api/ticketing/bookings/{id}/resend-wa", booking, h.resendBookingWa),
 
-		r("POST /api/ticketing/gate/tap", op, h.gateTap),
-		r("POST /api/ticketing/gate/pass-tap", op, h.passTap),
+		r("POST /api/ticketing/gate/tap", gate, h.gateTap),
+		r("POST /api/ticketing/gate/pass-tap", gatePass, h.passTap),
 
-		r("GET /api/ticketing/visits", op, h.listVisits),
-		r("POST /api/ticketing/visits", op, h.registerVisit),
-		r("GET /api/ticketing/visits/{id}", op, h.visitDetail),
-		r("POST /api/ticketing/visits/{id}/deposit", op, h.topUpDeposit),
-		r("POST /api/ticketing/visits/{id}/settle", op, h.settleVisit),
+		r("GET /api/ticketing/visits", loket, h.listVisits),
+		r("POST /api/ticketing/visits", loket, h.registerVisit),
+		r("GET /api/ticketing/visits/{id}", loket, h.visitDetail),
+		r("POST /api/ticketing/visits/{id}/deposit", loket, h.topUpDeposit),
+		r("POST /api/ticketing/visits/{id}/settle", loket, h.settleVisit),
 		r("POST /api/ticketing/visits/{id}/charges/{chargeId}/void", reports, h.voidCharge),
-		r("POST /api/ticketing/visits/{id}/bands/{bandId}/lost", op, h.markBandLost),
+		r("POST /api/ticketing/visits/{id}/bands/{bandId}/lost", loket, h.markBandLost),
 
-		r("GET /api/ticketing/season-passes", op, h.listSeasonPasses),
-		r("POST /api/ticketing/season-passes", op, h.issueSeasonPass),
-		r("GET /api/ticketing/season-passes/pass-options", op, h.passOptions),
-		r("POST /api/ticketing/season-passes/{id}/renew", op, h.renewSeasonPass),
+		r("GET /api/ticketing/season-passes", passes, h.listSeasonPasses),
+		r("POST /api/ticketing/season-passes", passes, h.issueSeasonPass),
+		r("GET /api/ticketing/season-passes/pass-options", passes, h.passOptions),
+		r("POST /api/ticketing/season-passes/{id}/renew", passes, h.renewSeasonPass),
 
-		r("POST /api/ticketing/tab/check", op, h.tabCheck),
-		r("GET /api/ticketing/tab/stats", op, h.tabStats),
-		r("GET /api/ticketing/occupancy", op, h.occupancy),
+		r("POST /api/ticketing/tab/check", iam.TicketingPosTab, h.tabCheck),
+		r("GET /api/ticketing/tab/stats", loket, h.tabStats),
+		r("GET /api/ticketing/occupancy", slices.Concat(booking, settings, reports), h.occupancy),
 		r("GET /api/ticketing/reports", reports, h.report),
 
-		r("GET /api/ticketing/time-slots", admin, h.listTimeSlots),
-		r("POST /api/ticketing/time-slots", admin, h.createTimeSlot),
-		r("PATCH /api/ticketing/time-slots/{id}", admin, h.updateTimeSlot),
-		r("DELETE /api/ticketing/time-slots/{id}", admin, h.deleteTimeSlot),
-		r("GET /api/ticketing/capacity-dates", admin, h.listCapacityDates),
-		r("POST /api/ticketing/capacity-dates", admin, h.createCapacityDate),
-		r("PATCH /api/ticketing/capacity-dates/{id}", admin, h.updateCapacityDate),
-		r("DELETE /api/ticketing/capacity-dates/{id}", admin, h.deleteCapacityDate),
-		r("GET /api/ticketing/settings", admin, h.getSettings),
-		r("PUT /api/ticketing/settings", admin, h.updateSettings),
-		r("GET /api/ticketing/channels", admin, h.listChannels),
-		r("PATCH /api/ticketing/channels/{id}", admin, h.updateChannel),
-		r("GET /api/ticketing/categories", admin, h.listCategories),
-		r("POST /api/ticketing/categories", admin, h.createCategory),
+		r("GET /api/ticketing/time-slots", settings, h.listTimeSlots),
+		r("POST /api/ticketing/time-slots", settings, h.createTimeSlot),
+		r("PATCH /api/ticketing/time-slots/{id}", settings, h.updateTimeSlot),
+		r("DELETE /api/ticketing/time-slots/{id}", settings, h.deleteTimeSlot),
+		r("GET /api/ticketing/capacity-dates", settings, h.listCapacityDates),
+		r("POST /api/ticketing/capacity-dates", settings, h.createCapacityDate),
+		r("PATCH /api/ticketing/capacity-dates/{id}", settings, h.updateCapacityDate),
+		r("DELETE /api/ticketing/capacity-dates/{id}", settings, h.deleteCapacityDate),
+		r("GET /api/ticketing/settings", slices.Concat(settings, loket), h.getSettings),
+		r("PUT /api/ticketing/settings", settings, h.updateSettings),
+		r("GET /api/ticketing/channels", settings, h.listChannels),
+		r("PATCH /api/ticketing/channels/{id}", settings, h.updateChannel),
+		r("GET /api/ticketing/categories", tickets, h.listCategories),
+		r("POST /api/ticketing/categories", tickets, h.createCategory),
 
-		r("GET /api/ticketing/bands", admin, h.listBands),
-		r("POST /api/ticketing/bands", admin, h.registerBand),
-		r("PATCH /api/ticketing/bands/{id}", admin, h.updateBand),
-		r("GET /api/ticketing/staff-passes", admin, h.listStaffPasses),
-		r("POST /api/ticketing/staff-passes", admin, h.pairStaffPass),
-		r("DELETE /api/ticketing/staff-passes/{id}", admin, h.revokeStaffPass),
+		r("GET /api/ticketing/bands", settings, h.listBands),
+		r("POST /api/ticketing/bands", settings, h.registerBand),
+		r("PATCH /api/ticketing/bands/{id}", settings, h.updateBand),
+		r("GET /api/ticketing/staff-passes", settings, h.listStaffPasses),
+		r("POST /api/ticketing/staff-passes", settings, h.pairStaffPass),
+		r("DELETE /api/ticketing/staff-passes/{id}", settings, h.revokeStaffPass),
 
-		r("GET /api/ticketing/channel-manager", admin, h.channelBoard),
-		r("GET /api/ticketing/products", admin, h.listProducts),
-		r("POST /api/ticketing/products", admin, h.createProduct),
-		r("GET /api/ticketing/products/loket-options", op, h.loketOptions),
-		r("GET /api/ticketing/products/{id}", admin, h.productDetail),
-		r("PATCH /api/ticketing/products/{id}", admin, h.updateProduct),
-		r("POST /api/ticketing/products/{id}/thumbnail", admin, h.uploadThumbnail),
-		r("PUT /api/ticketing/products/{id}/bundle-items", admin, h.saveBundleItems),
-		r("PUT /api/ticketing/products/{id}/channel-prices", admin, h.saveChannelPrices),
-		r("PATCH /api/ticketing/products/{id}/channels", admin, h.setDistribution),
-		r("POST /api/ticketing/products/{id}/dates", admin, h.addProductDate),
-		r("POST /api/ticketing/products/{id}/dates/bulk", admin, h.saveProductDateMarks),
-		r("DELETE /api/ticketing/products/{id}/dates/{dateId}", admin, h.deleteProductDate),
+		r("GET /api/ticketing/channel-manager", slices.Concat(channels, tickets), h.channelBoard),
+		r("GET /api/ticketing/products", slices.Concat(tickets, mapping), h.listProducts),
+		r("POST /api/ticketing/products", tickets, h.createProduct),
+		r("GET /api/ticketing/products/loket-options", loket, h.loketOptions),
+		r("GET /api/ticketing/products/{id}", tickets, h.productDetail),
+		r("PATCH /api/ticketing/products/{id}", tickets, h.updateProduct),
+		r("POST /api/ticketing/products/{id}/thumbnail", tickets, h.uploadThumbnail),
+		r("PUT /api/ticketing/products/{id}/bundle-items", tickets, h.saveBundleItems),
+		r("PUT /api/ticketing/products/{id}/channel-prices", channels, h.saveChannelPrices),
+		r("PATCH /api/ticketing/products/{id}/channels", channels, h.setDistribution),
+		r("POST /api/ticketing/products/{id}/dates", tickets, h.addProductDate),
+		r("POST /api/ticketing/products/{id}/dates/bulk", tickets, h.saveProductDateMarks),
+		r("DELETE /api/ticketing/products/{id}/dates/{dateId}", tickets, h.deleteProductDate),
 	}
 }
 

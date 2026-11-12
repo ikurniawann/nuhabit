@@ -30,7 +30,10 @@ func TestSalesFunnelWritesReachCRM(t *testing.T) {
 		t.Skipf("no branch fixture: %v", err)
 	}
 	seller := testutil.CreateStaff(t, testutil.StaffOptions{Role: "admin", CompanyID: &company,
-		Menus: map[string][]string{"sales-funnel": {"read", "create", "update", "delete"}}})
+		Menus: map[string][]string{
+			"sales-funnel.leads":    {"read", "create", "update", "delete"},
+			"sales-funnel.pipeline": {"read", "create", "update", "delete"},
+		}})
 	tx := testutil.Tx(t)
 	mux := testutil.Mux(salesfunnel.NewOn(d, tx, SalesFunnelPorts(d)))
 	ports := crmAdvancePorts(d)

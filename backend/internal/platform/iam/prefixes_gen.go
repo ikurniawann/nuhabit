@@ -104,6 +104,29 @@ var (
 	Promo                      = []string{"promo", "crm.promo"}
 	Dataroom                   = []string{"dataroom"}
 	Resort                     = []string{"resort"}
+	ResortFrontOffice          = []string{"resort.front-office"}
+	ResortReservations         = []string{"resort.reservations"}
+	ResortRooms                = []string{"resort.rooms"}
+	SalesFunnelLeads           = []string{"sales-funnel.leads"}
+	SalesFunnelPipeline        = []string{"sales-funnel.pipeline"}
+	SalesFunnelAccounts        = []string{"sales-funnel.accounts"}
+	SalesFunnelContacts        = []string{"sales-funnel.contacts"}
+	SalesFunnelFollowups       = []string{"sales-funnel.followups"}
+	SalesFunnelForecast        = []string{"sales-funnel.forecast"}
+	SalesFunnelReports         = []string{"sales-funnel.reports"}
+	SalesFunnelSettings        = []string{"sales-funnel.settings"}
+	SalesFunnelCrmOwnerPickers = []string{"crm.settings.workflows", "crm.settings.approvals", "crm.reports.schedules", "crm.marketing.forms"}
+	SalesFunnelCrmStagePickers = []string{"crm.settings.workflows"}
+	TicketingBooking           = []string{"ticketing.booking"}
+	TicketingLoket             = []string{"ticketing.loket"}
+	TicketingGate              = []string{"ticketing.gate"}
+	TicketingGatePass          = []string{"ticketing.gate_pass"}
+	TicketingPasses            = []string{"ticketing.passes"}
+	TicketingTickets           = []string{"ticketing.tickets"}
+	TicketingMapping           = []string{"ticketing.mapping"}
+	TicketingChannelManager    = []string{"ticketing.channel-manager"}
+	TicketingSettings          = []string{"ticketing.settings"}
+	TicketingPosTab            = []string{"pos.operations.cashier", "pos.operations.cashier-classic", "pos.operations.restaurant", "pos.cashier.central"}
 	PosWallet                  = []string{"pos.loyalty.wallet"}
 	GymExercises               = []string{"gym.exercises"}
 	GymRaces                   = []string{"gym.races"}
@@ -290,6 +313,29 @@ var ByKey = map[string][]string{
 	"promo":                      Promo,
 	"dataroom":                   Dataroom,
 	"resort":                     Resort,
+	"resortFrontOffice":          ResortFrontOffice,
+	"resortReservations":         ResortReservations,
+	"resortRooms":                ResortRooms,
+	"salesFunnelLeads":           SalesFunnelLeads,
+	"salesFunnelPipeline":        SalesFunnelPipeline,
+	"salesFunnelAccounts":        SalesFunnelAccounts,
+	"salesFunnelContacts":        SalesFunnelContacts,
+	"salesFunnelFollowups":       SalesFunnelFollowups,
+	"salesFunnelForecast":        SalesFunnelForecast,
+	"salesFunnelReports":         SalesFunnelReports,
+	"salesFunnelSettings":        SalesFunnelSettings,
+	"salesFunnelCrmOwnerPickers": SalesFunnelCrmOwnerPickers,
+	"salesFunnelCrmStagePickers": SalesFunnelCrmStagePickers,
+	"ticketingBooking":           TicketingBooking,
+	"ticketingLoket":             TicketingLoket,
+	"ticketingGate":              TicketingGate,
+	"ticketingGatePass":          TicketingGatePass,
+	"ticketingPasses":            TicketingPasses,
+	"ticketingTickets":           TicketingTickets,
+	"ticketingMapping":           TicketingMapping,
+	"ticketingChannelManager":    TicketingChannelManager,
+	"ticketingSettings":          TicketingSettings,
+	"ticketingPosTab":            TicketingPosTab,
 	"posWallet":                  PosWallet,
 	"gymExercises":               GymExercises,
 	"gymRaces":                   GymRaces,

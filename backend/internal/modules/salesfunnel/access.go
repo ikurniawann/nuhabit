@@ -25,9 +25,10 @@ const (
 	venueMissingShort = "Venue belum dikonfigurasi — lengkapi scope bisnis user atau venue default CRM"
 )
 
-// requireUser is requireSalesFunnelUser: a session and the sales-funnel menu.
+// requireUser is requireSalesFunnelUser: a session and one of the route's
+// sales-funnel menus.
 func (h *handler) requireUser(r *http.Request) (user, error) {
-	u, err := h.auth.RequireMenuPrefix(r, iam.SalesFunnel...)
+	u, err := h.auth.RequireMenuPrefix(r, routeMenus(r)...)
 	if err != nil {
 		return user{}, err
 	}
@@ -35,11 +36,12 @@ func (h *handler) requireUser(r *http.Request) (user, error) {
 }
 
 // requireFinance is requireFinanceRole: the accounting menu, or for invoice
-// viewers (INVOICE_VIEWER_ROLES) accounting or sales-funnel.
+// viewers (INVOICE_VIEWER_ROLES) accounting or one of the route's
+// sales-funnel menus.
 func (h *handler) requireFinance(r *http.Request, viewer bool) (user, error) {
 	prefixes := iam.Accounting
 	if viewer {
-		prefixes = slices.Concat(iam.Accounting, iam.SalesFunnel)
+		prefixes = slices.Concat(iam.Accounting, routeMenus(r))
 	}
 	u, err := h.auth.RequireMenuPrefix(r, prefixes...)
 	if err != nil {

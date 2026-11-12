@@ -724,7 +724,7 @@ func TestAuthWiring(t *testing.T) {
 	rec, body := testutil.Do(t, mux, testutil.AsStaff(testutil.Request("GET", "/api/ticketing/settings", nil), stranger))
 	eq(t, []any{rec.Code, body["error"]}, []any{403, "Insufficient permissions"})
 	loket := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"ticketing.loket": nil}})
-	rec, body = testutil.Do(t, mux, testutil.AsStaff(testutil.Request("GET", "/api/ticketing/settings", nil), loket))
+	rec, body = testutil.Do(t, mux, testutil.AsStaff(testutil.Request("GET", "/api/ticketing/time-slots", nil), loket))
 	eq(t, []any{rec.Code, body["error"]}, []any{403, "Insufficient permissions"})
 	rec, body = testutil.Do(t, mux, testutil.AsStaff(testutil.Request("GET", "/api/ticketing/tab/stats", nil), loket))
 	eq(t, []any{rec.Code, body["error"]}, []any{400, venueNotConfigured})

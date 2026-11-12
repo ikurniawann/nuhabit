@@ -106,7 +106,7 @@ func TestLeadImport(t *testing.T) {
 	req := httptest.NewRequest("POST", importURL, &noFile)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
 	expectBoth(e.send(&s, req), 400, "File not found")
-	unscoped := testutil.CreateStaff(t, testutil.StaffOptions{Role: "admin", Menus: map[string][]string{"sales-funnel": {"read", "create"}}})
+	unscoped := testutil.CreateStaff(t, testutil.StaffOptions{Role: "admin", Menus: map[string][]string{"sales-funnel.leads": {"read", "create"}}})
 	expectBoth(e.send(&unscoped, upload(t, importURL, "leads.csv", []byte(csv))), 403, "Scope bisnis user belum dikonfigurasi — hubungi admin")
 
 	// A body that is not multipart is request.formData() throwing: a 500.

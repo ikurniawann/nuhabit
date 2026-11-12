@@ -78,7 +78,12 @@ func (e *env) staff(role string, menus ...string) testutil.Staff {
 // seller is a venue user with the sales-funnel menu. The local schema's
 // users_role_check has no "sales" role yet, so admins stand in; the
 // sales-only rules are covered by the domain tests.
-func (e *env) seller() testutil.Staff { return e.staff("admin", "sales-funnel") }
+func (e *env) seller() testutil.Staff { return e.staff("admin", funnelMenus...) }
+
+// funnelMenus is every sales-funnel page, for tests about other rules.
+var funnelMenus = []string{"sales-funnel.leads", "sales-funnel.pipeline", "sales-funnel.accounts",
+	"sales-funnel.contacts", "sales-funnel.followups", "sales-funnel.forecast", "sales-funnel.reports",
+	"sales-funnel.settings"}
 
 type resp struct {
 	Status int

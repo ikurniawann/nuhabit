@@ -131,6 +131,45 @@ export const IAM = {
   promo: ["promo", "crm.promo"],
   dataroom: ["dataroom"],
   resort: ["resort"],
+  /** Resort per sub-modul: Front Office, Reservasi, Kamar & Tipe. */
+  resortFrontOffice: ["resort.front-office"],
+  resortReservations: ["resort.reservations"],
+  resortRooms: ["resort.rooms"],
+  /** Sales funnel per sub-modul (satu halaman dashboard per kode). */
+  salesFunnelLeads: ["sales-funnel.leads"],
+  salesFunnelPipeline: ["sales-funnel.pipeline"],
+  salesFunnelAccounts: ["sales-funnel.accounts"],
+  salesFunnelContacts: ["sales-funnel.contacts"],
+  salesFunnelFollowups: ["sales-funnel.followups"],
+  salesFunnelForecast: ["sales-funnel.forecast"],
+  salesFunnelReports: ["sales-funnel.reports"],
+  salesFunnelSettings: ["sales-funnel.settings"],
+  /** Halaman CRM yang memakai picker owner sales funnel. */
+  salesFunnelCrmOwnerPickers: [
+    "crm.settings.workflows",
+    "crm.settings.approvals",
+    "crm.reports.schedules",
+    "crm.marketing.forms",
+  ],
+  /** Halaman CRM yang memakai picker stage sales funnel (workflow rules). */
+  salesFunnelCrmStagePickers: ["crm.settings.workflows"],
+  /** Ticketing per sub-modul. */
+  ticketingBooking: ["ticketing.booking"],
+  ticketingLoket: ["ticketing.loket"],
+  ticketingGate: ["ticketing.gate"],
+  ticketingGatePass: ["ticketing.gate_pass"],
+  ticketingPasses: ["ticketing.passes"],
+  ticketingTickets: ["ticketing.tickets"],
+  ticketingMapping: ["ticketing.mapping"],
+  ticketingChannelManager: ["ticketing.channel-manager"],
+  ticketingSettings: ["ticketing.settings"],
+  /** Kasir POS yang mengecek saldo tab gelang ticketing. */
+  ticketingPosTab: [
+    "pos.operations.cashier",
+    "pos.operations.cashier-classic",
+    "pos.operations.restaurant",
+    "pos.cashier.central",
+  ],
   /** POS → Member → Dompet: paket top-up, koreksi saldo, pembayaran online, aturan saldo. */
   posWallet: ["pos.loyalty.wallet"],
   /** Gym → Stasiun & Latihan (pustaka HYROX + substitusi). */
