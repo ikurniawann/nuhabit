@@ -118,9 +118,12 @@ func roleID(ctx context.Context, tx pgx.Tx, code string) (string, error) {
 		VALUES ('super_admin', 'Super Admin', 'Akses penuh ke seluruh sistem', true, true) RETURNING id::text`).Scan(&id); err != nil {
 		return "", err
 	}
+	// FOR KEY SHARE skips a menu deleted while this runs (the test fixtures of
+	// packages running in parallel) instead of failing its foreign key.
 	_, err = tx.Exec(ctx, `INSERT INTO iam.role_menu_permissions (role_id, menu_id, granted_actions)
 		SELECT $1, m.id, COALESCE(m.permission_context->'actions', '["read"]'::jsonb) || '["create","update","delete","approve","export","import","execute"]'::jsonb
 		FROM iam.menus m WHERE m.deleted_at IS NULL AND m.is_active
+		FOR KEY SHARE
 		ON CONFLICT (role_id, menu_id) DO UPDATE SET is_active = true, granted_actions = EXCLUDED.granted_actions, updated_at = now()`, id)
 	return id, err
 }
