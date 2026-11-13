@@ -1,3 +1,4 @@
+import { withRetryKey } from "@/lib/idempotency";
 import { fetchAPI } from "./http";
 import type { CreateOrderRequest } from "./orders";
 
@@ -14,10 +15,12 @@ export interface CheckoutResponse {
 }
 
 export async function createCheckout(checkout: CreateCheckoutRequest) {
-  return fetchAPI<{ success: boolean; data: CheckoutResponse; error?: string }>('/checkouts', {
-    method: 'POST',
-    body: JSON.stringify(checkout),
-  });
+  return withRetryKey('pos-checkout', checkout, (headers) =>
+    fetchAPI<{ success: boolean; data: CheckoutResponse; error?: string }>('/checkouts', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(checkout),
+    }));
 }
 
 export async function completeCheckout(

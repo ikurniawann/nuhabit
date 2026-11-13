@@ -32,6 +32,7 @@ import (
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/ocr"
 	"nuhabit/backend/internal/platform/outbox"
+	"nuhabit/backend/internal/platform/redisx"
 )
 
 func main() {
@@ -93,17 +94,28 @@ func run(cfg config.Config, log *slog.Logger) error {
 	}
 	defer db.Close()
 
+	redisCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	rdb, err := redisx.Open(redisCtx, cfg.RedisURL)
+	cancel()
+	if err != nil {
+		return err
+	}
+	if rdb != nil {
+		defer rdb.Close()
+	}
+
 	reg := metrics.NewRegistry()
 	metrics.RegisterRuntime(reg)
 	metrics.RegisterPool(reg, func() metrics.PoolStat { return db.Stat() })
 	deps := module.Deps{
 		DB:      db,
-		Auth:    auth.NewService(db, log, time.Now, auth.Options{DatabaseURL: cfg.DatabaseURL, Production: cfg.IsProduction()}),
+		Auth:    auth.NewService(db, log, time.Now, auth.Options{DatabaseURL: cfg.DatabaseURL, Production: cfg.IsProduction(), Redis: rdb}),
 		Log:     log,
 		Now:     time.Now,
 		Config:  cfg,
 		Events:  outbox.NewBus(db, log),
 		Metrics: reg,
+		Redis:   rdb,
 	}
 	handler, mounted := app.Handler(deps, time.Now(), reg)
 	go func() {

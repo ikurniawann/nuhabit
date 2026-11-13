@@ -1,5 +1,6 @@
 /** Klien fetch halaman POS → Operasional → Tagihan (tagihan member). */
 
+import { withRetryKey } from "@/lib/idempotency";
 import type { MemberBillBalance } from "@/lib/pos/member-bill";
 import type { PosPaymentMethod } from "@/lib/pos/payment-methods";
 
@@ -94,10 +95,13 @@ export function payMemberBill(
     shift_id?: string | null;
   }
 ) {
-  return request<PayMemberBillResult>(`/api/pos/member-bills/${customerId}/payments`, {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
+  return withRetryKey(`pos-member-bill:${customerId}`, body, (headers) =>
+    request<PayMemberBillResult>(`/api/pos/member-bills/${customerId}/payments`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    })
+  );
 }
 
 export function settleMemberBill(customerId: string) {

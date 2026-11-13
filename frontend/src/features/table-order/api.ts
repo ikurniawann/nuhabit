@@ -1,5 +1,6 @@
 /** Klien fetch tipis utk halaman self-order meja (semua endpoint publik/cookie member). */
 
+import { withRetryKey } from "@/lib/idempotency";
 import type { BillingCharge, ChargeBreakdownLine } from "@/lib/pos/billing-settings";
 import type { TableOrderCategory, TableOrderProduct } from "@/lib/table-order/menu";
 import type { TableOrderPaymentMethod, TableOrderType } from "@/lib/table-order/order-status";
@@ -146,10 +147,13 @@ export async function fetchCatalog(): Promise<Catalog> {
 }
 
 export async function createOrder(input: CreateOrderInput) {
-  const json = await request<{ data: OrderData }>("/api/table-order/orders", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+  const json = await withRetryKey("table-order", input, (headers) =>
+    request<{ data: OrderData }>("/api/table-order/orders", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(input),
+    })
+  );
   return json.data;
 }
 

@@ -20,6 +20,12 @@ import {
 } from '@/lib/pos/offline-sync';
 
 /**
+ * Idempotency-Key tetap per item antrean: item yang terkirim lalu putus
+ * sebelum respons tiba tidak tercatat dua kali saat disinkron ulang.
+ */
+const offlineKey = (item: OfflineOrderRequest) => `pos-offline:${item.createdAt}:${item.queueId}`;
+
+/**
  * Antrian transaksi offline (IndexedDB) + sinkron ke server.
  *
  * - Gagal karena jaringan → item TETAP pending dan dicoba lagi otomatis
@@ -71,7 +77,9 @@ export function usePosOfflineQueue() {
         await updateQueueItem({ ...item, status: 'syncing' });
         const payload = item.orderPayload;
         const res: { success: boolean; error?: string } =
-          payload._offlineType === 'split' ? await createSplitOrder(payload) : await createOrder(payload);
+          payload._offlineType === 'split'
+            ? await createSplitOrder(payload, offlineKey(item))
+            : await createOrder(payload, offlineKey(item));
 
         if (res.success) {
           await removeFromQueue(item.queueId!);

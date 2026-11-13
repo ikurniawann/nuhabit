@@ -36,10 +36,10 @@ export function apiGet<T>(url: string) {
   return fetch(url).then((res) => parseJson<T>(res));
 }
 
-export function apiPost<T>(url: string, body: unknown) {
+export function apiPost<T>(url: string, body: unknown, headers?: Record<string, string>) {
   return fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
   }).then((res) => parseJson<T>(res));
 }

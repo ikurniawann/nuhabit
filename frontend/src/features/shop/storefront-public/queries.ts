@@ -1,5 +1,6 @@
 "use client";
 
+import { withRetryKey } from "@/lib/idempotency";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPut } from "@/lib/api-client";
 import type { CartLine } from "@/lib/shop/storefront-cart";
@@ -108,7 +109,7 @@ export type CheckoutResponse =
   | { orderNumber: string; accessToken: string; status: "paid"; statusUrl: string };
 
 export function submitShopCheckout(slug: string, payload: CheckoutPayload) {
-  return apiPost<{ data: CheckoutResponse }>(`/api/public/shop/${slug}/checkout`, payload).then(
-    (res) => res.data
-  );
+  return withRetryKey(`shop-checkout:${slug}`, payload, (headers) =>
+    apiPost<{ data: CheckoutResponse }>(`/api/public/shop/${slug}/checkout`, payload, headers)
+  ).then((res) => res.data);
 }

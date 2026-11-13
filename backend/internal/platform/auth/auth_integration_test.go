@@ -320,3 +320,23 @@ func TestEmployeeBaseline(t *testing.T) {
 	}
 	expect(t, menu("ess.attendance"), req(), 403, "Insufficient permissions")
 }
+
+func TestGrantsCache(t *testing.T) {
+	rdb := testutil.Redis(t)
+	db := testutil.DB(t)
+	ctx := context.Background()
+	svc := auth.NewService(db, nil, nil, auth.Options{Redis: rdb})
+	svc.InvalidateGrants(ctx)
+	t.Cleanup(func() { svc.InvalidateGrants(context.Background()) })
+	staff := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"gym.packages": nil}})
+	req := func() *http.Request { return testutil.AsStaff(testutil.Request("GET", "/api/x", nil), staff) }
+	packages := guardHandler(func(r *http.Request) (*auth.User, error) { return svc.RequireMenu(r, "gym.packages") })
+
+	expect(t, packages, req(), 200, "")
+	if _, err := db.Exec(ctx, `UPDATE iam.role_menu_permissions SET is_active = false WHERE role_id = $1`, staff.RoleID); err != nil {
+		t.Fatal(err)
+	}
+	expect(t, packages, req(), 200, "") // served from the cache
+	svc.InvalidateGrants(ctx)
+	expect(t, packages, req(), 403, "Insufficient permissions")
+}

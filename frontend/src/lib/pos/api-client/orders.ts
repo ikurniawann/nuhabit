@@ -1,3 +1,4 @@
+import { withRetryKey } from "@/lib/idempotency";
 import { fetchAPI, toQueryString, type ApiResult } from "./http";
 import type { Customer } from "./catalog";
 
@@ -74,11 +75,13 @@ export interface SplitPaymentResult {
   error?: string;
 }
 
-export async function createSplitOrder(order: SplitBillRequest) {
-  return fetchAPI<OrderMutationResult>('/orders', {
-    method: 'POST',
-    body: JSON.stringify(order),
-  });
+export async function createSplitOrder(order: SplitBillRequest, idempotencyKey?: string) {
+  return withRetryKey('pos-order', order, (headers) =>
+    fetchAPI<OrderMutationResult>('/orders', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(order),
+    }), idempotencyKey);
 }
 
 export async function getOrderSplits(orderId: string) {
@@ -116,10 +119,12 @@ export async function paySplit(
     reference_number?: string;
   }
 ) {
-  return fetchAPI<{ success: boolean; data: SplitPaymentResult; error?: string }>(`/orders/${orderId}/splits/${splitId}/pay`, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  return withRetryKey(`pos-split-pay:${splitId}`, payload, (headers) =>
+    fetchAPI<{ success: boolean; data: SplitPaymentResult; error?: string }>(`/orders/${orderId}/splits/${splitId}/pay`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    }));
 }
 
 // ============ VOID + TABLE MANAGEMENT ============
@@ -408,15 +413,17 @@ export interface IssuedGiftCardResponse {
   expires_at: string | null;
 }
 
-export async function createOrder(order: CreateOrderRequest) {
-  return fetchAPI<OrderMutationResult & {
-    /** EPIC-034 Fase B — kartu yang terbit dari penjualan gift card. */
-    gift_cards?: IssuedGiftCardResponse[];
-    gift_card_error?: string | null;
-  }>('/orders', {
-    method: 'POST',
-    body: JSON.stringify(order),
-  });
+export async function createOrder(order: CreateOrderRequest, idempotencyKey?: string) {
+  return withRetryKey('pos-order', order, (headers) =>
+    fetchAPI<OrderMutationResult & {
+      /** EPIC-034 Fase B — kartu yang terbit dari penjualan gift card. */
+      gift_cards?: IssuedGiftCardResponse[];
+      gift_card_error?: string | null;
+    }>('/orders', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(order),
+    }), idempotencyKey);
 }
 
 export async function getOrders(params?: {

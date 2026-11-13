@@ -20,12 +20,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/config"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/outbox"
+	"nuhabit/backend/internal/platform/redisx"
 )
 
 var (
@@ -332,4 +334,20 @@ func must(t testing.TB, err error) {
 	if err != nil {
 		t.Fatalf("testutil: %v", err)
 	}
+}
+
+// Redis opens TEST_REDIS_URL and skips the test when it is unset. Tests use
+// keys they own and delete them in cleanup; nothing is flushed.
+func Redis(t testing.TB) *redis.Client {
+	t.Helper()
+	url := os.Getenv("TEST_REDIS_URL")
+	if url == "" {
+		t.Skip("TEST_REDIS_URL not set")
+	}
+	rdb, err := redisx.Open(context.Background(), url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rdb.Close() })
+	return rdb
 }

@@ -27,6 +27,8 @@ type Config struct {
 	// JobsEnabled is JOBS_ENABLED: false (or 0, off, no) stops this process
 	// from running background jobs. Default on.
 	JobsEnabled bool
+	// RedisURL is REDIS_URL; empty runs the API without Redis.
+	RedisURL string
 }
 
 // IsProduction reports whether APP_ENV (or NODE_ENV) says production.
@@ -58,6 +60,7 @@ func DisabledIntegrations(getenv func(string) string) []string {
 		{"pembayaran Xendit (XENDIT_SECRET_KEY + XENDIT_WEBHOOK_TOKEN)", getenv("XENDIT_MOCK") == "1" || (has("XENDIT_SECRET_KEY") && has("XENDIT_WEBHOOK_TOKEN"))},
 		{"web push portal member (VAPID_PUBLIC_KEY + VAPID_PRIVATE_KEY)", has("VAPID_PUBLIC_KEY") && has("VAPID_PRIVATE_KEY")},
 		{"foto produk GoFood dari public/ Next (PUBLIC_ORIGIN atau PUBLIC_DIR)", has("PUBLIC_ORIGIN") || has("PUBLIC_DIR")},
+		{"Redis (REDIS_URL): Idempotency-Key checkout diabaikan dan izin IAM tidak di-cache", has("REDIS_URL")},
 	}
 	var off []string
 	for _, c := range checks {
@@ -94,6 +97,7 @@ func Load() Config {
 		TimeZone:    firstNonEmpty(os.Getenv("TZ"), "Asia/Jakarta"),
 		MetricsAddr: firstNonEmpty(os.Getenv("METRICS_ADDR")),
 		JobsEnabled: !isOff(os.Getenv("JOBS_ENABLED")),
+		RedisURL:    strings.TrimSpace(os.Getenv("REDIS_URL")),
 	}
 }
 

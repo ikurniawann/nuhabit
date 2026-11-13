@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/idempotency"
 	"nuhabit/backend/internal/platform/metrics"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/outbox"
@@ -95,8 +96,8 @@ func Mount(mux *http.ServeMux, deps module.Deps) []string {
 
 // Handler builds the whole HTTP surface: /health, /ready, the selected
 // modules, wrapped in request metrics (registered on reg), request id,
-// access log, panic recovery and the API auth gate (the half of the Next
-// proxy that proxied requests skip).
+// access log, panic recovery, the API auth gate (the half of the Next
+// proxy that proxied requests skip) and Idempotency-Key replay.
 func Handler(deps module.Deps, started time.Time, reg *metrics.Registry) (http.Handler, []string) {
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", Health(started))
@@ -112,6 +113,7 @@ func Handler(deps module.Deps, started time.Time, reg *metrics.Registry) (http.H
 		httpx.AccessLog(deps.Log),
 		httpx.Recover(deps.Log),
 		deps.Auth.Gate,
+		idempotency.Middleware(deps.Redis, deps.Log),
 	)
 	return h, mounted
 }

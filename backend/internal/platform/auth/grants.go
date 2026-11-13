@@ -3,8 +3,12 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"sort"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/redis/go-redis/v9"
 
 	"nuhabit/backend/internal/platform/iam"
 )
@@ -33,29 +37,72 @@ func (s *Service) ResolveRoleIDs(ctx context.Context, userID, role string) ([]st
 }
 
 // GrantedMenuCodes mirrors loadGrantedMenuCodesForUser: the role grants plus
-// the employee baseline.
+// the employee baseline, the codes of UserMenuActions.
 func (s *Service) GrantedMenuCodes(ctx context.Context, userID, role string) ([]string, error) {
-	roleIDs, err := s.ResolveRoleIDs(ctx, userID, role)
+	actions, err := s.UserMenuActions(ctx, userID, role)
 	if err != nil {
 		return nil, err
 	}
-	codes, err := s.GrantedMenuCodesForRoles(ctx, roleIDs)
-	if err != nil {
-		return nil, err
+	codes := make([]string, 0, len(actions))
+	for code := range actions {
+		codes = append(codes, code)
 	}
-	baseline, err := s.employeeBaseline(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	for code := range baseline {
-		codes = mergeUnique(codes, []string{code})
-	}
+	sort.Strings(codes)
 	return codes, nil
 }
 
+// grantsKey is the Redis hash of cached UserMenuActions, one field per
+// "<user id>:<role>". The hash expires grantsTTL after its first field, so
+// an employee change (which no IAM write invalidates) shows within a minute.
+const (
+	grantsKey = "iam:grants"
+	grantsTTL = time.Minute
+)
+
 // UserMenuActions mirrors loadGrantedMenuActionsForUser: the role grants plus
-// the employee baseline.
+// the employee baseline. With Redis it serves the cached result.
 func (s *Service) UserMenuActions(ctx context.Context, userID, role string) (map[string][]string, error) {
+	if s.redis == nil {
+		return s.loadUserMenuActions(ctx, userID, role)
+	}
+	field := userID + ":" + role
+	raw, err := s.redis.HGet(ctx, grantsKey, field).Bytes()
+	if err == nil {
+		var cached map[string][]string
+		if json.Unmarshal(raw, &cached) == nil {
+			return cached, nil
+		}
+	} else if !errors.Is(err, redis.Nil) {
+		s.log.Warn("iam grants cache read failed", "error", err)
+	}
+	granted, err := s.loadUserMenuActions(ctx, userID, role)
+	if err != nil {
+		return nil, err
+	}
+	if encoded, err := json.Marshal(granted); err == nil {
+		pipe := s.redis.Pipeline()
+		pipe.HSet(ctx, grantsKey, field, encoded)
+		pipe.ExpireNX(ctx, grantsKey, grantsTTL)
+		if _, err := pipe.Exec(ctx); err != nil {
+			s.log.Warn("iam grants cache write failed", "error", err)
+		}
+	}
+	return granted, nil
+}
+
+// InvalidateGrants drops every cached grant. Settings → IAM calls it after a
+// write to roles, menus or role permissions. A user's role change needs no
+// call: the role is part of the cache field.
+func (s *Service) InvalidateGrants(ctx context.Context) {
+	if s.redis == nil {
+		return
+	}
+	if err := s.redis.Del(ctx, grantsKey).Err(); err != nil {
+		s.log.Warn("iam grants cache invalidate failed", "error", err)
+	}
+}
+
+func (s *Service) loadUserMenuActions(ctx context.Context, userID, role string) (map[string][]string, error) {
 	roleIDs, err := s.ResolveRoleIDs(ctx, userID, role)
 	if err != nil {
 		return nil, err
@@ -102,20 +149,6 @@ func (s *Service) employeeBaseline(ctx context.Context, userID string) (map[stri
 		out[code] = mergeUnique(out[code], parseGrantedActions(raw))
 	}
 	return out, rows.Err()
-}
-
-// GrantedMenuCodesForRoles mirrors loadGrantedMenuCodes.
-func (s *Service) GrantedMenuCodesForRoles(ctx context.Context, roleIDs []string) ([]string, error) {
-	if len(roleIDs) == 0 {
-		return []string{}, nil
-	}
-	return s.queryStrings(ctx, `SELECT DISTINCT m.code
-     FROM iam.role_menu_permissions rmp
-     JOIN iam.menus m ON m.id = rmp.menu_id
-     WHERE rmp.role_id = ANY($1::uuid[])
-       AND rmp.is_active = true
-       AND m.deleted_at IS NULL
-       AND m.is_active = true`, roleIDs)
 }
 
 // queryStrings runs a one-column text query; no rows is an empty slice.

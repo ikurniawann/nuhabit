@@ -73,12 +73,12 @@ func TestValidate(t *testing.T) {
 
 func TestDisabledIntegrations(t *testing.T) {
 	all := DisabledIntegrations(func(string) string { return "" })
-	if len(all) != 5 {
+	if len(all) != 6 {
 		t.Fatalf("empty env: %v", all)
 	}
 	env := map[string]string{
 		"NEXT_PUBLIC_BASE_URL": "https://x", "RESEND_API_KEY": "k", "XENDIT_MOCK": "1",
-		"VAPID_PUBLIC_KEY": "a", "VAPID_PRIVATE_KEY": "b", "PUBLIC_ORIGIN": "http://next:3000",
+		"VAPID_PUBLIC_KEY": "a", "VAPID_PRIVATE_KEY": "b", "PUBLIC_ORIGIN": "http://next:3000", "REDIS_URL": "redis://redis:6379",
 	}
 	if off := DisabledIntegrations(func(k string) string { return env[k] }); len(off) != 0 {
 		t.Fatalf("configured env: %v", off)

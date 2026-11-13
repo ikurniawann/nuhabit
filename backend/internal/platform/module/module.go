@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/config"
@@ -28,6 +29,8 @@ type Deps struct {
 	Events *outbox.Bus
 	// Metrics is the /metrics registry; nil in tests.
 	Metrics *metrics.Registry
+	// Redis is nil when REDIS_URL is empty.
+	Redis *redis.Client
 }
 
 // Route is one ServeMux pattern, e.g. "GET /api/gym/packages/{id}".

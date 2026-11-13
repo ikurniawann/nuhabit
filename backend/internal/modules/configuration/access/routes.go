@@ -25,17 +25,29 @@ func Routes(d module.Deps, db database.DB) []module.Route {
 	h := handler{db: db, auth: d.Auth}
 	return []module.Route{
 		{Pattern: "GET /api/settings/iam/roles", Handler: httpx.Handle(h.listRoles)},
-		{Pattern: "POST /api/settings/iam/roles", Handler: httpx.Handle(h.createRole)},
+		{Pattern: "POST /api/settings/iam/roles", Handler: httpx.Handle(h.invalidating(h.createRole))},
 		{Pattern: "GET /api/settings/iam/roles/{id}", Handler: httpx.Handle(h.getRole)},
-		{Pattern: "PUT /api/settings/iam/roles/{id}", Handler: httpx.Handle(h.updateRole)},
-		{Pattern: "DELETE /api/settings/iam/roles/{id}", Handler: httpx.Handle(h.deleteRole)},
+		{Pattern: "PUT /api/settings/iam/roles/{id}", Handler: httpx.Handle(h.invalidating(h.updateRole))},
+		{Pattern: "DELETE /api/settings/iam/roles/{id}", Handler: httpx.Handle(h.invalidating(h.deleteRole))},
 		{Pattern: "GET /api/settings/iam/roles/{id}/permissions", Handler: httpx.Handle(h.getPermissions)},
-		{Pattern: "PUT /api/settings/iam/roles/{id}/permissions", Handler: httpx.Handle(h.putPermissions)},
+		{Pattern: "PUT /api/settings/iam/roles/{id}/permissions", Handler: httpx.Handle(h.invalidating(h.putPermissions))},
 		{Pattern: "GET /api/settings/iam/menus", Handler: httpx.Handle(h.listMenus)},
-		{Pattern: "POST /api/settings/iam/menus", Handler: httpx.Handle(h.createMenu)},
+		{Pattern: "POST /api/settings/iam/menus", Handler: httpx.Handle(h.invalidating(h.createMenu))},
 		{Pattern: "GET /api/settings/iam/menus/{id}", Handler: httpx.Handle(h.getMenu)},
-		{Pattern: "PUT /api/settings/iam/menus/{id}", Handler: httpx.Handle(h.updateMenu)},
-		{Pattern: "DELETE /api/settings/iam/menus/{id}", Handler: httpx.Handle(h.deleteMenu)},
+		{Pattern: "PUT /api/settings/iam/menus/{id}", Handler: httpx.Handle(h.invalidating(h.updateMenu))},
+		{Pattern: "DELETE /api/settings/iam/menus/{id}", Handler: httpx.Handle(h.invalidating(h.deleteMenu))},
+	}
+}
+
+// invalidating drops the cached IAM grants after a write that succeeded, so
+// the guards see the change on the next request.
+func (h handler) invalidating(fn httpx.HandlerFunc) httpx.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		if err := fn(w, r); err != nil {
+			return err
+		}
+		h.auth.InvalidateGrants(r.Context())
+		return nil
 	}
 }
 

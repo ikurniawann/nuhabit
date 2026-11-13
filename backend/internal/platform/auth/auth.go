@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
@@ -43,12 +44,16 @@ type Service struct {
 	// databaseURL feeds the member OTP dev-bypass local-host check.
 	databaseURL string
 	production  bool
+	// redis caches UserMenuActions; nil reads Postgres every time.
+	redis *redis.Client
 }
 
 // Options are the environment facts the member dev bypass needs.
 type Options struct {
 	DatabaseURL string
 	Production  bool
+	// Redis caches IAM grants for grantsTTL; nil disables the cache.
+	Redis *redis.Client
 }
 
 // NewService builds the auth service. log and now may be nil.
@@ -63,6 +68,7 @@ func NewService(db *pgxpool.Pool, log *slog.Logger, now func() time.Time, opts .
 	if len(opts) > 0 {
 		s.databaseURL = opts[0].DatabaseURL
 		s.production = opts[0].Production
+		s.redis = opts[0].Redis
 	}
 	return s
 }

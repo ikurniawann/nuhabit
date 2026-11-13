@@ -45,6 +45,8 @@ The host that builds the images needs at least 6 GB of memory for Docker:
 | `BACKEND_ENABLED` | `1` | `0` deploys Next alone and stops the API container. Every Go route then answers 503, so this is no rollback. |
 | `MIGRATE_ON_DEPLOY` | `1` | `0` skips migrations and the drift check. |
 | `MIGRATE_VERIFY` | `1` | `0` skips the drift check only. |
+| `REDIS_ENABLED` | `1` | `0` runs the API without Redis (see Redis below). |
+| `REDIS_IMAGE` | `redis:7.4.11-alpine` | Image for `<CONTAINER_NAME>-redis`. |
 
 The API reads the same env file as Next (`ENV_FILE`). It needs
 `NEXT_PUBLIC_APP_URL` for payment callback and share links, plus the
@@ -320,6 +322,33 @@ newer schema with one exception: `crm.crm_forms.default_source` now rejects
 default for a new form. Creating a public form fails on those builds until
 they pick another source.
 
+## Redis
+
+The API uses Redis for two things:
+
+- **Idempotency-Key.** A POST, PUT, PATCH or DELETE that carries the header
+  is answered once. A repeat with the same key, caller and URL gets the stored
+  response (header `Idempotent-Replayed: true`) for 24 hours, a repeat while
+  the first still runs gets 409, and the same key with another body gets 422.
+  Only responses under 400 are stored, so a rejected checkout may be retried
+  with the same key. The POS (order, central checkout, split payment, member
+  bill payment, offline queue), table order and storefront checkout send it.
+- **IAM grant cache.** Each user's menu grants are cached in the hash
+  `iam:grants` for at most one minute. Settings → IAM writes clear it at once;
+  employee changes (linking an account, deactivating, `reporting_to`) show
+  within a minute.
+
+The Docker script starts `<CONTAINER_NAME>-redis` on the internal network
+(no host port, AOF on the volume `<CONTAINER_NAME>-redis-data`, 256 MB with
+`volatile-lru`) and passes `REDIS_URL=redis://<CONTAINER_NAME>-redis:6379/0`
+to the API. It leaves a running Redis container alone between deploys.
+
+Without `REDIS_URL` the API starts, logs Redis in the list of disabled
+integrations, ignores `Idempotency-Key` and reads grants from Postgres on
+every request. With `REDIS_URL` set and Redis unreachable at startup, the API
+exits. When Redis goes down later, requests still run: the API logs a warning
+and skips the idempotency check and the cache.
+
 ## Compose (ci-cd-template deploys)
 
 CI pushes `$CI_REGISTRY_IMAGE_PUSH/api:<channel>` (jobs `build-api-*`). The
@@ -346,6 +375,7 @@ Add a service next to `arkiv` in the host's compose file:
       DATABASE_URL: postgresql://...      # same as arkiv
       STORAGE_DIR: /app/storage
       PUBLIC_ORIGIN: http://arkiv:3000    # Next serves public/
+      REDIS_URL: redis://arkiv-redis:6379/0
     volumes:
       - /srv/arkiv/storage:/app/storage   # same host dir as arkiv
     extra_hosts:
@@ -354,8 +384,20 @@ Add a service next to `arkiv` in the host's compose file:
       options: {max-size: 50m, max-file: "5"}
 ```
 
-and on the `arkiv` service set `BACKEND_URL: http://arkiv-api:8080` (both
-services share the compose network). The API exposes no host port.
+plus Redis (declare `arkiv-redis-data` under the top-level `volumes:`):
+
+```yaml
+  arkiv-redis:
+    image: redis:7.4.11-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy volatile-lru
+    volumes:
+      - arkiv-redis-data:/data
+```
+
+and on the `arkiv` service set `BACKEND_URL: http://arkiv-api:8080` (all
+services share the compose network). Neither the API nor Redis exposes a
+host port.
 
 `PUBLIC_ORIGIN` is where the API fetches Next's `public/` files, which ship
 only in the Next image: the GoFood photo converter
@@ -378,7 +420,10 @@ locally with `make -C backend test`.
 Several API replicas may run behind one `BACKEND_URL` (a load balancer or a
 compose `deploy.replicas`): rate limits, live-interview signaling, interview
 recording appends (an advisory lock per part file) and the outbox all
-coordinate through Postgres. `MODULES=<names>` mounts a subset when one module
+coordinate through Postgres, and every replica shares one Redis for
+Idempotency-Key and the grant cache. Uploads live on disk under
+`STORAGE_DIR`, so replicas on different hosts need that directory on shared
+storage. `MODULES=<names>` mounts a subset when one module
 should run as its own service. Each replica opens its own pgx pool (default
 size: the larger of 4 and the CPU count); set `pool_max_conns` in
 `DATABASE_URL` to keep Next plus all replicas under the server's

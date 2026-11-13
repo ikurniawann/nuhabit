@@ -112,6 +112,29 @@ API_IMAGE="${DOCKER_IMAGE}-api"
 LOG_OPTS=(--log-opt max-size=50m --log-opt max-file=5)
 docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK"
 
+# Redis untuk Idempotency-Key checkout dan cache izin IAM, hanya di network
+# internal (tanpa port host). Container dibiarkan jalan antar-deploy agar
+# kunci idempotency tidak hilang; AOF di volume menjaga kunci saat restart.
+# REDIS_ENABLED=0 menjalankan API tanpa Redis (API mencatat peringatan).
+REDIS_ENABLED="${REDIS_ENABLED:-1}"
+REDIS_CONTAINER="${CONTAINER_NAME}-redis"
+REDIS_IMAGE="${REDIS_IMAGE:-redis:7.4.11-alpine}"
+REDIS_ENV=()
+if [ "$REDIS_ENABLED" = "1" ]; then
+  if [ "$(docker inspect --format '{{.State.Running}}' "$REDIS_CONTAINER" 2>/dev/null)" != "true" ]; then
+    docker rm -f "$REDIS_CONTAINER" >/dev/null 2>&1 || true
+    docker run -d \
+      --name "$REDIS_CONTAINER" \
+      --restart unless-stopped \
+      "${LOG_OPTS[@]}" \
+      --network "$NETWORK" \
+      -v "${REDIS_CONTAINER}-data:/data" \
+      "$REDIS_IMAGE" \
+      redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy volatile-lru >/dev/null
+  fi
+  REDIS_ENV=(-e "REDIS_URL=redis://${REDIS_CONTAINER}:6379/0")
+fi
+
 # 1. Build kedua image selagi container lama tetap melayani. Tag :previous
 #    menunjuk image yang dipakai container yang sedang jalan (bukan :latest,
 #    yang bisa berisi build gagal-migrasi yang tidak pernah jalan), untuk
@@ -194,6 +217,7 @@ run_api() {
     -e APP_ENV=production \
     -e STORAGE_DIR=/app/storage \
     -e PUBLIC_ORIGIN="http://${CONTAINER_NAME}:${CONTAINER_PORT}" \
+    ${REDIS_ENV[@]+"${REDIS_ENV[@]}"} \
     "$API_IMAGE:$1" >/dev/null || return 1
   for attempt in $(seq 1 30); do
     if [ "$(docker inspect --format '{{.State.Health.Status}}' "$API_CONTAINER" 2>/dev/null)" = "healthy" ]; then
