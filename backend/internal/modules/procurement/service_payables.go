@@ -225,15 +225,20 @@ func (s *Service) ApplyVendorCredits(ctx context.Context, poID string, amount fl
 		if dryRun {
 			return nil
 		}
-		for _, a := range allocations {
-			if _, err := tx.Exec(ctx, `INSERT INTO purchasing.vendor_credit_applications (vendor_credit_id, purchase_order_id, amount, applied_by)
-				VALUES ($1, $2, $3, $4)`, a.CreditID, po.Str("id"), a.Amount, entry.ActorID); err != nil {
-				return err
-			}
-			if _, err := tx.Exec(ctx, `UPDATE purchasing.vendor_credits SET applied_amount = applied_amount + $2, updated_at = now() WHERE id = $1`,
-				a.CreditID, a.Amount); err != nil {
-				return err
-			}
+		// AllocateCredits takes each credit at most once, so the set-based
+		// update touches every credit exactly once.
+		creditIDs, amounts := make([]string, len(allocations)), make([]float64, len(allocations))
+		for i, a := range allocations {
+			creditIDs[i], amounts[i] = a.CreditID, a.Amount
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO purchasing.vendor_credit_applications (vendor_credit_id, purchase_order_id, amount, applied_by)
+			SELECT v.credit_id, $3, v.amount, $4 FROM unnest($1::uuid[], $2::numeric[]) AS v(credit_id, amount)`,
+			creditIDs, amounts, po.Str("id"), entry.ActorID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `UPDATE purchasing.vendor_credits vc SET applied_amount = vc.applied_amount + v.amount, updated_at = now()
+			FROM unnest($1::uuid[], $2::numeric[]) AS v(credit_id, amount) WHERE vc.id = v.credit_id`, creditIDs, amounts); err != nil {
+			return err
 		}
 		label := po.Str("nomor_po")
 		poID := po.Str("id")

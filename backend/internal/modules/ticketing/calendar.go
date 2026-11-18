@@ -70,28 +70,27 @@ func (s *Service) SaveProductDateMarks(ctx context.Context, v Venue, productID, 
 				return err
 			}
 		}
+		// Each new mark is a one-day row, so a date only collides with rows
+		// that existed before this statement: one insert skips those.
 		seen := map[string]bool{}
+		var dates []string
 		for _, date := range add {
-			if seen[date] {
-				continue
-			}
-			seen[date] = true
-			var marked bool
-			if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM ticketing.ticket_product_dates
-				WHERE ticket_product_id = $1 AND date_kind = $2 AND start_date <= $3 AND end_date >= $3)`,
-				productID, kind, date).Scan(&marked); err != nil {
-				return err
-			}
-			if marked {
-				continue
-			}
-			if _, err := tx.Exec(ctx, `INSERT INTO ticketing.ticket_product_dates
-				(company_id, branch_id, ticket_product_id, date_kind, label, start_date, end_date, created_by)
-				VALUES ($1, $2, $3, $4, $5, $6, $6, $7)`, v.CompanyID, v.BranchID, productID, kind, date, date, v.UserID); err != nil {
-				return err
+			if !seen[date] {
+				seen[date] = true
+				dates = append(dates, date)
 			}
 		}
-		return nil
+		if len(dates) == 0 {
+			return nil
+		}
+		_, err := tx.Exec(ctx, `INSERT INTO ticketing.ticket_product_dates
+			(company_id, branch_id, ticket_product_id, date_kind, label, start_date, end_date, created_by)
+			SELECT $1, $2, $3, $4::text, d.day, d.day::date, d.day::date, $6
+			FROM unnest($5::text[]) WITH ORDINALITY AS d(day, ord)
+			WHERE NOT EXISTS (SELECT 1 FROM ticketing.ticket_product_dates x
+				WHERE x.ticket_product_id = $3 AND x.date_kind = $4::text AND x.start_date <= d.day::date AND x.end_date >= d.day::date)
+			ORDER BY d.ord`, v.CompanyID, v.BranchID, productID, kind, dates, v.UserID)
+		return err
 	})
 }
 

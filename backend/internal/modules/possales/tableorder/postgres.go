@@ -99,20 +99,34 @@ type orderItem struct {
 }
 
 func insertItems(ctx context.Context, q database.Querier, orderID string, items []orderItem) error {
-	for _, it := range items {
-		variants, _ := json.Marshal(it.Variants)
-		modifiers, _ := json.Marshal(it.Modifiers)
-		_, err := q.Exec(ctx, `INSERT INTO pos.pos_order_items
-		   (order_id, product_id, product_name, product_sku, variants, modifiers, quantity, unit_price, subtotal,
-		    total_amount, kitchen_notes, station, kitchen_status, xp_earned, inventory_deducted)
-		 VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8, $9, $10, $11, $12, 'pending', $13, false)`,
-			orderID, it.ProductID, it.ProductName, it.ProductSKU, string(variants), string(modifiers), it.Quantity,
-			it.UnitPrice, it.Total, it.Total, it.KitchenNotes, it.Station, it.XPEarned)
-		if err != nil {
-			return err
-		}
+	n := len(items)
+	if n == 0 {
+		return nil
 	}
-	return nil
+	products, names, skus := make([]string, n), make([]string, n), make([]string, n)
+	variants, modifiers := make([]string, n), make([]string, n)
+	notes, stations := make([]string, n), make([]string, n)
+	quantities, xp := make([]int, n), make([]int, n)
+	prices, totals := make([]float64, n), make([]float64, n)
+	for i, it := range items {
+		v, _ := json.Marshal(it.Variants)
+		m, _ := json.Marshal(it.Modifiers)
+		products[i], names[i], skus[i] = it.ProductID, it.ProductName, it.ProductSKU
+		variants[i], modifiers[i] = string(v), string(m)
+		quantities[i], prices[i], totals[i] = it.Quantity, it.UnitPrice, it.Total
+		notes[i], stations[i], xp[i] = it.KitchenNotes, it.Station, it.XPEarned
+	}
+	_, err := q.Exec(ctx, `INSERT INTO pos.pos_order_items
+	   (order_id, product_id, product_name, product_sku, variants, modifiers, quantity, unit_price, subtotal,
+	    total_amount, kitchen_notes, station, kitchen_status, xp_earned, inventory_deducted)
+	 SELECT $1, v.product_id, v.product_name, v.product_sku, v.variants::jsonb, v.modifiers::jsonb, v.quantity, v.unit_price, v.total,
+	    v.total, v.kitchen_notes, v.station, 'pending', v.xp_earned, false
+	 FROM unnest($2::uuid[], $3::text[], $4::text[], $5::text[], $6::text[], $7::numeric[], $8::numeric[], $9::numeric[],
+	             $10::text[], $11::text[], $12::int4[]) WITH ORDINALITY
+	   AS v(product_id, product_name, product_sku, variants, modifiers, quantity, unit_price, total, kitchen_notes, station, xp_earned, ord)
+	 ORDER BY v.ord`,
+		orderID, products, names, skus, variants, modifiers, quantities, prices, totals, notes, stations, xp)
+	return err
 }
 
 // insertHistory writes the creation history row; the TS ignores its error.

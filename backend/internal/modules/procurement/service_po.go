@@ -82,6 +82,9 @@ func (s *Service) ConvertPrToPo(ctx context.Context, prID string, in prConvertIn
 			return err
 		}
 		lines := make([]domain.PoLine, 0, len(items))
+		prItems, materials := make([]string, 0, len(items)), make([]string, 0, len(items))
+		units, notes := make([]*string, 0, len(items)), make([]*string, 0, len(items))
+		qtys, unitPrices := make([]float64, 0, len(items)), make([]float64, 0, len(items))
 		for _, item := range items {
 			material := item.Str("raw_material_id")
 			if material == "" {
@@ -92,13 +95,20 @@ func (s *Service) ConvertPrToPo(ctx context.Context, prID string, in prConvertIn
 				price = domain.JSRound(suggested)
 			}
 			qty := item.Num("qty")
+			prItems, materials = append(prItems, item.Str("id")), append(materials, material)
+			units, notes = append(units, item.StrPtr("satuan_id")), append(notes, item.StrPtr("description"))
+			qtys, unitPrices = append(qtys, qty), append(unitPrices, price)
+			lines = append(lines, domain.PoLine{Qty: qty, Price: price})
+		}
+		if len(lines) > 0 {
 			if _, err := tx.Exec(ctx, `INSERT INTO purchase_order_items
 				(purchase_order_id, pr_item_id, raw_material_id, qty_ordered, satuan_id, harga_satuan, diskon_item, catatan, is_active)
-				VALUES ($1, $2, $3, $4, $5, $6, 0, $7, true)`,
-				poID, item.Str("id"), material, qty, item.StrPtr("satuan_id"), price, item.StrPtr("description")); err != nil {
+				SELECT $1, v.pr_item_id, v.raw_material_id, v.qty, v.satuan_id, v.price, 0, v.notes, true
+				FROM unnest($2::uuid[], $3::uuid[], $4::numeric[], $5::uuid[], $6::numeric[], $7::text[])
+				  AS v(pr_item_id, raw_material_id, qty, satuan_id, price, notes)`,
+				poID, prItems, materials, qtys, units, unitPrices, notes); err != nil {
 				return err
 			}
-			lines = append(lines, domain.PoLine{Qty: qty, Price: price})
 		}
 		t := domain.ComputePoTotals(domain.SumPoLines(lines), &in.DiskonPersen, &in.DiskonNominal, &in.PpnPersen)
 		if _, err := tx.Exec(ctx, `UPDATE purchase_orders SET subtotal = $2, diskon_nominal = $3, ppn_nominal = $4, total = $5, updated_at = $6 WHERE id = $1`,
@@ -597,13 +607,23 @@ func (s *Service) CreatePurchaseOrder(ctx context.Context, moduleType string, in
 		if err != nil {
 			return err
 		}
-		for _, l := range in.Items {
+		if n := len(in.Items); n > 0 {
+			prItems, units, notes := make([]*string, n), make([]*string, n), make([]*string, n)
+			products, materials, supplies, skus := make([]*string, n), make([]*string, n), make([]*string, n), make([]*string, n)
+			qtys, unitPrices := make([]float64, n), make([]float64, n)
+			for i, l := range in.Items {
+				prItems[i], units[i], notes[i] = nonEmpty(l.PrItemID), nonEmpty(l.SatuanID), nonEmpty(l.Notes)
+				products[i], materials[i], supplies[i], skus[i] = l.ProductID, l.RawMaterialID, l.SupplyItemID, nonEmpty(l.PosSkuID)
+				qtys[i], unitPrices[i] = l.Qty, l.Price
+			}
 			if _, err := tx.Exec(ctx, `INSERT INTO purchase_order_items
 				(purchase_order_id, pr_item_id, satuan_id, qty_ordered, harga_satuan, catatan, is_active,
 				 product_id, raw_material_id, supply_item_id, pos_sku_id)
-				VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8, $9, $10)`,
-				po.Str("id"), nonEmpty(l.PrItemID), nonEmpty(l.SatuanID), l.Qty, l.Price, nonEmpty(l.Notes),
-				l.ProductID, l.RawMaterialID, l.SupplyItemID, nonEmpty(l.PosSkuID)); err != nil {
+				SELECT $1, v.pr_item_id, v.satuan_id, v.qty, v.price, v.notes, true,
+				       v.product_id, v.raw_material_id, v.supply_item_id, v.pos_sku_id
+				FROM unnest($2::uuid[], $3::uuid[], $4::numeric[], $5::numeric[], $6::text[], $7::uuid[], $8::uuid[], $9::uuid[], $10::uuid[])
+				  AS v(pr_item_id, satuan_id, qty, price, notes, product_id, raw_material_id, supply_item_id, pos_sku_id)`,
+				po.Str("id"), prItems, units, qtys, unitPrices, notes, products, materials, supplies, skus); err != nil {
 				return err
 			}
 		}
@@ -914,16 +934,15 @@ func (s *Service) cancelDraftRejectCredits(ctx context.Context, q database.Queri
 	if err != nil {
 		return err
 	}
-	for _, id := range ids {
-		if _, err := q.Exec(ctx, `DELETE FROM vendor_credit_items WHERE vendor_credit_id = $1`, id); err != nil {
-			return err
-		}
-		if _, err := q.Exec(ctx, `UPDATE vendor_credits SET status = 'cancelled', total_amount = 0,
-			reason_notes = 'Dibatalkan saat PO ditutup — kekurangan dihitung dari sisa qty', updated_at = $2 WHERE id = $1`, id, s.now()); err != nil {
-			return err
-		}
+	if len(ids) == 0 {
+		return nil
 	}
-	return nil
+	if _, err := q.Exec(ctx, `DELETE FROM vendor_credit_items WHERE vendor_credit_id = ANY($1::uuid[])`, ids); err != nil {
+		return err
+	}
+	_, err = q.Exec(ctx, `UPDATE vendor_credits SET status = 'cancelled', total_amount = 0,
+		reason_notes = 'Dibatalkan saat PO ditutup — kekurangan dihitung dari sisa qty', updated_at = $2 WHERE id = ANY($1::uuid[])`, ids, s.now())
+	return err
 }
 
 /* ── Items ───────────────────────────────────────────────────────────── */

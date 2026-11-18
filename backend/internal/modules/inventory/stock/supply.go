@@ -225,17 +225,26 @@ func (h *handler) createSupplyUsage(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 	ctx := r.Context()
+	// One read for every requested item: uq_supply_inventory_item_wh keeps
+	// a single row per item and warehouse. Items without a row count as 0.
+	itemIDs := make([]string, len(items))
+	for i, it := range items {
+		itemIDs[i] = it.supplyItemID
+	}
+	stock, err := kit.Query(ctx, h.env.DB, `SELECT supply_item_id::text AS id, COALESCE(qty_available,0)::text AS qty FROM supply_inventory
+		WHERE supply_item_id = ANY($1::uuid[])
+		  AND COALESCE(warehouse_id, '00000000-0000-0000-0000-000000000000'::uuid)
+		    = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+		  AND is_active = true`, itemIDs, *warehouseID)
+	if err != nil {
+		return err
+	}
+	availByItem := map[string]string{}
+	for _, r := range stock {
+		availByItem[r.Str("id")] = r.Str("qty")
+	}
 	for _, it := range items {
-		var avail string
-		err := h.env.DB.QueryRow(ctx, `SELECT COALESCE(qty_available,0)::text AS qty FROM supply_inventory
-			WHERE supply_item_id = $1
-			  AND COALESCE(warehouse_id, '00000000-0000-0000-0000-000000000000'::uuid)
-			    = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
-			  AND is_active = true LIMIT 1`, it.supplyItemID, *warehouseID).Scan(&avail)
-		if err != nil && !database.IsNoRows(err) {
-			return err
-		}
-		if available := kit.ToNum(avail); it.qty > available {
+		if available := kit.ToNum(availByItem[strings.ToLower(it.supplyItemID)]); it.qty > available {
 			return httpx.BadRequest("Stok tidak cukup untuk salah satu barang (tersedia " + kit.JSNum(available) +
 				", diminta " + kit.JSNum(it.qty) + ")")
 		}

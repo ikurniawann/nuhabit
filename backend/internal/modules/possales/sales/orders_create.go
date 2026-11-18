@@ -983,19 +983,41 @@ func buildOrderItemRows(orderID string, items []domain.Obj, lines []domain.LineR
 
 // insertOrderItems writes rows built by buildOrderItemRows.
 func insertOrderItems(ctx context.Context, q database.Querier, rows []*jsrow.Row) error {
-	for _, r := range rows {
-		v, _ := jsrow.Marshal(r.Get("variants"))
-		m, _ := jsrow.Marshal(r.Get("modifiers"))
-		if _, err := q.Exec(ctx, `INSERT INTO pos.pos_order_items (order_id, product_id, sku_id, product_name, product_sku, variants, modifiers,
-			quantity, unit_price, subtotal, discount_type, discount_value, discount_amount, total_amount, xp_earned, station, kitchen_status,
-			inventory_deducted, cost_price, cost_total, gross_profit, gross_margin_pct)
-			VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10, $11, $12, $13, $14, 0, $15, 'pending', $16, $17, $18, $19, $20)`,
-			r.Get("order_id"), r.Get("product_id"), r.Get("sku_id"), r.Get("product_name"), r.Get("product_sku"), string(v), string(m),
-			r.Get("quantity"), r.Get("unit_price"), r.Get("subtotal"), r.Get("discount_type"), r.Get("discount_value"), r.Get("discount_amount"),
-			r.Get("total_amount"), r.Get("station"), r.Get("inventory_deducted"), r.Get("cost_price"), r.Get("cost_total"),
-			r.Get("gross_profit"), r.Get("gross_margin_pct")); err != nil {
-			return err
-		}
+	if len(rows) == 0 {
+		return nil
 	}
-	return nil
+	// One array per column, in the parameter order of insertOrderItemsSQL.
+	keys := []string{"order_id", "product_id", "sku_id", "product_name", "product_sku", "variants", "modifiers",
+		"quantity", "unit_price", "subtotal", "discount_type", "discount_value", "discount_amount", "total_amount",
+		"station", "inventory_deducted", "cost_price", "cost_total", "gross_profit", "gross_margin_pct"}
+	cols := make([]any, len(keys))
+	for c, key := range keys {
+		values := make([]any, len(rows))
+		for i, r := range rows {
+			values[i] = r.Get(key)
+			if key == "variants" || key == "modifiers" {
+				b, _ := jsrow.Marshal(values[i])
+				values[i] = string(b)
+			}
+		}
+		cols[c] = values
+	}
+	_, err := q.Exec(ctx, insertOrderItemsSQL, cols...)
+	return err
 }
+
+// insertOrderItemsSQL inserts one pos_order_items row per array element,
+// in array order.
+const insertOrderItemsSQL = `INSERT INTO pos.pos_order_items (order_id, product_id, sku_id, product_name, product_sku, variants, modifiers,
+	quantity, unit_price, subtotal, discount_type, discount_value, discount_amount, total_amount, xp_earned, station, kitchen_status,
+	inventory_deducted, cost_price, cost_total, gross_profit, gross_margin_pct)
+	SELECT v.order_id, v.product_id, v.sku_id, v.product_name, v.product_sku, v.variants::jsonb, v.modifiers::jsonb,
+	       v.quantity, v.unit_price, v.subtotal, v.discount_type, v.discount_value, v.discount_amount, v.total_amount, 0, v.station, 'pending',
+	       v.inventory_deducted, v.cost_price, v.cost_total, v.gross_profit, v.gross_margin_pct
+	FROM unnest($1::uuid[], $2::uuid[], $3::uuid[], $4::text[], $5::text[], $6::text[], $7::text[],
+	            $8::numeric[], $9::numeric[], $10::numeric[], $11::text[], $12::numeric[], $13::numeric[], $14::numeric[],
+	            $15::text[], $16::bool[], $17::numeric[], $18::numeric[], $19::numeric[], $20::numeric[]) WITH ORDINALITY
+	  AS v(order_id, product_id, sku_id, product_name, product_sku, variants, modifiers,
+	       quantity, unit_price, subtotal, discount_type, discount_value, discount_amount, total_amount,
+	       station, inventory_deducted, cost_price, cost_total, gross_profit, gross_margin_pct, ord)
+	ORDER BY v.ord`

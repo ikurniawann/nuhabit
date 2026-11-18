@@ -340,20 +340,27 @@ func (h *handler) createProductOpname(w http.ResponseWriter, r *http.Request) er
 			companyID, branchID, in.warehouseID, orDate(in.opnameDate, now), in.reason, kit.OrNil(in.notes), len(lines), u.ID).Scan(&id); err != nil {
 			return err
 		}
-		for _, line := range lines {
+		// Missing inventory rows are created first; the lines then go in
+		// as one insert. Quantities travel as kit.JSNum text, like kit.N.
+		invIDs, quantities, costs := make([]string, len(lines)), make([]string, len(lines)), make([]string, len(lines))
+		products, skus := make([]any, len(lines)), make([]any, len(lines))
+		for i, line := range lines {
 			invID := line.Str("inventory_id")
 			if invID == "" {
 				if invID, err = ledger.EnsureProductInventoryID(ctx, q, line.Str("product_id"), line.Num("unit_cost"), &u.ID); err != nil {
 					return err
 				}
 			}
-			if _, err := q.Exec(ctx, `INSERT INTO product_stock_opname_lines (product_stock_opname_id, inventory_id, product_id,
-				pos_sku_id, qty_system, qty_counted, qty_variance, unit_cost) VALUES ($1, $2, $3, $4, $5, NULL, NULL, $6)`,
-				id, invID, line.Get("product_id"), line.Get("pos_sku_id"), kit.N(line.Num("qty_system")), kit.N(line.Num("unit_cost"))); err != nil {
-				return err
-			}
+			invIDs[i], products[i], skus[i] = invID, line.Get("product_id"), line.Get("pos_sku_id")
+			quantities[i], costs[i] = kit.JSNum(line.Num("qty_system")), kit.JSNum(line.Num("unit_cost"))
 		}
-		return nil
+		_, err := q.Exec(ctx, `INSERT INTO product_stock_opname_lines (product_stock_opname_id, inventory_id, product_id,
+			pos_sku_id, qty_system, qty_counted, qty_variance, unit_cost)
+			SELECT $1, l.inventory_id, l.product_id, l.pos_sku_id, l.qty_system::numeric, NULL, NULL, l.unit_cost::numeric
+			FROM unnest($2::uuid[], $3::uuid[], $4::uuid[], $5::text[], $6::text[]) WITH ORDINALITY
+			  AS l(inventory_id, product_id, pos_sku_id, qty_system, unit_cost, ord)
+			ORDER BY l.ord`, id, invIDs, products, skus, quantities, costs)
+		return err
 	})
 	if err != nil {
 		return err

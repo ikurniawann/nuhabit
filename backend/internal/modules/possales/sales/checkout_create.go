@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -231,6 +232,10 @@ func insertChildOrder(ctx context.Context, tx pgx.Tx, row childOrder, now time.T
 
 // insertChildItems writes the lines of one child order.
 func insertChildItems(ctx context.Context, tx pgx.Tx, orderID string, lines []domain.BuiltLine, cost map[string]float64, merchClaimed map[string]bool) error {
+	if len(lines) == 0 {
+		return nil
+	}
+	cols := make([][]any, 20)
 	for _, l := range lines {
 		pid := l.ProductID()
 		snap := domain.BuildCostSnapshot(cost[pid], l.Qty, l.LineTotal)
@@ -242,26 +247,22 @@ func insertChildItems(ctx context.Context, tx pgx.Tx, orderID string, lines []do
 		}
 		station := normalizeStation(l.Item.Get("station"), domain.StrOr(l.Item.Get("product_name"), ""), "")
 		sku := domain.StrOr(l.Item.Get("product_sku"), domain.StrOr(l.Item.Get("product_id"), ""))
-		if _, err := tx.Exec(ctx, `INSERT INTO pos.pos_order_items (
-         order_id, product_id, sku_id, product_name, product_sku, variants, modifiers,
-         quantity, unit_price, subtotal, discount_type, discount_value, discount_amount,
-         total_amount, xp_earned, station, kitchen_status, inventory_deducted,
-         cost_price, cost_total, gross_profit, gross_margin_pct
-       ) VALUES (
-         $1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,
-         $8,$9,$10,$11,$12,$13,
-         $14,0,$15,'pending',$16,
-         $17,$18,$19,$20
-       )`,
+		for c, v := range []any{
 			orderID, nilIfEmpty(pid), nilIfEmpty(l.Item.Str("sku_id")), domain.StrOr(l.Item.Get("product_name"), "Unknown"),
 			truncate50(sku), jsonOrEmptyArray(l.Item.Get("variants")), jsonOrEmptyArray(l.Item.Get("modifiers")),
 			l.Qty, l.UnitPrice, l.LineSubtotal, nilIfEmpty(discType), discValue, l.LineDiscount,
 			l.LineTotal, station, pid != "" && merchClaimed[pid],
-			snap.CostPrice, snap.CostTotal, snap.GrossProfit, snap.GrossMarginPct); err != nil {
-			return err
+			snap.CostPrice, snap.CostTotal, snap.GrossProfit, snap.GrossMarginPct,
+		} {
+			cols[c] = append(cols[c], v)
 		}
 	}
-	return nil
+	args := make([]any, len(cols))
+	for c := range cols {
+		args[c] = cols[c]
+	}
+	_, err := tx.Exec(ctx, insertOrderItemsSQL, args...)
+	return err
 }
 
 // truncate50 is String(x).slice(0, 50) (UTF-16 units).
@@ -671,12 +672,16 @@ func (h *Handler) finalizePaidChildren(ctx context.Context, tx pgx.Tx, orderIDs 
 	for _, it := range items {
 		byOrder[it.Str("order_id")] = append(byOrder[it.Str("order_id")], it)
 	}
+	printed, err := tx.Query(ctx, `SELECT DISTINCT order_id::text FROM pos.pos_print_jobs WHERE order_id = ANY($1::uuid[])`, orderIDs)
+	if err != nil {
+		return 0, err
+	}
+	withJobs, err := pgx.CollectRows(printed, pgx.RowTo[string])
+	if err != nil {
+		return 0, err
+	}
 	for _, o := range orders {
-		var exists bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pos.pos_print_jobs WHERE order_id = $1)`, o.Str("id")).Scan(&exists); err != nil {
-			return 0, err
-		}
-		if !exists {
+		if !slices.Contains(withJobs, o.Str("id")) {
 			h.insertPrintJobs(ctx, tx, h.printOrder(o, o.Str("queue_number")), byOrder[o.Str("id")])
 		}
 	}

@@ -391,16 +391,27 @@ func sumReturnLines(items []ReturnLine) float64 {
 }
 
 func insertReturnItems(ctx context.Context, q database.Querier, returnID string, items []ReturnLine) error {
-	for _, it := range items {
-		if _, err := q.Exec(ctx, `INSERT INTO purchase_return_items
-			(return_id, grn_item_id, raw_material_id, product_id, qty_returned, unit_cost, subtotal, batch_number, expiry_date, condition_notes, qc_status)
-			VALUES ($1, $2, $3::text::uuid, $4::text::uuid, $5, $6, $7, $8, $9::text::date, $10, 'rejected')`,
-			returnID, it.GrnItemID, nonEmpty(it.RawMaterialID), nonEmpty(it.ProductID), it.QtyReturned, it.UnitCost,
-			it.QtyReturned*it.UnitCost, nonEmpty(it.BatchNumber), nonEmpty(it.ExpiryDate), nonEmpty(it.ConditionNotes)); err != nil {
-			return err
-		}
+	n := len(items)
+	if n == 0 {
+		return nil
 	}
-	return nil
+	grnItems := make([]string, n)
+	materials, products := make([]*string, n), make([]*string, n)
+	batches, expiries, conditions := make([]*string, n), make([]*string, n), make([]*string, n)
+	qtys, costs, subtotals := make([]float64, n), make([]float64, n), make([]float64, n)
+	for i, it := range items {
+		grnItems[i], materials[i], products[i] = it.GrnItemID, nonEmpty(it.RawMaterialID), nonEmpty(it.ProductID)
+		qtys[i], costs[i], subtotals[i] = it.QtyReturned, it.UnitCost, it.QtyReturned*it.UnitCost
+		batches[i], expiries[i], conditions[i] = nonEmpty(it.BatchNumber), nonEmpty(it.ExpiryDate), nonEmpty(it.ConditionNotes)
+	}
+	_, err := q.Exec(ctx, `INSERT INTO purchase_return_items
+		(return_id, grn_item_id, raw_material_id, product_id, qty_returned, unit_cost, subtotal, batch_number, expiry_date, condition_notes, qc_status)
+		SELECT $1, v.grn_item_id, v.raw_material_id::uuid, v.product_id::uuid, v.qty, v.cost, v.subtotal,
+		       v.batch_number, v.expiry_date::date, v.condition_notes, 'rejected'
+		FROM unnest($2::uuid[], $3::text[], $4::text[], $5::numeric[], $6::numeric[], $7::numeric[], $8::text[], $9::text[], $10::text[])
+		  AS v(grn_item_id, raw_material_id, product_id, qty, cost, subtotal, batch_number, expiry_date, condition_notes)`,
+		returnID, grnItems, materials, products, qtys, costs, subtotals, batches, expiries, conditions)
+	return err
 }
 
 // ReturnCreate is returnCreateSchema.
@@ -619,13 +630,21 @@ func (s *Service) ApprovePurchaseReturn(ctx context.Context, id, userID string) 
 			}
 		}
 		total := 0.0
+		var grnItems []string
+		var returned []float64
 		for _, it := range items {
 			total += it.Num("qty") * it.Num("cost")
 			if it.Str("grn_item_id") == "" {
 				continue
 			}
-			if _, err := tx.Exec(ctx, `UPDATE grn_items SET qty_returned = COALESCE(qty_returned, 0) + $2, updated_at = $3 WHERE id = $1`,
-				it.Str("grn_item_id"), it.Num("qty"), s.now()); err != nil {
+			grnItems, returned = append(grnItems, it.Str("grn_item_id")), append(returned, it.Num("qty"))
+		}
+		if len(grnItems) > 0 {
+			// Several return lines can point at one GRN item, so the
+			// quantities are summed per item before the update.
+			if _, err := tx.Exec(ctx, `UPDATE grn_items gi SET qty_returned = COALESCE(gi.qty_returned, 0) + v.qty, updated_at = $3
+				FROM (SELECT id, SUM(qty) AS qty FROM unnest($1::uuid[], $2::numeric[]) AS u(id, qty) GROUP BY id) v
+				WHERE gi.id = v.id`, grnItems, returned, s.now()); err != nil {
 				return err
 			}
 		}

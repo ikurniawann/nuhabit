@@ -25,7 +25,8 @@ func (s *Service) recalculatePoReceivedQty(ctx context.Context, q database.Queri
 	if err != nil {
 		return err
 	}
-	for _, r := range rows {
+	ids, quantities := make([]string, len(rows)), make([]float64, len(rows))
+	for i, r := range rows {
 		var lines []struct {
 			QtyDiterima float64 `json:"qty_diterima"`
 			QtyQcPosted float64 `json:"qty_qc_posted"`
@@ -40,11 +41,14 @@ func (s *Service) recalculatePoReceivedQty(ctx context.Context, q database.Queri
 		for _, l := range lines {
 			received += domain.GrnItemReceivedQty(l.QtyDiterima, l.QtyQcPosted, l.Status, l.Posted)
 		}
-		if _, err := q.Exec(ctx, `UPDATE purchase_order_items SET qty_received = $2 WHERE id = $1`, r.Str("po_item_id"), received); err != nil {
-			return err
-		}
+		ids[i], quantities[i] = r.Str("po_item_id"), received
 	}
-	return nil
+	if len(ids) == 0 {
+		return nil
+	}
+	_, err = q.Exec(ctx, `UPDATE purchase_order_items poi SET qty_received = v.qty
+		FROM unnest($1::uuid[], $2::numeric[]) AS v(id, qty) WHERE poi.id = v.id`, ids, quantities)
+	return err
 }
 
 // poQtyTotals sums ordered and received over the PO's active lines.

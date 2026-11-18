@@ -159,13 +159,20 @@ func (s *Service) submitQc(ctx context.Context, tx pgx.Tx, in QcInput) (*QcResul
 		in.UserID, s.now()).Scan(&inspectionID); err != nil {
 		return nil, plainError(err)
 	}
-	for _, item := range in.Items {
-		rm, product := itemRef(item)
+	if n := len(in.Items); n > 0 {
+		grnItems, statuses := make([]string, n), make([]string, n)
+		rms, products, notes := make([]*string, n), make([]*string, n), make([]*string, n)
+		inspected := make([]float64, n)
+		for i, item := range in.Items {
+			rm, product := itemRef(item)
+			grnItems[i], rms[i], products[i] = item.GrnItemID, nilIfEmpty(rm), nilIfEmpty(product)
+			inspected[i] = item.QtyInspected
+			statuses[i], notes[i] = domain.QcItemStatus(item.QtyAccepted, item.QtyRejected), nonEmpty(item.Catatan)
+		}
 		if _, err := tx.Exec(ctx, `INSERT INTO grn_qc_inspection_items
 			(qc_inspection_id, grn_item_id, raw_material_id, product_id, qty_inspected, qty_accepted, qty_rejected, item_status, catatan)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			inspectionID, item.GrnItemID, nilIfEmpty(rm), nilIfEmpty(product), item.QtyInspected, item.QtyAccepted, item.QtyRejected,
-			domain.QcItemStatus(item.QtyAccepted, item.QtyRejected), nonEmpty(item.Catatan)); err != nil {
+			SELECT $1, * FROM unnest($2::uuid[], $3::uuid[], $4::uuid[], $5::numeric[], $6::numeric[], $7::numeric[], $8::text[], $9::text[])`,
+			inspectionID, grnItems, rms, products, inspected, accepted, rejected, statuses, notes); err != nil {
 			return nil, plainError(err)
 		}
 	}

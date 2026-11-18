@@ -95,13 +95,20 @@ func (s *Service) syncRejectCredits(ctx context.Context, q database.Querier, grn
 			return err
 		}
 	}
-	for _, l := range active {
-		if _, err := q.Exec(ctx, `INSERT INTO vendor_credit_items (vendor_credit_id, grn_item_id, raw_material_id, qty, unit_price, line_amount, notes)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)`, creditID, l.GrnItemID, l.RawMaterialID, l.Qty, l.UnitPrice, domain.RoundMoney(l.Qty*l.UnitPrice), l.Notes); err != nil {
-			return err
-		}
+	if len(active) == 0 {
+		return nil
 	}
-	return nil
+	n := len(active)
+	grnItems, materials, notes := make([]string, n), make([]string, n), make([]*string, n)
+	qtys, prices, amounts := make([]float64, n), make([]float64, n), make([]float64, n)
+	for i, l := range active {
+		grnItems[i], materials[i], notes[i] = l.GrnItemID, l.RawMaterialID, l.Notes
+		qtys[i], prices[i], amounts[i] = l.Qty, l.UnitPrice, domain.RoundMoney(l.Qty*l.UnitPrice)
+	}
+	_, err = q.Exec(ctx, `INSERT INTO vendor_credit_items (vendor_credit_id, grn_item_id, raw_material_id, qty, unit_price, line_amount, notes)
+		SELECT $1, * FROM unnest($2::uuid[], $3::uuid[], $4::numeric[], $5::numeric[], $6::numeric[], $7::text[])`,
+		creditID, grnItems, materials, qtys, prices, amounts, notes)
+	return err
 }
 
 // editableCredit is findEditableCredit: the newest draft/pending credit.

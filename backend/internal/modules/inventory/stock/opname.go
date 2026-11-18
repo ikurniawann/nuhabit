@@ -415,20 +415,27 @@ func (h *handler) createStockOpname(w http.ResponseWriter, r *http.Request) erro
 			in.warehouseID, branchID, orDate(in.opnameDate, now), in.reason, kit.OrNil(in.notes), len(rows), u.ID).Scan(&id); err != nil {
 			return err
 		}
-		for _, row := range rows {
+		// Missing inventory rows are created first; the lines then go in
+		// as one insert. Quantities travel as kit.JSNum text, like kit.N.
+		invIDs, materials := make([]string, len(rows)), make([]string, len(rows))
+		quantities, costs := make([]string, len(rows)), make([]string, len(rows))
+		for i, row := range rows {
 			invID := kit.Deref(row.InventoryID)
 			if invID == "" {
 				if invID, err = ledger.EnsureWarehouseInventoryID(ctx, q, row.RawMaterialID, in.warehouseID, &branchID, row.UnitCost, u.ID); err != nil {
 					return err
 				}
 			}
-			if _, err := q.Exec(ctx, `INSERT INTO stock_opname_lines (stock_opname_id, inventory_id, raw_material_id,
-				qty_system, qty_counted, qty_variance, unit_cost) VALUES ($1, $2, $3, $4, NULL, NULL, $5)`,
-				id, invID, row.RawMaterialID, kit.N(row.QtyOnhand), kit.N(row.UnitCost)); err != nil {
-				return err
-			}
+			invIDs[i], materials[i] = invID, row.RawMaterialID
+			quantities[i], costs[i] = kit.JSNum(row.QtyOnhand), kit.JSNum(row.UnitCost)
 		}
-		return nil
+		_, err := q.Exec(ctx, `INSERT INTO stock_opname_lines (stock_opname_id, inventory_id, raw_material_id,
+			qty_system, qty_counted, qty_variance, unit_cost)
+			SELECT $1, l.inventory_id, l.raw_material_id, l.qty_system::numeric, NULL, NULL, l.unit_cost::numeric
+			FROM unnest($2::uuid[], $3::uuid[], $4::text[], $5::text[]) WITH ORDINALITY
+			  AS l(inventory_id, raw_material_id, qty_system, unit_cost, ord)
+			ORDER BY l.ord`, id, invIDs, materials, quantities, costs)
+		return err
 	})
 	if err != nil {
 		return err

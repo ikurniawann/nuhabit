@@ -100,6 +100,16 @@ func lockAvailableBands(ctx context.Context, q database.Querier, v Venue, uids [
 	return ids, nil
 }
 
+// markBandsInUse flips bands the caller already locked (lockAvailableBands)
+// to 'dipakai' in one statement.
+func markBandsInUse(ctx context.Context, q database.Querier, bandIDs []string) error {
+	if len(bandIDs) == 0 {
+		return nil
+	}
+	_, err := q.Exec(ctx, `UPDATE ticketing.ticket_bands SET status = 'dipakai', updated_at = now() WHERE id = ANY($1::uuid[])`, bandIDs)
+	return err
+}
+
 type bundleBand struct {
 	uid, componentVariantID, bundleProductID string
 	unitNo                                   int
@@ -283,32 +293,41 @@ func (s *Service) RegisterVisit(ctx context.Context, v Venue, in RegisterVisitIn
 			return err
 		}
 
-		markInUse := func(bandID string) error {
-			_, err := tx.Exec(ctx, `UPDATE ticketing.ticket_bands SET status = 'dipakai', updated_at = now() WHERE id = $1`, bandID)
-			return err
-		}
-		for _, b := range in.Bands {
-			bandID := bandIDs[domain.NormalizeNfcUID(b.NfcUID)]
+		var usedBands []string
+		if n := len(in.Bands); n > 0 {
+			ids, variants := make([]string, n), make([]string, n)
+			for i, b := range in.Bands {
+				ids[i], variants[i] = bandIDs[domain.NormalizeNfcUID(b.NfcUID)], b.VariantID
+			}
 			if _, err := tx.Exec(ctx, `INSERT INTO ticketing.ticket_visit_bands
-				(company_id, branch_id, visit_id, band_id, variant_id) VALUES ($1, $2, $3, $4, $5)`,
-				v.CompanyID, v.BranchID, visitID, bandID, b.VariantID); err != nil {
+				(company_id, branch_id, visit_id, band_id, variant_id)
+				SELECT $1, $2, $3, t.band_id, t.variant_id
+				FROM unnest($4::uuid[], $5::uuid[]) WITH ORDINALITY AS t(band_id, variant_id, ord) ORDER BY t.ord`,
+				v.CompanyID, v.BranchID, visitID, ids, variants); err != nil {
 				return err
 			}
-			if err := markInUse(bandID); err != nil {
-				return err
-			}
+			usedBands = append(usedBands, ids...)
 		}
-		for _, m := range bundleBands {
-			bandID := bandIDs[m.uid]
+		if n := len(bundleBands); n > 0 {
+			ids, variants, products, labels := make([]string, n), make([]string, n), make([]string, n), make([]string, n)
+			units, prices := make([]int, n), make([]float64, n)
+			for i, m := range bundleBands {
+				ids[i], variants[i], products[i], labels[i] = bandIDs[m.uid], m.componentVariantID, m.bundleProductID, m.memberLabel
+				units[i], prices[i] = m.unitNo, m.allocatedPrice
+			}
 			if _, err := tx.Exec(ctx, `INSERT INTO ticketing.ticket_visit_bands
 				(company_id, branch_id, visit_id, band_id, variant_id, bundle_product_id, bundle_unit_no, allocated_price, member_label)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-				v.CompanyID, v.BranchID, visitID, bandID, m.componentVariantID, m.bundleProductID, m.unitNo, m.allocatedPrice, m.memberLabel); err != nil {
+				SELECT $1, $2, $3, t.band_id, t.variant_id, t.bundle_product_id, t.bundle_unit_no, t.allocated_price, t.member_label
+				FROM unnest($4::uuid[], $5::uuid[], $6::uuid[], $7::int4[], $8::numeric[], $9::text[]) WITH ORDINALITY
+				  AS t(band_id, variant_id, bundle_product_id, bundle_unit_no, allocated_price, member_label, ord)
+				ORDER BY t.ord`,
+				v.CompanyID, v.BranchID, visitID, ids, variants, products, units, prices, labels); err != nil {
 				return err
 			}
-			if err := markInUse(bandID); err != nil {
-				return err
-			}
+			usedBands = append(usedBands, ids...)
+		}
+		if err := markBandsInUse(ctx, tx, usedBands); err != nil {
+			return err
 		}
 
 		if in.PaymentMode == "prepaid" && in.Deposit != nil {

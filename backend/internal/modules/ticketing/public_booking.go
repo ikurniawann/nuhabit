@@ -155,15 +155,18 @@ func (s *Service) insertBooking(ctx context.Context, tx pgx.Tx, in BookingInput,
 		}
 	}
 
-	insertGuest := func(itemID, variantID string, position int, bundleProduct *string, unitNo *int, price *float64, label *string) error {
-		_, err := tx.Exec(ctx, `INSERT INTO ticketing.ticket_booking_guests
-			  (company_id, branch_id, booking_id, booking_item_id,
-			   variant_id, guest_name, position, bundle_product_id,
-			   bundle_unit_no, allocated_price, member_label)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-			v.CompanyID, v.BranchID, id, itemID, variantID, p.cart.GuestNames[position-1], position,
-			bundleProduct, unitNo, price, label)
-		return err
+	// Guests are collected while the items are written and inserted in one
+	// statement at the end, in position order.
+	var guestItems, guestVariants, guestNames []string
+	var guestPositions []int
+	var guestBundles, guestLabels []*string
+	var guestUnits []*int
+	var guestPrices []*float64
+	addGuest := func(itemID, variantID string, position int, bundleProduct *string, unitNo *int, price *float64, label *string) {
+		guestItems, guestVariants = append(guestItems, itemID), append(guestVariants, variantID)
+		guestNames, guestPositions = append(guestNames, p.cart.GuestNames[position-1]), append(guestPositions, position)
+		guestBundles, guestUnits = append(guestBundles, bundleProduct), append(guestUnits, unitNo)
+		guestPrices, guestLabels = append(guestPrices, price), append(guestLabels, label)
 	}
 	position, bundleUnit := 0, 0
 	for _, item := range p.cart.Items {
@@ -190,18 +193,28 @@ func (s *Service) insertBooking(ctx context.Context, tx pgx.Tx, in BookingInput,
 				for mi, m := range item.Members {
 					position++
 					unit, share, label := bundleUnit, shares[mi], item.ProductName+" — "+m.MemberLabel
-					if err := insertGuest(itemID, m.ComponentVariantID, position, &item.ProductID, &unit, &share, &label); err != nil {
-						return "", 0, err
-					}
+					addGuest(itemID, m.ComponentVariantID, position, &item.ProductID, &unit, &share, &label)
 				}
 			}
 			continue
 		}
 		for range item.Qty {
 			position++
-			if err := insertGuest(itemID, item.VariantID, position, nil, nil, nil, nil); err != nil {
-				return "", 0, err
-			}
+			addGuest(itemID, item.VariantID, position, nil, nil, nil, nil)
+		}
+	}
+	if len(guestItems) > 0 {
+		if _, err := tx.Exec(ctx, `INSERT INTO ticketing.ticket_booking_guests
+			  (company_id, branch_id, booking_id, booking_item_id,
+			   variant_id, guest_name, position, bundle_product_id,
+			   bundle_unit_no, allocated_price, member_label)
+			SELECT $1, $2, $3, g.booking_item_id, g.variant_id, g.guest_name, g.position, g.bundle_product_id,
+			       g.bundle_unit_no, g.allocated_price, g.member_label
+			FROM unnest($4::uuid[], $5::uuid[], $6::text[], $7::int4[], $8::uuid[], $9::int4[], $10::numeric[], $11::text[])
+			  AS g(booking_item_id, variant_id, guest_name, position, bundle_product_id, bundle_unit_no, allocated_price, member_label)
+			ORDER BY g.position`,
+			v.CompanyID, v.BranchID, id, guestItems, guestVariants, guestNames, guestPositions, guestBundles, guestUnits, guestPrices, guestLabels); err != nil {
+			return "", 0, err
 		}
 	}
 	return id, discount, nil

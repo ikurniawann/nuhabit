@@ -34,15 +34,20 @@ func closeVisit(ctx context.Context, q database.Querier, v Venue, visitID string
 }
 
 func insertPayments(ctx context.Context, q database.Querier, v Venue, visitID string, payments []DepositInput, bandID *string, label string) error {
-	for _, p := range payments {
-		if _, err := q.Exec(ctx, `INSERT INTO ticketing.ticket_visit_charges
-			(company_id, branch_id, visit_id, band_id, charge_type, direction, description, amount, payment_method, created_by)
-			VALUES ($1, $2, $3, $4, 'pembayaran', 'kredit', $5, $6, $7, $8)`,
-			v.CompanyID, v.BranchID, visitID, bandID, label+" ("+p.Method+")", p.Amount, p.Method, v.UserID); err != nil {
-			return err
-		}
+	if len(payments) == 0 {
+		return nil
 	}
-	return nil
+	labels, methods, amounts := make([]string, len(payments)), make([]string, len(payments)), make([]float64, len(payments))
+	for i, p := range payments {
+		labels[i], methods[i], amounts[i] = label+" ("+p.Method+")", p.Method, p.Amount
+	}
+	_, err := q.Exec(ctx, `INSERT INTO ticketing.ticket_visit_charges
+		(company_id, branch_id, visit_id, band_id, charge_type, direction, description, amount, payment_method, created_by)
+		SELECT $1, $2, $3, $4, 'pembayaran', 'kredit', t.description, t.amount, t.payment_method, $8
+		FROM unnest($5::text[], $6::numeric[], $7::text[]) WITH ORDINALITY AS t(description, amount, payment_method, ord)
+		ORDER BY t.ord`,
+		v.CompanyID, v.BranchID, visitID, bandID, labels, amounts, methods, v.UserID)
+	return err
 }
 
 // SettleVisit is settleVisit. The result is {mode, paid, closed} for one

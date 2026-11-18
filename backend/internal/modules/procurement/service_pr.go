@@ -402,17 +402,26 @@ func prWriteError(err error, fallback string) error {
 }
 
 func insertPrItems(ctx context.Context, q database.Querier, prID string, items []prItemInput) error {
-	for _, item := range items {
-		_, err := q.Exec(ctx, `INSERT INTO pr_items
-			(pr_id, product_id, raw_material_id, supply_item_id, satuan_id, description, qty, unit, estimated_price, total)
-			VALUES ($1, $2::text::uuid, $3::text::uuid, $4::text::uuid, $5::text::uuid, $6, $7, $8, $9, $10)`,
-			prID, item.ProductID, item.RawMaterialID, item.SupplyItemID, item.SatuanID,
-			item.Description, item.Line.Qty, item.Unit, item.Line.EstimatedPrice, item.Line.Total)
-		if err != nil {
-			return err
-		}
+	n := len(items)
+	if n == 0 {
+		return nil
 	}
-	return nil
+	products, materials, supplies, units := make([]*string, n), make([]*string, n), make([]*string, n), make([]*string, n)
+	descriptions, unitNames := make([]string, n), make([]string, n)
+	qtys, prices, totals := make([]float64, n), make([]float64, n), make([]float64, n)
+	for i, item := range items {
+		products[i], materials[i], supplies[i], units[i] = item.ProductID, item.RawMaterialID, item.SupplyItemID, item.SatuanID
+		descriptions[i], unitNames[i] = item.Description, item.Unit
+		qtys[i], prices[i], totals[i] = item.Line.Qty, item.Line.EstimatedPrice, item.Line.Total
+	}
+	_, err := q.Exec(ctx, `INSERT INTO pr_items
+		(pr_id, product_id, raw_material_id, supply_item_id, satuan_id, description, qty, unit, estimated_price, total)
+		SELECT $1, v.product_id::uuid, v.raw_material_id::uuid, v.supply_item_id::uuid, v.satuan_id::uuid,
+		       v.description, v.qty, v.unit, v.estimated_price, v.total
+		FROM unnest($2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::int4[], $8::text[], $9::numeric[], $10::numeric[])
+		  AS v(product_id, raw_material_id, supply_item_id, satuan_id, description, qty, unit, estimated_price, total)`,
+		prID, products, materials, supplies, units, descriptions, qtys, unitNames, prices, totals)
+	return err
 }
 
 // publishUrgent is notifyIfUrgent: the WhatsApp alert goes through the outbox.

@@ -208,18 +208,17 @@ func (s *Service) RedeemBooking(ctx context.Context, v Venue, id string, bands [
 			RETURNING id::text`, v.CompanyID, v.BranchID, b.customerName, b.customerPhone, channelID, v.UserID).Scan(&visitID); err != nil {
 			return err
 		}
+		n := len(bands)
+		usedBands, variantIDs, guestNames := make([]string, n), make([]string, n), make([]string, n)
+		bundleProducts, allocatedPrices, memberLabels := make([]*string, n), make([]*string, n), make([]*string, n)
+		bundleUnits := make([]*int, n)
+		var chargeBands, chargeLabels, chargeContexts []string
+		var chargeAmounts []float64
 		for i, rb := range bands {
 			bandID := bandIDs[uids[i]]
 			g := byID[rb.GuestID]
-			if _, err := tx.Exec(ctx, `INSERT INTO ticketing.ticket_visit_bands
-				(company_id, branch_id, visit_id, band_id, variant_id, guest_name, bundle_product_id, bundle_unit_no, allocated_price, member_label)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-				v.CompanyID, v.BranchID, visitID, bandID, g.variantID, g.name, g.bundleProductID, g.bundleUnitNo, g.allocatedPrice, g.memberLabel); err != nil {
-				return err
-			}
-			if _, err := tx.Exec(ctx, `UPDATE ticketing.ticket_bands SET status = 'dipakai', updated_at = now() WHERE id = $1`, bandID); err != nil {
-				return err
-			}
+			usedBands[i], variantIDs[i], guestNames[i] = bandID, g.variantID, g.name
+			bundleProducts[i], bundleUnits[i], allocatedPrices[i], memberLabels[i] = g.bundleProductID, g.bundleUnitNo, g.allocatedPrice, g.memberLabel
 			price := g.price()
 			if price <= 0 {
 				continue // free tickets have no ledger line (amount > 0 constraint)
@@ -233,12 +232,33 @@ func (s *Service) RedeemBooking(ctx context.Context, v Venue, id string, bands [
 				"variant_id": g.variantID, "bundle_product_id": g.bundleProductID, "season_kind": g.seasonKind,
 				"channel_id": channelID, "visit_date": b.visitDate,
 			})
+			chargeBands = append(chargeBands, bandID)
+			chargeLabels = append(chargeLabels, "Tiket "+label+" ("+g.seasonKind+", "+b.visitDate+") — booking "+b.code+", a.n. "+g.name)
+			chargeAmounts = append(chargeAmounts, price)
+			chargeContexts = append(chargeContexts, string(priceContext))
+		}
+		if n > 0 {
+			if _, err := tx.Exec(ctx, `INSERT INTO ticketing.ticket_visit_bands
+				(company_id, branch_id, visit_id, band_id, variant_id, guest_name, bundle_product_id, bundle_unit_no, allocated_price, member_label)
+				SELECT $1, $2, $3, t.band_id, t.variant_id, t.guest_name, t.bundle_product_id, t.bundle_unit_no, t.allocated_price::numeric, t.member_label
+				FROM unnest($4::uuid[], $5::uuid[], $6::text[], $7::uuid[], $8::int4[], $9::text[], $10::text[]) WITH ORDINALITY
+				  AS t(band_id, variant_id, guest_name, bundle_product_id, bundle_unit_no, allocated_price, member_label, ord)
+				ORDER BY t.ord`,
+				v.CompanyID, v.BranchID, visitID, usedBands, variantIDs, guestNames, bundleProducts, bundleUnits, allocatedPrices, memberLabels); err != nil {
+				return err
+			}
+			if err := markBandsInUse(ctx, tx, usedBands); err != nil {
+				return err
+			}
+		}
+		if len(chargeBands) > 0 {
 			if _, err := tx.Exec(ctx, `INSERT INTO ticketing.ticket_visit_charges
 				(company_id, branch_id, visit_id, band_id, charge_type, direction, description, amount, price_context, created_by)
-				VALUES ($1, $2, $3, $4, 'tiket', 'debit', $5, $6, $7, $8)`,
-				v.CompanyID, v.BranchID, visitID, bandID,
-				"Tiket "+label+" ("+g.seasonKind+", "+b.visitDate+") — booking "+b.code+", a.n. "+g.name,
-				price, string(priceContext), v.UserID); err != nil {
+				SELECT $1, $2, $3, t.band_id, 'tiket', 'debit', t.description, t.amount, t.price_context::jsonb, $8
+				FROM unnest($4::uuid[], $5::text[], $6::numeric[], $7::text[]) WITH ORDINALITY
+				  AS t(band_id, description, amount, price_context, ord)
+				ORDER BY t.ord`,
+				v.CompanyID, v.BranchID, visitID, chargeBands, chargeLabels, chargeAmounts, chargeContexts, v.UserID); err != nil {
 				return err
 			}
 		}
