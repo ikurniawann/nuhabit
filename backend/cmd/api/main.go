@@ -32,6 +32,7 @@ import (
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/ocr"
 	"nuhabit/backend/internal/platform/outbox"
+	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/redisx"
 )
 
@@ -87,7 +88,7 @@ func run(cfg config.Config, log *slog.Logger) error {
 	defer stop()
 
 	openCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	db, err := database.Open(openCtx, cfg.DatabaseURL)
+	db, err := database.Open(openCtx, cfg.DatabaseURL, cfg.SlowQuery)
 	cancel()
 	if err != nil {
 		return err
@@ -102,6 +103,7 @@ func run(cfg config.Config, log *slog.Logger) error {
 	}
 	if rdb != nil {
 		defer rdb.Close()
+		ratelimit.UseRedis(rdb)
 	}
 
 	reg := metrics.NewRegistry()

@@ -152,3 +152,23 @@ func TestPruneDropsExpiredKeys(t *testing.T) {
 		t.Fatal("live key pruned")
 	}
 }
+
+// TestRedisBackend reruns the window scenarios with the counters in Redis and
+// checks that no hit reached platform.rate_limits.
+func TestRedisBackend(t *testing.T) {
+	ratelimit.UseRedis(testutil.Redis(t))
+	t.Cleanup(func() { ratelimit.UseRedis(nil) })
+	t.Run("fixed", TestFixedWindowIsSharedAcrossReplicas)
+	t.Run("sliding", TestSlidingWindowIsSharedAcrossReplicas)
+	t.Run("sliding count", TestSlidingCountReadsWithoutRecording)
+	t.Run("concurrent", TestConcurrentHitsNeverExceedTheLimit)
+
+	k := key(t)
+	if _, err := ratelimit.New(testutil.DB(t)).Fixed(context.Background(), k, 3, time.Minute, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	var rows int
+	if err := testutil.DB(t).QueryRow(context.Background(), `SELECT count(*) FROM platform.rate_limits WHERE key = $1`, k).Scan(&rows); err != nil || rows != 0 {
+		t.Fatalf("postgres rows for a Redis-counted key: %d (%v)", rows, err)
+	}
+}

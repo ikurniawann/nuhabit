@@ -1,11 +1,13 @@
 # Deploying the Go API
 
 The Go API runs on the same host as the Next container and owns every route
-in `frontend/src/lib/go-routes.generated.json`. Next stays the only public
-entry point: its proxy forwards those routes to `BACKEND_URL`. The Next image
-has no TypeScript handler for them, so with `BACKEND_URL` unset they answer
-503. Next serves only the `/api` routes Go does not register, such as
-`/api/health`, `/api/ready` and `/api/files/...`.
+in `frontend/src/lib/go-routes.generated.json`. An nginx edge container holds
+the host port and sends `/api/` straight to Go and everything else to Next
+(see Edge below). Next keeps its own proxy to `BACKEND_URL` as the fallback
+for `EDGE_ENABLED=0`: the Next image has no TypeScript handler for the Go
+routes, so with `BACKEND_URL` unset they answer 503. Next serves only the
+`/api` routes Go does not register: `/api/health`, `/api/ready` and
+`/api/openapi.json`.
 
 ## Docker script (.gitlab/deploy-docker.sh)
 
@@ -47,6 +49,11 @@ The host that builds the images needs at least 6 GB of memory for Docker:
 | `MIGRATE_VERIFY` | `1` | `0` skips the drift check only. |
 | `REDIS_ENABLED` | `1` | `0` runs the API without Redis (see Redis below). |
 | `REDIS_IMAGE` | `redis:7.4.11-alpine` | Image for `<CONTAINER_NAME>-redis`. |
+| `EDGE_ENABLED` | `1` | `0` removes the edge container and publishes Next on the host port, as before the edge existed (see Edge below). |
+| `EDGE_IMAGE` | `nginx:1.28.0-alpine` | Image for `<CONTAINER_NAME>-edge`. |
+| `PROMETHEUS_ENABLED` | `1` | `0` skips the Prometheus container and leaves `METRICS_ADDR` to `ENV_FILE` (see Metrics below). |
+| `PROMETHEUS_PORT` | `9091` | Loopback port of the Prometheus UI on the host. |
+| `PROMETHEUS_IMAGE` | `prom/prometheus:v3.15.1` | Image for `<CONTAINER_NAME>-prometheus`. |
 
 The API reads the same env file as Next (`ENV_FILE`). It needs
 `NEXT_PUBLIC_APP_URL` for payment callback and share links, plus the
@@ -71,9 +78,15 @@ a second listener next to `PORT`. The main port never serves `/metrics`, and
 the Next proxy forwards only API routes, so the public site cannot reach it.
 The metrics listener has no auth: access control is where it binds.
 
-- Docker script or compose: `METRICS_ADDR=:9090` and no `-p`/`ports:` for
-  it. A Prometheus container on the network `<CONTAINER_NAME>-net` (compose:
-  the compose network) scrapes `<CONTAINER_NAME>-api:9090`.
+- Docker script: it sets `METRICS_ADDR=:9090` on the API and runs
+  `<CONTAINER_NAME>-prometheus`, which scrapes `<CONTAINER_NAME>-api:9090`
+  every 15 s and keeps 15 days or 1 GB on the volume
+  `<CONTAINER_NAME>-prometheus-data`. The UI listens on the host's loopback
+  only: `ssh -L 9091:127.0.0.1:9091 <host>`, then open
+  `http://localhost:9091`. A Prometheus that fails to start does not fail
+  the deploy.
+- Compose: `METRICS_ADDR=:9090` and no `ports:` for it, plus a Prometheus
+  service on the compose network with the scrape config below.
 - Prometheus on the host instead: publish it on loopback only,
   `-p 127.0.0.1:9090:9090`, and scrape `127.0.0.1:9090`.
 - Unset (the default): no listener, no metrics.
@@ -124,6 +137,39 @@ The `job_*` series count this replica only: `job_runs_total` and the
 last-success gauge stay flat on a replica whose ticks the others won
 (`job_skipped_total` grows instead), so aggregate with `max by (job)` or
 `sum by (job)` across replicas.
+
+## Finding slow queries
+
+Three sources, from cheapest to most complete:
+
+1. **Latency per route** in Prometheus:
+   `histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket[5m])))`.
+   It names the slow endpoint, not the statement.
+2. **Slow query log.** The API logs `slow query` with `duration_ms`, the SQL
+   text (whitespace collapsed, 500 bytes at most) and `rows` for each
+   statement that takes `SLOW_QUERY_MS` or longer (default 500, `0` turns it
+   off). Arguments are never logged. Read it with
+   `docker logs <CONTAINER_NAME>-api 2>&1 | grep '"slow query"'`. Statements
+   sent in a pgx batch and the queries Next still runs are not covered.
+3. **`pg_stat_statements`** counts every statement from every client. It
+   needs a Postgres superuser and one restart, so the deploy script does not
+   set it up:
+
+   ```
+   # postgresql.conf, then restart Postgres
+   shared_preload_libraries = 'pg_stat_statements'
+   ```
+
+   ```sql
+   -- once, connected to the application database as a superuser
+   CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+   GRANT pg_read_all_stats TO <application role>;
+   ```
+
+   Then `psql "$DATABASE_URL" -f backend/database/sql/checks/CHECK-SLOW-QUERIES.sql`
+   prints the top statements by total time, by mean time and by calls.
+   `migrate -verify` then lists `extension pg_stat_statements` as an object
+   found only in the database and still exits 0, so deploys keep passing.
 
 ## Background jobs
 
@@ -336,7 +382,12 @@ The API uses Redis for two things:
 - **IAM grant cache.** Each user's menu grants are cached in the hash
   `iam:grants` for at most one minute. Settings → IAM writes clear it at once;
   employee changes (linking an account, deactivating, `reporting_to`) show
-  within a minute.
+  within a minute. The Next container reads and fills the same hash for its
+  page guards and the sidebar (`frontend/src/lib/iam/grant-cache.ts`), so it
+  needs `REDIS_URL` too; the Docker script passes it to both containers.
+- **Rate limits.** With `REDIS_URL` set, every limiter counts in Redis (one
+  script call per hit, keys `rl:f:*` and `rl:s:*`). A hit Redis fails to
+  answer is counted in `platform.rate_limits` instead.
 
 The Docker script starts `<CONTAINER_NAME>-redis` on the internal network
 (no host port, AOF on the volume `<CONTAINER_NAME>-redis-data`, 256 MB with
@@ -344,10 +395,36 @@ The Docker script starts `<CONTAINER_NAME>-redis` on the internal network
 to the API. It leaves a running Redis container alone between deploys.
 
 Without `REDIS_URL` the API starts, logs Redis in the list of disabled
-integrations, ignores `Idempotency-Key` and reads grants from Postgres on
-every request. With `REDIS_URL` set and Redis unreachable at startup, the API
+integrations, ignores `Idempotency-Key`, reads grants from Postgres on
+every request and counts rate limits in `platform.rate_limits`. With `REDIS_URL` set and Redis unreachable at startup, the API
 exits. When Redis goes down later, requests still run: the API logs a warning
 and skips the idempotency check and the cache.
+
+## Edge
+
+`<CONTAINER_NAME>-edge` (nginx, config in `.gitlab/edge/default.conf.template`)
+listens on `HOST_PORT`. Next and the API have no host port.
+
+- `/api/` goes straight to the API container, except `/api/health`,
+  `/api/ready` and `/api/openapi.json`, which Next serves. A request body is
+  streamed to Go instead of being buffered by the Node process, and responses
+  are not buffered, so SSE keeps flowing.
+- Everything else goes to Next, with the original `Host` (the member hostname
+  rewrite in `src/proxy.ts` depends on it).
+- JSON, CSS, JS and SVG responses are gzipped when the upstream did not
+  compress them.
+- While the API container is down or being replaced, `/api/` answers 503 with
+  the JSON error envelope within a few seconds.
+
+`frontend/src/lib/edge-routes.test.ts` fails when the three Next paths in the
+template stop matching `frontend/src/app/api` or the Go route manifest: a new
+Next `/api` handler needs its own `location =` line.
+
+The script copies the template next to `ENV_FILE` and recreates the edge on
+every deploy. When the edge fails to start, the script publishes Next on the
+host port and carries on, and the deploy log says so. The health checks go
+through the host port; the script also checks Next's own proxy to Go from
+inside the network, because that path serves `EDGE_ENABLED=0`.
 
 ## Compose (ci-cd-template deploys)
 
@@ -395,9 +472,28 @@ plus Redis (declare `arkiv-redis-data` under the top-level `volumes:`):
       - arkiv-redis-data:/data
 ```
 
-and on the `arkiv` service set `BACKEND_URL: http://arkiv-api:8080` (all
-services share the compose network). Neither the API nor Redis exposes a
-host port.
+and on the `arkiv` service set `BACKEND_URL: http://arkiv-api:8080` and
+`REDIS_URL: redis://arkiv-redis:6379/0` (all services share the compose
+network). Neither the API nor Redis exposes a host port.
+
+To send `/api/` straight to Go, move the host port from `arkiv` to an edge
+service:
+
+```yaml
+  arkiv-edge:
+    image: nginx:1.28.0-alpine
+    restart: unless-stopped
+    ports:
+      - "3000:80"                         # the port arkiv published
+    environment:
+      API_UPSTREAM: arkiv-api:8080
+      NEXT_UPSTREAM: arkiv:3000
+    volumes:
+      - /etc/arkiv/edge.conf.template:/etc/nginx/templates/default.conf.template:ro
+```
+
+with `/etc/arkiv/edge.conf.template` copied from
+`.gitlab/edge/default.conf.template`.
 
 `PUBLIC_ORIGIN` is where the API fetches Next's `public/` files, which ship
 only in the Next image: the GoFood photo converter
@@ -418,10 +514,10 @@ locally with `make -C backend test`.
 ## Scaling
 
 Several API replicas may run behind one `BACKEND_URL` (a load balancer or a
-compose `deploy.replicas`): rate limits, live-interview signaling, interview
+compose `deploy.replicas`): live-interview signaling, interview
 recording appends (an advisory lock per part file) and the outbox all
 coordinate through Postgres, and every replica shares one Redis for
-Idempotency-Key and the grant cache. Uploads live on disk under
+Idempotency-Key, the grant cache and rate limits. Uploads live on disk under
 `STORAGE_DIR`, so replicas on different hosts need that directory on shared
 storage. `MODULES=<names>` mounts a subset when one module
 should run as its own service. Each replica opens its own pgx pool (default

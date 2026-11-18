@@ -2,6 +2,7 @@ import { cache } from "react";
 import type { UserRole } from "@/types";
 import { loadEmployeeBaseline } from "@/lib/iam/employee-baseline";
 import { resolveRoleIds } from "@/lib/iam/get-user-menus";
+import { cachedGrant } from "@/lib/iam/grant-cache";
 import { iamDbQuery } from "@/lib/iam/pg-client";
 import {
   hasAnyIamMenuPrefix,
@@ -58,32 +59,26 @@ export async function loadGrantedMenuActions(
   return map;
 }
 
-/** The role grants plus the employee baseline (Area Karyawan, Tugas Saya). */
-export const loadGrantedMenuCodesForUser = cache(
-  async (userId: string, role: UserRole): Promise<string[]> => {
-    const roleIds = await resolveRoleIds(userId, role);
-    const [codes, baseline] = await Promise.all([loadGrantedMenuCodes(roleIds), loadEmployeeBaseline(userId)]);
-    return [...new Set([...codes, ...baseline.map((menu) => menu.code)])];
-  }
-);
-
-/** granted_actions per menu: the role grants plus the employee baseline. */
-const loadUserMenuActions = cache(
-  async (userId: string, role: UserRole): Promise<Map<string, string[]>> => {
-    const roleIds = await resolveRoleIds(userId, role);
-    const [granted, baseline] = await Promise.all([loadGrantedMenuActions(roleIds), loadEmployeeBaseline(userId)]);
-    for (const menu of baseline) {
-      granted.set(menu.code, [...new Set([...(granted.get(menu.code) ?? []), ...menu.actions])]);
-    }
-    return granted;
-  }
-);
-
-/** granted_actions per kode menu milik user, sebagai objek agar bisa dikirim ke klien. */
+/**
+ * granted_actions per kode menu: grant role ditambah baseline karyawan (Area
+ * Karyawan, Tugas Saya). Di-cache di Redis bersama API Go (lihat grant-cache).
+ */
 export const loadGrantedMenuActionsForUser = cache(
-  async (userId: string, role: UserRole): Promise<Record<string, string[]>> =>
-    Object.fromEntries(await loadUserMenuActions(userId, role))
+  (userId: string, role: UserRole): Promise<Record<string, string[]>> =>
+    cachedGrant(`${userId}:${role}`, async () => {
+      const roleIds = await resolveRoleIds(userId, role);
+      const [granted, baseline] = await Promise.all([loadGrantedMenuActions(roleIds), loadEmployeeBaseline(userId)]);
+      for (const menu of baseline) {
+        granted.set(menu.code, [...new Set([...(granted.get(menu.code) ?? []), ...menu.actions])]);
+      }
+      return Object.fromEntries(granted);
+    })
 );
+
+/** Kode menu milik user: kunci dari loadGrantedMenuActionsForUser. */
+export async function loadGrantedMenuCodesForUser(userId: string, role: UserRole): Promise<string[]> {
+  return Object.keys(await loadGrantedMenuActionsForUser(userId, role));
+}
 
 export async function userHasIamPrefix(
   userId: string,
@@ -100,6 +95,6 @@ export async function userHasIamAction(
   prefixes: readonly string[],
   action: string
 ): Promise<boolean> {
-  const granted = await loadUserMenuActions(userId, role);
-  return hasGrantedAction(granted, prefixes, action);
+  const granted = await loadGrantedMenuActionsForUser(userId, role);
+  return hasGrantedAction(new Map(Object.entries(granted)), prefixes, action);
 }

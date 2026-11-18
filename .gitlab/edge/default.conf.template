@@ -1,0 +1,76 @@
+# Edge di depan Next dan Go API (lihat backend/docs/DEPLOY.md, bagian Edge).
+# /api/ langsung ke Go: body tidak lagi ditampung proses Node dan respons JSON
+# dikompres di sini. Tiga route /api yang masih ditangani Next ada di bawah;
+# frontend/src/lib/edge-routes.test.ts gagal bila daftar itu tidak lagi cocok
+# dengan frontend/src/app/api atau dengan manifest route Go.
+#
+# ${API_UPSTREAM} dan ${NEXT_UPSTREAM} diisi entrypoint image nginx (envsubst).
+# proxy_pass memakai variabel agar nama container di-resolve ulang lewat DNS
+# Docker setiap 5 detik: container Next/API yang dibuat ulang saat deploy
+# mendapat IP baru.
+
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  ''      '';
+}
+
+# Tunnel di depan sudah mengisi X-Forwarded-Proto; tanpa itu pakai skema lokal.
+map $http_x_forwarded_proto $edge_proto {
+  default $http_x_forwarded_proto;
+  ''      $scheme;
+}
+
+server {
+  listen 80;
+  server_name _;
+  server_tokens off;
+  resolver 127.0.0.11 valid=5s ipv6=off;
+  # Container yang sedang diganti saat deploy dijawab 5xx dalam hitungan
+  # detik, bukan menggantung 30-60 detik (default nginx).
+  resolver_timeout 3s;
+  proxy_connect_timeout 5s;
+
+  # Sama dengan proxyClientMaxBodySize Next: berkas data room sampai 100 MB.
+  client_max_body_size 110m;
+
+  gzip on;
+  gzip_proxied any;
+  gzip_vary on;
+  gzip_min_length 1024;
+  gzip_types application/json text/plain text/css application/javascript image/svg+xml;
+
+  proxy_http_version 1.1;
+  proxy_set_header Host $http_host;
+  proxy_set_header X-Forwarded-Host $http_host;
+  proxy_set_header X-Forwarded-Proto $edge_proto;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection $connection_upgrade;
+
+  location = /api/health { set $next http://${NEXT_UPSTREAM}; proxy_pass $next; }
+  location = /api/ready { set $next http://${NEXT_UPSTREAM}; proxy_pass $next; }
+  location = /api/openapi.json { set $next http://${NEXT_UPSTREAM}; proxy_pass $next; }
+
+  location /api/ {
+    set $api http://${API_UPSTREAM};
+    proxy_pass $api;
+    # Unggahan mengalir langsung ke Go; SSE (desktop, asisten AI) dan unduhan
+    # besar tidak ditahan di buffer. EventSource menyambung ulang setelah 1 jam.
+    proxy_request_buffering off;
+    proxy_buffering off;
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+    error_page 502 504 = @api_down;
+  }
+
+  location / {
+    set $next http://${NEXT_UPSTREAM};
+    proxy_pass $next;
+    proxy_read_timeout 300s;
+  }
+
+  location @api_down {
+    default_type application/json;
+    return 503 '{"success":false,"error":"Layanan sedang tidak tersedia, coba lagi"}';
+  }
+}

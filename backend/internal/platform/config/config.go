@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Config is the runtime configuration shared by every module.
@@ -29,6 +31,9 @@ type Config struct {
 	JobsEnabled bool
 	// RedisURL is REDIS_URL; empty runs the API without Redis.
 	RedisURL string
+	// SlowQuery is SLOW_QUERY_MS (default 500): statements at least this
+	// slow are logged. 0 turns the log off.
+	SlowQuery time.Duration
 }
 
 // IsProduction reports whether APP_ENV (or NODE_ENV) says production.
@@ -60,7 +65,7 @@ func DisabledIntegrations(getenv func(string) string) []string {
 		{"pembayaran Xendit (XENDIT_SECRET_KEY + XENDIT_WEBHOOK_TOKEN)", getenv("XENDIT_MOCK") == "1" || (has("XENDIT_SECRET_KEY") && has("XENDIT_WEBHOOK_TOKEN"))},
 		{"web push portal member (VAPID_PUBLIC_KEY + VAPID_PRIVATE_KEY)", has("VAPID_PUBLIC_KEY") && has("VAPID_PRIVATE_KEY")},
 		{"foto produk GoFood dari public/ Next (PUBLIC_ORIGIN atau PUBLIC_DIR)", has("PUBLIC_ORIGIN") || has("PUBLIC_DIR")},
-		{"Redis (REDIS_URL): Idempotency-Key checkout diabaikan dan izin IAM tidak di-cache", has("REDIS_URL")},
+		{"Redis (REDIS_URL): Idempotency-Key checkout diabaikan, izin IAM tidak di-cache, rate limit dihitung di Postgres", has("REDIS_URL")},
 	}
 	var off []string
 	for _, c := range checks {
@@ -98,7 +103,17 @@ func Load() Config {
 		MetricsAddr: firstNonEmpty(os.Getenv("METRICS_ADDR")),
 		JobsEnabled: !isOff(os.Getenv("JOBS_ENABLED")),
 		RedisURL:    strings.TrimSpace(os.Getenv("REDIS_URL")),
+		SlowQuery:   slowQuery(os.Getenv("SLOW_QUERY_MS")),
 	}
+}
+
+// slowQuery parses SLOW_QUERY_MS; empty or invalid is the 500 ms default.
+func slowQuery(v string) time.Duration {
+	ms, err := strconv.Atoi(strings.TrimSpace(v))
+	if err != nil || ms < 0 {
+		return 500 * time.Millisecond
+	}
+	return time.Duration(ms) * time.Millisecond
 }
 
 func isOff(v string) bool {

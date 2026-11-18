@@ -135,6 +135,87 @@ if [ "$REDIS_ENABLED" = "1" ]; then
   REDIS_ENV=(-e "REDIS_URL=redis://${REDIS_CONTAINER}:6379/0")
 fi
 
+# Prometheus: menyimpan metrik API (latensi per route, pool koneksi, job) 15
+# hari atau 1 GB. Hanya terikat ke loopback host: buka lewat SSH tunnel,
+#   ssh -L 9091:127.0.0.1:${PROMETHEUS_PORT:-9091} <host>
+# lalu http://localhost:9091. Kegagalan Prometheus tidak menggagalkan deploy.
+# PROMETHEUS_ENABLED=0 melewatinya dan API tidak membuka listener metrik
+# (kecuali METRICS_ADDR ada di ENV_FILE).
+PROMETHEUS_ENABLED="${PROMETHEUS_ENABLED:-1}"
+PROMETHEUS_CONTAINER="${CONTAINER_NAME}-prometheus"
+PROMETHEUS_IMAGE="${PROMETHEUS_IMAGE:-prom/prometheus:v3.15.1}"
+PROMETHEUS_PORT="${PROMETHEUS_PORT:-9091}"
+PROMETHEUS_CONFIG="$(dirname "$ENV_FILE")/${CONTAINER_NAME}-prometheus.yml"
+METRICS_ENV=()
+if [ "$PROMETHEUS_ENABLED" = "1" ]; then
+  METRICS_ENV=(-e "METRICS_ADDR=:9090")
+  cat > "$PROMETHEUS_CONFIG" <<PROMETHEUS_YML
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: nuhabit-api
+    static_configs:
+      - targets: ["${API_CONTAINER}:9090"]
+PROMETHEUS_YML
+  # File config dibaca semua user: container Prometheus jalan sebagai nobody.
+  chmod 644 "$PROMETHEUS_CONFIG"
+  if [ "$(docker inspect --format '{{.State.Running}}' "$PROMETHEUS_CONTAINER" 2>/dev/null)" = "true" ]; then
+    docker kill -s HUP "$PROMETHEUS_CONTAINER" >/dev/null 2>&1 || true
+  else
+    docker rm -f "$PROMETHEUS_CONTAINER" >/dev/null 2>&1 || true
+    docker run -d \
+      --name "$PROMETHEUS_CONTAINER" \
+      --restart unless-stopped \
+      "${LOG_OPTS[@]}" \
+      --network "$NETWORK" \
+      -p "127.0.0.1:${PROMETHEUS_PORT}:9090" \
+      -v "${PROMETHEUS_CONFIG}:/etc/prometheus/prometheus.yml:ro" \
+      -v "${PROMETHEUS_CONTAINER}-data:/prometheus" \
+      "$PROMETHEUS_IMAGE" \
+      --config.file=/etc/prometheus/prometheus.yml \
+      --storage.tsdb.path=/prometheus \
+      --storage.tsdb.retention.time=15d \
+      --storage.tsdb.retention.size=1GB >/dev/null ||
+      echo "Prometheus gagal jalan; deploy dilanjutkan tanpa penyimpanan metrik." >&2
+  fi
+fi
+
+# Edge nginx: memegang port host, mengirim /api/ langsung ke Go dan sisanya ke
+# Next (lihat .gitlab/edge/default.conf.template). Template disalin ke samping
+# ENV_FILE supaya container tetap bisa restart setelah checkout CI dibersihkan.
+# EDGE_ENABLED=0 kembali ke susunan lama: Next memegang port host dan
+# meneruskan /api ke Go lewat BACKEND_URL.
+EDGE_ENABLED="${EDGE_ENABLED:-1}"
+EDGE_CONTAINER="${CONTAINER_NAME}-edge"
+EDGE_IMAGE="${EDGE_IMAGE:-nginx:1.28.0-alpine}"
+EDGE_TEMPLATE="$(dirname "$ENV_FILE")/${CONTAINER_NAME}-edge.conf.template"
+
+# run_edge: buat ulang container edge dan pastikan nginx jalan dengan
+# konfigurasi yang valid.
+run_edge() {
+  docker rm -f "$EDGE_CONTAINER" >/dev/null 2>&1 || true
+  cp "$(dirname "$0")/edge/default.conf.template" "$EDGE_TEMPLATE" || return 1
+  docker run -d \
+    --name "$EDGE_CONTAINER" \
+    --restart unless-stopped \
+    "${LOG_OPTS[@]}" \
+    --network "$NETWORK" \
+    -p "${BIND_ADDRESS}:${HOST_PORT}:80" \
+    -v "${EDGE_TEMPLATE}:/etc/nginx/templates/default.conf.template:ro" \
+    -e API_UPSTREAM="${API_CONTAINER}:8080" \
+    -e NEXT_UPSTREAM="${CONTAINER_NAME}:${CONTAINER_PORT}" \
+    "$EDGE_IMAGE" >/dev/null || return 1
+  for attempt in $(seq 1 10); do
+    if docker exec "$EDGE_CONTAINER" nginx -t >/dev/null 2>&1 &&
+      [ "$(docker inspect --format '{{.State.Running}}' "$EDGE_CONTAINER" 2>/dev/null)" = "true" ]; then
+      return 0
+    fi
+    sleep 1
+  done
+  docker logs --tail 50 "$EDGE_CONTAINER" >&2 || true
+  return 1
+}
+
 # 1. Build kedua image selagi container lama tetap melayani. Tag :previous
 #    menunjuk image yang dipakai container yang sedang jalan (bukan :latest,
 #    yang bisa berisi build gagal-migrasi yang tidak pernah jalan), untuk
@@ -218,6 +299,7 @@ run_api() {
     -e STORAGE_DIR=/app/storage \
     -e PUBLIC_ORIGIN="http://${CONTAINER_NAME}:${CONTAINER_PORT}" \
     ${REDIS_ENV[@]+"${REDIS_ENV[@]}"} \
+    ${METRICS_ENV[@]+"${METRICS_ENV[@]}"} \
     "$API_IMAGE:$1" >/dev/null || return 1
   for attempt in $(seq 1 30); do
     if [ "$(docker inspect --format '{{.State.Health.Status}}' "$API_CONTAINER" 2>/dev/null)" = "healthy" ]; then
@@ -236,20 +318,35 @@ run_api() {
 start_next() {
   docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || true
   docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
+  # Dengan edge, port host milik container edge dan Next hanya terlihat di
+  # network internal.
+  local publish=(-p "${BIND_ADDRESS}:${HOST_PORT}:${CONTAINER_PORT}")
+  if [ "$EDGE_ENABLED" = "1" ]; then
+    publish=()
+  else
+    docker rm -f "$EDGE_CONTAINER" >/dev/null 2>&1 || true
+  fi
   docker run -d \
     --name "$CONTAINER_NAME" \
     --restart unless-stopped \
     "${LOG_OPTS[@]}" \
     --network "$NETWORK" \
-    -p "${BIND_ADDRESS}:${HOST_PORT}:${CONTAINER_PORT}" \
+    ${publish[@]+"${publish[@]}"} \
     --add-host host.docker.internal:host-gateway \
     -v "${STORAGE_DIR}:/app/storage" \
     --env-file "$ENV_FILE" \
     -e DATABASE_URL="$DATABASE_URL_RUNTIME" \
     -e MIGRATE_DATABASE_URL="$DATABASE_URL_RUNTIME" \
     -e NODE_ENV=production \
+    ${REDIS_ENV[@]+"${REDIS_ENV[@]}"} \
     "$@" \
     "$DOCKER_IMAGE:$NEXT_TAG" >/dev/null
+  if [ "$EDGE_ENABLED" = "1" ] && ! run_edge; then
+    echo "Container edge gagal jalan: Next dipublikasikan langsung di port ${HOST_PORT} (susunan lama)." >&2
+    EDGE_ENABLED=0
+    start_next "$@"
+    return
+  fi
   for attempt in $(seq 1 30); do
     if curl -fsSL "http://127.0.0.1:${HOST_PORT}/login" >/dev/null; then
       return 0
@@ -263,8 +360,13 @@ start_next() {
 
 # proxy_reaches_go: hanya Go yang memasang X-Request-Id, jadi header itu
 # membuktikan proxy Next sampai ke API.
+# Dengan edge, port host langsung sampai ke Go, jadi proxy Next (masih dipakai
+# sebagai cadangan saat EDGE_ENABLED=0) diperiksa juga dari dalam network.
 proxy_reaches_go() {
-  curl -s -o /dev/null -D - "http://127.0.0.1:${HOST_PORT}/api/auth/me" | grep -qi '^x-request-id:'
+  curl -s -o /dev/null -D - "http://127.0.0.1:${HOST_PORT}/api/auth/me" | grep -qi '^x-request-id:' || return 1
+  [ "$EDGE_ENABLED" = "1" ] || return 0
+  docker exec "$EDGE_CONTAINER" curl -s -o /dev/null -D - "http://${CONTAINER_NAME}:${CONTAINER_PORT}/api/auth/me" |
+    grep -qi '^x-request-id:'
 }
 
 # roll_back_to_previous: jalankan pasangan image :previous (API dan Next dari

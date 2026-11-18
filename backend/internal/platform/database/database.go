@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -34,8 +36,9 @@ const SearchPath = "public,iam,configuration,hris,performance,recruitment,item,p
 const TimeZone = "Asia/Jakarta"
 
 // Open connects a pool with the TS session settings (search_path, timezone)
-// and pings it once.
-func Open(ctx context.Context, url string) (*pgxpool.Pool, error) {
+// and pings it once. slowQuery above zero logs each statement that takes at
+// least that long (see slowQueryTracer).
+func Open(ctx context.Context, url string, slowQuery ...time.Duration) (*pgxpool.Pool, error) {
 	if url == "" {
 		return nil, errors.New("database: DATABASE_URL is empty")
 	}
@@ -45,6 +48,9 @@ func Open(ctx context.Context, url string) (*pgxpool.Pool, error) {
 	}
 	cfg.ConnConfig.RuntimeParams["search_path"] = SearchPath
 	cfg.ConnConfig.RuntimeParams["timezone"] = TimeZone
+	if len(slowQuery) > 0 && slowQuery[0] > 0 {
+		cfg.ConnConfig.Tracer = slowQueryTracer{threshold: slowQuery[0], log: slog.Default()}
+	}
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("database: connect: %w", err)

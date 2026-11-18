@@ -45,7 +45,8 @@ From `backend/` the Makefile wraps the same commands: `make run`, `make test`,
 | `TZ` | `Asia/Jakarta` | process zone; the pool also forces `timezone=Asia/Jakarta` per session |
 | `LOG_LEVEL` | `info` | slog level; logs are JSON on stdout |
 | `METRICS_ADDR` | unset | listen address of the internal Prometheus `/metrics` server (see `docs/DEPLOY.md`); unset serves none |
-| `REDIS_URL` | unset | Redis for `Idempotency-Key` replay and the IAM grant cache (see `docs/DEPLOY.md`); unset runs without both |
+| `REDIS_URL` | unset | Redis for `Idempotency-Key` replay, the IAM grant cache and rate limits (see `docs/DEPLOY.md`); unset runs on Postgres alone |
+| `SLOW_QUERY_MS` | `500` | statements at least this slow are logged as `slow query` with their SQL text, never their arguments; `0` turns it off |
 | `JOBS_ENABLED` | `true` | `false` stops this process from running background jobs (see `docs/DEPLOY.md`) |
 | `TEST_DATABASE_URL` | unset | enables integration tests |
 

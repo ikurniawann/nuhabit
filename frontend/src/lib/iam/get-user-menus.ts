@@ -4,6 +4,7 @@ import { filterMenusByLoyaltyFeatures } from "@/lib/crm/loyalty-features";
 import { getLoyaltyFeatures } from "@/lib/crm/loyalty-features-server";
 import { isEssOnlyRole } from "./access";
 import { loadEmployeeBaseline } from "./employee-baseline";
+import { cachedGrant } from "./grant-cache";
 import { iamDbQuery, isIamDbConfigured } from "./pg-client";
 import type { MenuRow, NavIconName, NavItem } from "./types";
 import { isNavVisibleMenuType } from "./types";
@@ -241,19 +242,21 @@ export const getUserMenus = cache(async (userId: string, role: UserRole): Promis
   }
 
   try {
-    const roleIds = await resolveRoleIds(userId, role);
-    const [permittedIds, baseline] = await Promise.all([fetchPermittedMenuIds(roleIds), loadEmployeeBaseline(userId)]);
-    for (const menu of baseline) permittedIds.add(menu.id);
+    // Baris menu milik user di-cache di Redis (lihat grant-cache); saringan
+    // loyalty di bawah tetap dihitung per request.
+    const menus = await cachedGrant(`nav:${userId}:${role}`, async () => {
+      const roleIds = await resolveRoleIds(userId, role);
+      const [permittedIds, baseline] = await Promise.all([fetchPermittedMenuIds(roleIds), loadEmployeeBaseline(userId)]);
+      for (const menu of baseline) permittedIds.add(menu.id);
+      if (permittedIds.size === 0) return [];
+      return fetchMenusByIds([...(await includeAncestorMenus(permittedIds))]);
+    });
 
-    if (permittedIds.size === 0) {
+    if (menus.length === 0) {
       return [];
     }
 
-    const allMenuIds = await includeAncestorMenus(permittedIds);
-    const [menus, loyaltyFeatures] = await Promise.all([
-      fetchMenusByIds([...allMenuIds]),
-      getLoyaltyFeatures(),
-    ]);
+    const loyaltyFeatures = await getLoyaltyFeatures();
 
     // Menu fitur loyalty yang dinonaktifkan (ARK Coin / XP) disaring di sini,
     // jadi hilang dari sidebar, desktop, dan navigasi POS sekaligus — dan guard
@@ -289,27 +292,29 @@ export const isEssOnlyUser = cache(
     if (!isIamDbConfigured()) return isEssOnlyRole(role);
 
     try {
-      const roleIds = await resolveRoleIds(userId, role);
-      if (roleIds.length === 0) return isEssOnlyRole(role);
+      return await cachedGrant(`ess:${userId}:${role}`, async () => {
+        const roleIds = await resolveRoleIds(userId, role);
+        if (roleIds.length === 0) return isEssOnlyRole(role);
 
-      const rows = await iamDbQuery<{ has_access: boolean }>(
-        `SELECT EXISTS (
-           SELECT 1
-           FROM iam.role_menu_permissions rmp
-           JOIN iam.menus m ON m.id = rmp.menu_id
-           WHERE rmp.role_id = ANY($1::uuid[])
-             AND rmp.is_active = true
-             AND m.deleted_at IS NULL
-             AND m.is_active = true
-             AND m.code <> 'ess'
-             AND m.code NOT LIKE 'ess.%'
-             AND m.code <> 'tasks'
-             AND m.code NOT LIKE 'tasks.%'
-         ) AS has_access`,
-        [roleIds]
-      );
+        const rows = await iamDbQuery<{ has_access: boolean }>(
+          `SELECT EXISTS (
+             SELECT 1
+             FROM iam.role_menu_permissions rmp
+             JOIN iam.menus m ON m.id = rmp.menu_id
+             WHERE rmp.role_id = ANY($1::uuid[])
+               AND rmp.is_active = true
+               AND m.deleted_at IS NULL
+               AND m.is_active = true
+               AND m.code <> 'ess'
+               AND m.code NOT LIKE 'ess.%'
+               AND m.code <> 'tasks'
+               AND m.code NOT LIKE 'tasks.%'
+           ) AS has_access`,
+          [roleIds]
+        );
 
-      return !rows[0]?.has_access;
+        return !rows[0]?.has_access;
+      });
     } catch (error) {
       if (!isIamUnavailable(error)) {
         console.error("[iam] isEssOnlyUser failed:", error);

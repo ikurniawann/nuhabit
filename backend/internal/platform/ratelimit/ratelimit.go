@@ -1,6 +1,8 @@
-// Package ratelimit counts request hits in platform.rate_limits, so every API
-// replica enforces one shared limit per key. Each hit is a single upsert: the
-// row lock taken by ON CONFLICT serialises concurrent hits on a key.
+// Package ratelimit counts request hits so every API replica enforces one
+// shared limit per key. After UseRedis the counters live in Redis (see
+// redis.go); otherwise, and for any hit Redis fails to answer, they live in
+// platform.rate_limits. A Postgres hit is a single upsert: the row lock taken
+// by ON CONFLICT serialises concurrent hits on a key.
 //
 // Two window shapes match the TS limiters:
 //   - Fixed is lib/rate-limit.ts checkRateLimit: a counter that resets one
@@ -47,6 +49,11 @@ type Window struct {
 // Fixed records a hit for key at now unless the window already holds limit
 // hits.
 func (l *Limiter) Fixed(ctx context.Context, key string, limit int, window time.Duration, now time.Time) (Window, error) {
+	if rdb := shared.Load(); rdb != nil {
+		if w, err := redisFixed(ctx, rdb, key, limit, window, now); !redisDown(ctx, err) {
+			return w, err
+		}
+	}
 	l.maybePrune(ctx, now)
 	var w Window
 	err := l.db.QueryRow(ctx, `
@@ -63,6 +70,11 @@ RETURNING last_allowed, count, expires_at`, key, now, now.Add(window), limit).Sc
 // Peek reads a fixed window's count and reset without counting a hit; nil
 // when the key has no row.
 func (l *Limiter) Peek(ctx context.Context, key string) (*Window, error) {
+	if rdb := shared.Load(); rdb != nil {
+		if w, err := redisPeek(ctx, rdb, key); !redisDown(ctx, err) {
+			return w, err
+		}
+	}
 	var w Window
 	err := l.db.QueryRow(ctx, `SELECT count, expires_at FROM platform.rate_limits WHERE key = $1`, key).Scan(&w.Count, &w.ResetAt)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -78,6 +90,11 @@ func (l *Limiter) Peek(ctx context.Context, key string) (*Window, error) {
 // inside the trailing window. A refusal returns how long until the oldest
 // counted hit leaves the window.
 func (l *Limiter) Sliding(ctx context.Context, key string, limit int, window time.Duration, now time.Time) (allowed bool, retryAfter time.Duration, err error) {
+	if rdb := shared.Load(); rdb != nil {
+		if allowed, retryAfter, err = redisSliding(ctx, rdb, key, limit, window, now); !redisDown(ctx, err) {
+			return allowed, retryAfter, err
+		}
+	}
 	l.maybePrune(ctx, now)
 	var oldest time.Time
 	err = l.db.QueryRow(ctx, `
@@ -100,6 +117,11 @@ RETURNING last_allowed, (SELECT min(h) FROM unnest(hits) h)`,
 // SlidingCount reads how many of key's hits fall inside the trailing
 // window without recording one, for limits that count only failures.
 func (l *Limiter) SlidingCount(ctx context.Context, key string, window time.Duration, now time.Time) (int, error) {
+	if rdb := shared.Load(); rdb != nil {
+		if n, err := redisSlidingCount(ctx, rdb, key, window, now); !redisDown(ctx, err) {
+			return n, err
+		}
+	}
 	var n int
 	err := l.db.QueryRow(ctx, `
 SELECT count(*) FROM platform.rate_limits r, unnest(r.hits) h
